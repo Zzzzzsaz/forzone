@@ -3198,6 +3198,25 @@ function bootOffline(){
   loadS(); bootApp();
 }
 
+async function bootOnline(){
+  const ok = await supaInit();
+  if(!ok){
+    // Supabase not configured — go offline, show banner
+    document.getElementById('supa-banner')?.classList.add('show');
+    loadS(); bootApp(); return;
+  }
+  document.getElementById('loading-txt').textContent='Sprawdzanie sesji...';
+  try{
+    const {data:{session}} = await supabase.auth.getSession();
+    if(session?.user){
+      currentUser = session.user;
+      await bootWithAuth();
+    } else {
+      showAuthScreen();
+    }
+  }catch(e){ loadS(); bootApp(); }
+}
+
 function showSupaConfigHelp(){
   alert('Konfiguracja Supabase:\n\n1. Idź na supabase.com → New project\n2. Settings → API → skopiuj "Project URL" i "anon public" key\n3. Otwórz plik desktop-manager.html w edytorze tekstu\n4. Znajdź: const SUPABASE_URL = \'\'\n   i wklej swój URL między apostrofami\n5. Znajdź: const SUPABASE_KEY = \'\'\n   i wklej swój anon key\n6. W Supabase SQL Editor uruchom skrypt z pliku setup-supabase.sql\n7. Hostuj pliki na GitHub Pages / Netlify\n\nTyle! Synchronizacja zacznie działać automatycznie.');
 }
