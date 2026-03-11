@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Business OS</title>
+<!-- title updated dynamically via applySettings() -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#2d5be3">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -444,6 +445,43 @@ body.dark .window{
 }
 .window.minimized{display:none}
 @keyframes winOpen{from{opacity:0;transform:scale(.92) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}
+
+/* ══ MOBILE: windows become fullscreen panels ══ */
+@media (max-width: 768px) {
+  .window {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    border-radius: 0 !important;
+    z-index: 50000 !important;
+    left: 0 !important; top: 0 !important;
+    animation: mob-win-open .22s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes mob-win-open {
+    from { opacity:0; transform: translateY(24px); }
+    to   { opacity:1; transform: translateY(0); }
+  }
+  .window.minimized { display: none !important; }
+  .win-titlebar {
+    cursor: default !important;
+    padding-top: calc(11px + env(safe-area-inset-top)) !important;
+  }
+  .win-titlebar .win-btn.minimize,
+  .win-titlebar .win-btn.maximize { display: none !important; }
+  .win-titlebar .win-btn.close {
+    width: 32px; height: 32px; border-radius: 10px;
+    background: var(--surface3) !important;
+    color: var(--text2) !important; font-size: 14px !important;
+  }
+  .win-titlebar .win-btn.close::after { content: '←'; color: var(--text2); font-size: 14px; font-weight: 700; }
+  .win-titlebar .win-btn.close:hover { color: var(--text) !important; }
+  .win-body { padding-bottom: calc(100px + env(safe-area-inset-bottom)) !important; }
+  .resize-handle { display: none !important; }
+  /* Keep mob-shell visible underneath but hide desktop chrome */
+  #mob-shell { display: flex !important; }
+  /* When a window is open, show it on top of mob-shell */
+}
 
 .win-titlebar{
   padding:11px 14px 10px;
@@ -935,7 +973,7 @@ body.dark .dw-hdr{border-bottom-color:rgba(255,255,255,.07);}
 .dw.is-pinned .dw-hdr{cursor:default;}
 
 /* ═══════════════ NOTIFICATION BUBBLE ═══════════════ */
-#notif-bubble{
+#notif-bubble{ display:none !important;
   position:fixed;bottom:24px;left:24px;z-index:9998;
 }
 #notif-dot{
@@ -2045,49 +2083,65 @@ body.dark .order-card{background:var(--surface2)}
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: 90px;
+  padding-bottom: 96px;
 }
 
-/* ── Bottom nav ── */
+/* ── Bottom nav — floating pill like desktop dock ── */
 #mob-nav {
   position: fixed;
-  bottom: 0; left: 0; right: 0;
-  height: calc(62px + env(safe-area-inset-bottom));
-  padding-bottom: env(safe-area-inset-bottom);
-  background: var(--surface);
-  border-top: 1px solid var(--border);
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  width: auto;
+  height: 62px;
+  padding: 0 10px;
+  background: rgba(255,255,255,.82);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(255,255,255,.6);
+  border-radius: 26px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.14), 0 2px 8px rgba(0,0,0,.08);
   display: flex;
-  align-items: flex-start;
-  justify-content: space-around;
-  padding-top: 8px;
-  z-index: 100;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  z-index: 10000;
+  white-space: nowrap;
+}
+body.dark #mob-nav {
+  background: rgba(34,33,30,.88);
+  border-color: rgba(255,255,255,.1);
+  box-shadow: 0 8px 32px rgba(0,0,0,.4);
 }
 .mob-nav-btn {
   display: flex; flex-direction: column;
-  align-items: center; gap: 3px;
+  align-items: center; gap: 2px;
   background: none; border: none; cursor: pointer;
-  padding: 4px 8px; border-radius: 12px;
+  padding: 6px 10px; border-radius: 18px;
   transition: background .15s;
-  min-width: 52px;
+  min-width: 54px;
 }
-.mob-nav-btn:active { background: var(--surface2); }
+.mob-nav-btn:active { background: rgba(0,0,0,.06); }
+.mob-nav-icon {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: rgba(0,0,0,.06);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; transition: all .2s cubic-bezier(.34,1.56,.64,1);
+}
+body.dark .mob-nav-icon { background: rgba(255,255,255,.08); }
 .mob-nav-btn.active .mob-nav-icon {
   background: var(--accent);
+  transform: scale(1.08);
+  box-shadow: 0 4px 12px rgba(45,91,227,.35);
 }
-.mob-nav-icon {
-  width: 36px; height: 36px; border-radius: 10px;
-  background: var(--surface2);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px; transition: background .15s;
-}
-.mob-nav-btn.active .mob-nav-icon { background: var(--accent); }
 .mob-nav-label {
-  font-size: 10px; font-weight: 600; color: var(--text3);
-  transition: color .15s;
+  font-size: 9.5px; font-weight: 700; color: var(--text3);
+  transition: color .15s; letter-spacing: .01em;
 }
 .mob-nav-btn.active .mob-nav-label { color: var(--accent); }
+
+/* Content padding — account for floating dock */
+#mob-content { padding-bottom: 96px; }
 
 /* ── Sections ── */
 .mob-section { display: none; }
@@ -2412,8 +2466,9 @@ body.dark .mob-quick-add input { background: #2a2a2a; border-color: #444; color:
   <div id="mob-topbar">
     <div class="mob-topbar-left">
       <div id="mob-sync-dot" title="Sync status"></div>
-      <div>
-        <div class="mob-topbar-logo" id="mob-logo-text">BizOS</div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span id="mob-logo-icon" style="font-size:20px">⚡</span>
+        <div class="mob-topbar-logo" id="mob-logo-text">MójSystem</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
@@ -2507,16 +2562,6 @@ body.dark .mob-quick-add input { background: #2a2a2a; border-color: #444; color:
       </div>
       <!-- App grid -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 14px 14px" id="mob-more-grid"></div>
-      <!-- Nastrój -->
-      <div style="padding:0 14px 8px">
-        <div style="font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Nastrój dziś</div>
-      </div>
-      <div style="margin:0 14px 14px;background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden">
-        <div class="mob-mood-row" id="mob-mood-btns"></div>
-        <div style="padding:0 16px 14px">
-          <textarea class="mob-form-textarea" id="mob-mood-note" placeholder="Jak się czujesz? (opcjonalne)" rows="2" oninput="mobSaveMood()"></textarea>
-        </div>
-      </div>
       <!-- Nawyki -->
       <div style="padding:0 14px 8px">
         <div style="font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Nawyki</div>
@@ -3161,10 +3206,6 @@ body.dark .mob-quick-add input { background: #2a2a2a; border-color: #444; color:
 </div>
 
 <!-- ══════════════════════ NOTIFICATION BUBBLE ══════════════════════ -->
-<div id="notif-bubble">
-  <div id="notif-dot">
-    🔔
-    <div id="notif-badge" style="display:none">0</div>
   </div>
   <div id="notif-popup">
     <div class="notif-hdr">🔔 Powiadomienia</div>
@@ -3906,6 +3947,10 @@ function applySettings(){
   document.getElementById('mb-logo-text').textContent=name;
   const sbIcon=document.getElementById('sb-logo-icon');if(sbIcon)sbIcon.textContent=icon;
   const sbName=document.getElementById('sb-logo-name');if(sbName)sbName.textContent=name;
+  // Mobile topbar
+  const mobLogo=document.getElementById('mob-logo-text');if(mobLogo)mobLogo.textContent=name;
+  const mobIcon=document.getElementById('mob-logo-icon');if(mobIcon)mobIcon.textContent=icon;
+  // Browser tab title
   document.title=name;
 }
 
@@ -4488,9 +4533,9 @@ let maxedWin=null,maxedOrig={};
 function bringToFront(id){zTop++;document.getElementById(id).style.zIndex=zTop}
 
 function startDrag(e,id){
+  if(isMobile()) return; // no dragging on mobile — windows are fullscreen
   if(['BUTTON','INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))return;
   dragging=id;
-  // Offset of click WITHIN the window (viewport-relative)
   const r=document.getElementById(id).getBoundingClientRect();
   dragOffX=e.clientX-r.left;
   dragOffY=e.clientY-r.top;
@@ -4576,9 +4621,10 @@ function toggleWin(winId,btnId){
   const win=document.getElementById(winId);
   if(win.classList.contains('minimized')){
     win.classList.remove('minimized');
-    clampWinToSafeZone(win);
+    if(!isMobile()) clampWinToSafeZone(win);
     bringToFront(winId);
-    win.style.animation='none';void win.offsetHeight;win.style.animation='winOpen .25s cubic-bezier(.34,1.56,.64,1)';
+    win.style.animation='none';void win.offsetHeight;
+    win.style.animation=isMobile()?'mob-win-open .22s cubic-bezier(.34,1.56,.64,1)':'winOpen .25s cubic-bezier(.34,1.56,.64,1)';
     if(winId==='win-charts') setTimeout(renderChart, 80);
     if(winId==='win-tasks') setTimeout(renderCal, 50);
     if(winId==='win-budget') setTimeout(renderBudget, 50);
@@ -4591,6 +4637,11 @@ function toggleWin(winId,btnId){
 }
 function closeWin(winId,btnId){
   document.getElementById(winId).classList.add('minimized');
+  if(isMobile()){
+    // Return to whichever section was active before
+    const homeBtn = document.getElementById('mob-nav-home');
+    if(homeBtn) mobNav(homeBtn, 'home');
+  }
   renderDock();
 }
 function minimizeWin(winId,btnId){closeWin(winId,btnId)}
@@ -6967,6 +7018,90 @@ function deleteSavingsCat(id){
   saveS();renderBudget();
 }
 
+function renderSavingsTab(){
+  const cats=S.savingsCats||[];
+  const monthly=S.savingsMonthly||0;
+  const total=cats.reduce((s,c)=>s+(Number(c.amount)||0),0);
+  const totalGoal=cats.reduce((s,c)=>s+(Number(c.goal)||0),0);
+  const pct=totalGoal>0?Math.min(100,Math.round(total/totalGoal*100)):0;
+
+  const catsHtml=cats.length?cats.map(c=>{
+    const amt=Number(c.amount)||0;
+    const goal=Number(c.goal)||0;
+    const cp=goal>0?Math.min(100,Math.round(amt/goal*100)):0;
+    return `<div class="sav-cat">
+      <div class="sav-cat-icon" style="background:var(--green-bg)">${c.icon||'💰'}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+          <div class="sav-cat-name">${escHtml(c.name)}</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="sav-cat-amount">${Number(c.amount||0).toLocaleString('pl-PL')} zł</div>
+            ${goal>0?`<div style="font-size:10px;color:var(--text3)">${cp}% z ${goal.toLocaleString('pl-PL')} zł</div>`:''}
+            <button onclick="deleteSavingsCat(${c.id})" style="background:none;border:none;cursor:pointer;color:var(--red-text);font-size:14px;padding:0 2px;line-height:1" title="Usuń">×</button>
+          </div>
+        </div>
+        ${goal>0?`<div class="sav-bar"><div class="sav-bar-fill" style="width:${cp}%"></div></div>`:''}
+      </div>
+    </div>`;
+  }).join(''):`<div style="text-align:center;padding:28px;color:var(--text3);font-size:13px">Brak kategorii oszczędności.<br>Dodaj pierwszą poniżej.</div>`;
+
+  return`<div style="display:flex;flex-direction:column;flex:1;overflow:hidden;min-height:0">
+    <div style="flex:1;overflow-y:auto;padding:14px;scrollbar-width:thin">
+
+      <!-- Podsumowanie -->
+      <div class="savings-summary">
+        <div class="sav-box">
+          <div class="sav-box-val">${total.toLocaleString('pl-PL')} zł</div>
+          <div class="sav-box-lbl">Łącznie odłożone</div>
+        </div>
+        <div class="sav-box">
+          <div class="sav-box-val">${totalGoal>0?pct+'%':'—'}</div>
+          <div class="sav-box-lbl">Realizacja celu</div>
+        </div>
+        <div class="sav-box">
+          <div class="sav-box-val">${monthly>0?monthly.toLocaleString('pl-PL')+' zł':'—'}</div>
+          <div class="sav-box-lbl">Odkładam/mies.</div>
+        </div>
+      </div>
+
+      <!-- Pasek łączny -->
+      ${totalGoal>0?`<div style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:5px">
+          <span>Cel łączny: ${totalGoal.toLocaleString('pl-PL')} zł</span>
+          <span>${pct}%</span>
+        </div>
+        <div class="sav-bar" style="height:8px;border-radius:4px">
+          <div class="sav-bar-fill" style="width:${pct}%;border-radius:4px;background:linear-gradient(90deg,var(--green),var(--accent))"></div>
+        </div>
+      </div>`:''}
+
+      <!-- Kategorie -->
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Kategorie</div>
+      <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:4px 10px;margin-bottom:14px">
+        ${catsHtml}
+      </div>
+
+      <!-- Miesięczna kwota -->
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Miesięczna kwota oszczędności</div>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <input id="sav-monthly-inp" type="number" value="${monthly||''}" placeholder="np. 500"
+          style="flex:1;height:36px;border-radius:9px;border:1.5px solid var(--border);background:var(--surface2);padding:0 10px;font-size:13px;color:var(--text);outline:none">
+        <button onclick="saveSavingsMonthly()" class="budget-add-btn" style="height:36px;padding:0 14px;white-space:nowrap">Zapisz</button>
+      </div>
+
+      <!-- Dodaj kategorię -->
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Dodaj kategorię</div>
+      <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <input id="sav-cat-name" placeholder="Nazwa (np. Wakacje)" style="grid-column:1/-1;height:34px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);padding:0 10px;font-size:12.5px;color:var(--text);outline:none">
+        <input id="sav-cat-amount" type="number" placeholder="Kwota (zł)" style="height:34px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);padding:0 10px;font-size:12.5px;color:var(--text);outline:none">
+        <input id="sav-cat-goal" type="number" placeholder="Cel (zł, opcja)" style="height:34px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);padding:0 10px;font-size:12.5px;color:var(--text);outline:none">
+        <button onclick="addSavingsCat()" class="budget-add-btn" style="grid-column:1/-1;height:34px;justify-content:center">+ Dodaj kategorię</button>
+      </div>
+
+    </div>
+  </div>`;
+}
+
 function renderSavings(){ renderBudget(); }
 
 // ═══════════════ FAKTURY ═══════════════
@@ -8279,7 +8414,6 @@ function bootApp(){
   renderDock();
   setTimeout(()=>renderDock(),50);
   setTimeout(()=>renderDock(),300);
-  setTimeout(generateBriefing,1800);
   // Mobile init
   setTimeout(()=>initMobile(), 100);
 }
@@ -8297,14 +8431,67 @@ let mobBudgetTabActive = 'income';
 let mobBudgetYear = new Date().getFullYear();
 let mobBudgetMonth = new Date().getMonth();
 
+// Open any window fullscreen on mobile (close others first)
+function mobOpenWin(winId) {
+  if (!isMobile()) { toggleWin(winId); return; }
+  document.querySelectorAll('.window').forEach(w => { if(w.id !== winId) w.classList.add('minimized'); });
+  document.querySelectorAll('.mob-section').forEach(s => s.classList.remove('active'));
+  const win = document.getElementById(winId);
+  if (!win) return;
+  if (win.classList.contains('minimized')) {
+    win.classList.remove('minimized');
+    bringToFront(winId);
+    win.style.animation = 'mob-win-open .22s cubic-bezier(.34,1.56,.64,1)';
+    if(winId==='win-charts') setTimeout(renderChart, 80);
+    if(winId==='win-tasks')  setTimeout(renderCal, 50);
+    if(winId==='win-budget') setTimeout(renderBudget, 50);
+    if(winId==='win-mood')   setTimeout(renderMood, 50);
+    if(winId==='win-orders') setTimeout(renderOrders, 50);
+  }
+  renderDock();
+}
+
+const MOB_NAV_WINS = {
+  tasks:  'win-tasks',
+  shops:  'win-shops',
+  budget: 'win-budget',
+  more:   null,
+};
+
 function mobNav(btn, section) {
   document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  document.querySelectorAll('.mob-section').forEach(s => s.classList.remove('active'));
-  document.getElementById('mob-sec-' + section)?.classList.add('active');
-  mobCurrentSection = section;
-  document.getElementById('mob-content').scrollTop = 0;
-  mobRenderSection(section);
+
+  if (section === 'home') {
+    // Close all windows, go back to home
+    document.querySelectorAll('.window').forEach(w => w.classList.add('minimized'));
+    document.querySelectorAll('.mob-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('mob-sec-home')?.classList.add('active');
+    mobCurrentSection = 'home';
+    document.getElementById('mob-content').scrollTop = 0;
+    mobRenderHome();
+    return;
+  }
+
+  if (section === 'more') {
+    // Close all windows, show more grid
+    document.querySelectorAll('.window').forEach(w => w.classList.add('minimized'));
+    document.querySelectorAll('.mob-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('mob-sec-more')?.classList.add('active');
+    mobCurrentSection = 'more';
+    document.getElementById('mob-content').scrollTop = 0;
+    mobRenderMore();
+    return;
+  }
+
+  // For tasks/shops/budget — open the actual window fullscreen
+  const winId = MOB_NAV_WINS[section];
+  if (winId) {
+    document.querySelectorAll('.mob-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.window').forEach(w => { if(w.id !== winId) w.classList.add('minimized'); });
+    mobCurrentSection = section;
+    toggleWin(winId);
+  }
 }
 
 function mobRenderSection(section) {
@@ -8367,7 +8554,8 @@ function mobRenderHome() {
 
   // Shops mini
   const shopsEl = document.getElementById('mob-home-shops');
-  shopsEl.innerHTML = shops.slice(0, 3).map(sh => mobShopCardHTML(sh, true)).join('');
+  el.innerHTML = shops.slice(0, 3).map(sh => mobShopCardHTML(sh, true)).join('')+
+    `<div style="padding:0 14px 4px"><button onclick="mobOpenWin('win-shops')" style="width:100%;height:40px;border-radius:12px;border:1.5px solid var(--border);background:none;color:var(--text2);font-size:13px;font-weight:700;cursor:pointer">Wszystkie sklepy →</button></div>`;
 }
 
 // ── Tasks ──
@@ -8467,7 +8655,7 @@ function mobShopCardHTML(sh, mini) {
   const statusTextColors = {active:'var(--green-text)',warning:'var(--orange-text)',paused:'var(--yellow-text)',inactive:'var(--red-text)'};
   const statusLabels = {active:'Aktywny',warning:'Uwaga',paused:'Pauza',inactive:'Nieaktywny'};
   const st = sh.status||'active';
-  return `<div class="mob-shop-card" onclick="mobOpenShop(${sh.id})">
+  return `<div class="mob-shop-card" onclick="mobOpenWin('win-shops')" style="-webkit-tap-highlight-color:transparent">
     <div class="mob-shop-head">
       <div class="mob-shop-icon">🏪</div>
       <div class="mob-shop-info">
@@ -8691,15 +8879,19 @@ function mobRenderMore() {
   if (!isMobile()) return;
   // App grid
   const apps = [
-    {icon:'💡',label:'Pomysły',   action:"mobOpenIdeas()"},
-    {icon:'📋',label:'Plany',     action:"mobOpenPlans()"},
-    {icon:'📝',label:'Zlecenia',  action:"mobOpenOrders()"},
-    {icon:'📦',label:'Dostawcy',  action:"mobOpenSuppliers()"},
-    {icon:'📝',label:'Notatki',   action:"mobOpenNotes()"},
-    {icon:'🤖',label:'AI Asyst.', action:"mobOpenAI()"},
+    {icon:'💡',label:'Pomysły',   winId:'win-ideas'},
+    {icon:'📋',label:'Plany',     winId:'win-plans'},
+    {icon:'📝',label:'Zlecenia',  winId:'win-orders'},
+    {icon:'📦',label:'Dostawcy',  winId:'win-suppliers'},
+    {icon:'📝',label:'Notatki',   winId:'win-notes'},
+    {icon:'🌡️',label:'Nastrój',   winId:'win-mood'},
+    {icon:'💪',label:'Nawyki',    winId:'win-habits'},
+    {icon:'📊',label:'Wykresy',   winId:'win-charts'},
+    {icon:'💰',label:'Kalk. marży',winId:'win-margin'},
+    {icon:'🤖',label:'AI Asyst.', winId:'win-ai'},
   ];
   document.getElementById('mob-more-grid').innerHTML = apps.map(a=>`
-    <button onclick="${a.action}" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px 12px;cursor:pointer;text-align:center;transition:all .15s" onactive="this.style.background='var(--surface2)'">
+    <button onclick="mobOpenWin('${a.winId}')" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px 12px;cursor:pointer;text-align:center;transition:all .15s;-webkit-tap-highlight-color:transparent">
       <div style="font-size:28px;margin-bottom:6px">${a.icon}</div>
       <div style="font-size:13px;font-weight:700;color:var(--text)">${a.label}</div>
     </button>`).join('');
@@ -8867,6 +9059,37 @@ function mobOpenSuppliers() {
         <div class="mob-card-sub">${escHtml(s.products||'')}</div>
       </div>`).join('') : '<div class="mob-empty">Brak dostawców</div>'}
   `);
+}
+
+function mobOpenMood() {
+  const todayKey = new Date().toISOString().slice(0,10);
+  const mood = (S.mood||{})[todayKey] || {};
+  const EMOJIS = ['😞','😕','😐','🙂','😁'];
+  const LABELS = ['Kiepsko','Słabo','Normalnie','Dobrze','Świetnie'];
+  showMobModal(`
+    <div class="mob-modal-title">🌡️ Nastrój dziś</div>
+    <div style="display:flex;justify-content:center;gap:10px;padding:8px 0 16px">
+      ${EMOJIS.map((e,i)=>`<button class="mob-mood-btn ${mood.score===i+1?'active':''}" onclick="mobSetMoodModal(${i+1})" id="mob-mm-${i+1}">${e}<div style="font-size:9px;margin-top:3px;font-weight:600;color:var(--text3)">${LABELS[i]}</div></button>`).join('')}
+    </div>
+    <label class="mob-form-label">Notatka (opcjonalnie)</label>
+    <textarea class="mob-form-textarea" id="mob-mood-modal-note" placeholder="Jak się czujesz?" rows="3">${mood.note||''}</textarea>
+    <button class="mob-form-submit" onclick="mobSaveMoodModal()">Zapisz nastrój</button>
+  `);
+}
+
+function mobSetMoodModal(score) {
+  document.querySelectorAll('[id^="mob-mm-"]').forEach(b=>b.classList.remove('active'));
+  document.getElementById('mob-mm-'+score)?.classList.add('active');
+  window._mobMoodScore = score;
+}
+
+function mobSaveMoodModal() {
+  const key = new Date().toISOString().slice(0,10);
+  const note = document.getElementById('mob-mood-modal-note')?.value||'';
+  const score = window._mobMoodScore || (S.mood?.[key]?.score||0);
+  if (!S.mood) S.mood={};
+  S.mood[key] = {score, tags:[], note};
+  saveS(); closeMobModal();
 }
 
 function mobOpenAI() {
