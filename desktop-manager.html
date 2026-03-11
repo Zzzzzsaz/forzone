@@ -3054,15 +3054,19 @@ function supaReady(){ return !!(supabase && currentUser); }
 async function supaInit(){
   if(!SUPABASE_URL || !SUPABASE_KEY) return false;
   try{
-    if(!window.supabaseLib){
-      await new Promise((res,rej)=>{
-        const s=document.createElement('script');
-        s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
-        s.onload=()=>{window.supabaseLib=window.supabase;res();}; s.onerror=rej;
-        document.head.appendChild(s);
-      });
-    }
-    supabase = window.supabaseLib.createClient(SUPABASE_URL, SUPABASE_KEY);
+    await new Promise((res,rej)=>{
+      // Timeout after 5s if CDN fails
+      const t = setTimeout(()=>rej(new Error('CDN timeout')), 5000);
+      const s = document.createElement('script');
+      s.src = 'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js';
+      s.onload = ()=>{ clearTimeout(t); res(); };
+      s.onerror = ()=>{ clearTimeout(t); rej(new Error('CDN load error')); };
+      document.head.appendChild(s);
+    });
+    const lib = window.supabase;
+    const createClient = lib?.createClient || lib?.default?.createClient;
+    if(!createClient) throw new Error('createClient not found');
+    supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
     return true;
   }catch(e){ console.warn('Supabase init failed',e); return false; }
 }
@@ -3199,22 +3203,29 @@ function bootOffline(){
 }
 
 async function bootOnline(){
-  const ok = await supaInit();
-  if(!ok){
-    // Supabase not configured — go offline, show banner
-    document.getElementById('supa-banner')?.classList.add('show');
-    loadS(); bootApp(); return;
-  }
-  document.getElementById('loading-txt').textContent='Sprawdzanie sesji...';
+  // Safety timeout — if nothing happens in 6s, go offline
+  const fallback = setTimeout(()=>{ loadS(); bootApp(); }, 6000);
   try{
+    const ok = await supaInit();
+    if(!ok){
+      clearTimeout(fallback);
+      document.getElementById('supa-banner')?.classList.add('show');
+      loadS(); bootApp(); return;
+    }
+    document.getElementById('loading-txt').textContent='Sprawdzanie sesji...';
     const {data:{session}} = await supabase.auth.getSession();
+    clearTimeout(fallback);
     if(session?.user){
       currentUser = session.user;
       await bootWithAuth();
     } else {
       showAuthScreen();
     }
-  }catch(e){ loadS(); bootApp(); }
+  }catch(e){
+    clearTimeout(fallback);
+    console.warn('bootOnline error',e);
+    loadS(); bootApp();
+  }
 }
 
 function showSupaConfigHelp(){
@@ -7866,9 +7877,7 @@ function bootApp(){
 // ── PWA Service Worker registration ──
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('service-worker.js')
-      .then(r=>console.log('SW registered',r.scope))
-      .catch(e=>console.log('SW failed',e));
+    navigator.serviceWorker.register('service-worker.js').catch(()=>{});
   });
 }
 
