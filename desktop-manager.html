@@ -1986,94 +1986,10 @@ body.dark .order-card{background:var(--surface2)}
   border-color:var(--accent);outline:none;box-shadow:0 0 0 3px rgba(79,126,248,.12)
 }
 
-/* ══ AUTH / LOGIN SCREEN ══ */
-#auth-screen{
-  position:fixed;inset:0;z-index:999999;
-  background:linear-gradient(135deg,#1a1815 0%,#2d2a26 50%,#1e3a8a 100%);
-  display:flex;align-items:center;justify-content:center;font-family:'DM Sans',sans-serif;
-}
-#auth-screen.hidden{display:none}
-.auth-card{
-  background:rgba(255,255,255,.07);backdrop-filter:blur(20px);
-  border:1px solid rgba(255,255,255,.12);border-radius:20px;
-  padding:36px 40px;width:360px;max-width:95vw;box-shadow:0 30px 80px rgba(0,0,0,.5);
-}
-.auth-logo{font-size:40px;text-align:center;margin-bottom:6px}
-.auth-title{font-size:22px;font-weight:800;color:#fff;text-align:center;margin-bottom:4px}
-.auth-sub{font-size:13px;color:rgba(255,255,255,.45);text-align:center;margin-bottom:24px}
-.auth-label{font-size:11px;font-weight:700;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;display:block}
-.auth-input{
-  width:100%;height:42px;border-radius:11px;border:1.5px solid rgba(255,255,255,.12);
-  background:rgba(255,255,255,.07);color:#fff;font-size:14px;padding:0 14px;
-  margin-bottom:12px;outline:none;transition:border-color .15s;
-}
-.auth-input::placeholder{color:rgba(255,255,255,.25)}
-.auth-input:focus{border-color:rgba(79,126,248,.7);background:rgba(255,255,255,.1)}
-.auth-btn{
-  width:100%;height:44px;border-radius:12px;border:none;
-  background:linear-gradient(135deg,#2d5be3,#1a3ea8);
-  color:#fff;font-size:14px;font-weight:700;cursor:pointer;
-  transition:all .15s;margin-top:4px;
-}
-.auth-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(45,91,227,.4)}
-.auth-btn.secondary{background:rgba(255,255,255,.08);margin-top:8px}
-.auth-btn.secondary:hover{background:rgba(255,255,255,.14)}
-.auth-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
-.auth-err{color:#f87171;font-size:12.5px;text-align:center;margin-top:8px;min-height:18px}
-.auth-mode-link{text-align:center;font-size:12px;color:rgba(255,255,255,.35);margin-top:14px;cursor:pointer}
-.auth-mode-link span{color:rgba(255,255,255,.65);text-decoration:underline}
-.auth-offline-note{
-  text-align:center;font-size:11.5px;color:rgba(255,255,255,.25);margin-top:10px;
-  cursor:pointer;text-decoration:underline;
-}
-#loading-screen{
-  position:fixed;inset:0;z-index:999998;background:#1a1815;
-  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;
-}
-#loading-screen.hidden{display:none}
-.loading-pulse{font-size:48px;animation:lpulse 1.2s ease-in-out infinite}
-@keyframes lpulse{0%,100%{opacity:.4;transform:scale(.94)}50%{opacity:1;transform:scale(1.06)}}
-.loading-txt{color:rgba(255,255,255,.35);font-size:13px;font-family:'DM Sans',sans-serif}
-#supa-banner{
-  position:fixed;bottom:96px;left:50%;transform:translateX(-50%);
-  background:#1e3a8a;color:#bfdbfe;font-size:12px;font-weight:600;
-  padding:8px 18px;border-radius:20px;z-index:9990;cursor:pointer;
-  display:none;border:1px solid rgba(96,165,250,.25);white-space:nowrap;
-}
-#supa-banner.show{display:block}
 </style>
 </head>
 <body>
 
-<!-- ══ LOADING SCREEN ══ -->
-<div id="loading-screen">
-  <div class="loading-pulse">🖥️</div>
-  <div class="loading-txt" id="loading-txt">Ładowanie...</div>
-</div>
-
-<!-- ══ AUTH SCREEN ══ -->
-<div id="auth-screen" class="hidden">
-  <div class="auth-card">
-    <div class="auth-logo">🖥️</div>
-    <div class="auth-title">Business OS</div>
-    <div class="auth-sub" id="auth-sub">Zaloguj się aby synchronizować dane</div>
-    <div id="auth-name-row" style="display:none">
-      <label class="auth-label">Twoje imię</label>
-      <input class="auth-input" id="auth-name" placeholder="Jak mam się do Ciebie zwracać?">
-    </div>
-    <label class="auth-label">Email</label>
-    <input class="auth-input" id="auth-email" type="email" placeholder="twoj@email.com" onkeydown="if(event.key==='Enter')authSubmit()">
-    <label class="auth-label">Hasło</label>
-    <input class="auth-input" id="auth-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')authSubmit()">
-    <button class="auth-btn" id="auth-submit-btn" onclick="authSubmit()">Zaloguj się</button>
-    <button class="auth-btn secondary" id="auth-toggle-btn" onclick="authToggleMode()">Nie mam konta — Zarejestruj się</button>
-    <div class="auth-err" id="auth-err"></div>
-    <div class="auth-offline-note" onclick="bootOffline()">Kontynuuj bez synchronizacji (tylko lokalnie)</div>
-  </div>
-</div>
-
-<!-- ══ SUPABASE NOT CONFIGURED BANNER ══ -->
-<div id="supa-banner" onclick="showSupaConfigHelp()">⚙️ Skonfiguruj Supabase dla synchronizacji →</div>
 
 <!-- ══════════════════════ SIDEBAR TAB ══════════════════════ -->
 <div id="sb-tab" onclick="toggleSidebar()">📱 MENU</div>
@@ -3046,10 +2962,9 @@ const SUPABASE_URL = 'https://usgjmtklmuzfkvlssttb.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzZ2ptdGtsbXV6Zmt2bHNzdHRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyMzkwNzMsImV4cCI6MjA4ODgxNTA3M30.Dr21caAeo_cEM3i8uAg6z6ncAU_Q9h7tluQVE0cZd-4';
 
 let supabase = null;
-let currentUser = null;
 let _saveTimer = null;
 
-function supaReady(){ return !!(supabase && currentUser); }
+function supaReady(){ return !!supabase; }
 
 async function supaInit(){
   if(!SUPABASE_URL || !SUPABASE_KEY) return false;
@@ -3071,10 +2986,11 @@ async function supaInit(){
   }catch(e){ console.warn('Supabase init failed',e); return false; }
 }
 
+const SUPA_STATE_ID = 'forzone-main-state';
 async function supaLoadState(){
   if(!supaReady()) return false;
   try{
-    const {data,error}=await supabase.from('user_state').select('data').eq('user_id',currentUser.id).maybeSingle();
+    const {data,error}=await supabase.from('app_state').select('data').eq('state_id',SUPA_STATE_ID).maybeSingle();
     if(error) throw error;
     if(data?.data){ S=data.data; }
     return true;
@@ -3087,9 +3003,9 @@ async function supaSaveState(){
   try{
     const now = new Date().toISOString();
     S._savedAt = Date.now();
-    await supabase.from('user_state').upsert(
-      {user_id:currentUser.id, data:S, updated_at:now},
-      {onConflict:'user_id'}
+    await supabase.from('app_state').upsert(
+      {state_id:SUPA_STATE_ID, data:S, updated_at:now},
+      {onConflict:'state_id'}
     );
     showSyncBadge('online');
   }catch(e){ console.warn('supaSave error',e); showSyncBadge('offline'); }
@@ -3132,124 +3048,28 @@ function saveS(){
   if(supaReady()){ clearTimeout(_saveTimer); _saveTimer=setTimeout(()=>supaSaveState(),2000); }
 }
 
-// ═══════════════ AUTH ═══════════════
-let authMode = 'login';
-
-function showAuthScreen(){
-  document.getElementById('loading-screen').classList.add('hidden');
-  document.getElementById('auth-screen').classList.remove('hidden');
-}
-function hideAuthScreen(){
-  document.getElementById('auth-screen').classList.add('hidden');
-  document.getElementById('loading-screen').classList.remove('hidden');
-}
-
-function authToggleMode(){
-  authMode = authMode==='login'?'register':'login';
-  const isReg=authMode==='register';
-  document.getElementById('auth-sub').textContent=isReg?'Stwórz konto — dane będą synchronizowane':'Zaloguj się do swojego Business OS';
-  document.getElementById('auth-submit-btn').textContent=isReg?'Zarejestruj się →':'Zaloguj się →';
-  document.getElementById('auth-toggle-btn').textContent=isReg?'Mam już konto — Zaloguj się':'Nie mam konta — Zarejestruj się';
-  document.getElementById('auth-name-row').style.display=isReg?'block':'none';
-  document.getElementById('auth-err').textContent='';
-}
-
-async function authSubmit(){
-  if(!supabase){notify('⚠️ Supabase nie skonfigurowany — edytuj SUPABASE_URL/KEY w pliku HTML');return;}
-  const email=(document.getElementById('auth-email')?.value||'').trim();
-  const pass=document.getElementById('auth-pass')?.value||'';
-  const name=(document.getElementById('auth-name')?.value||'').trim();
-  const errEl=document.getElementById('auth-err');
-  const btn=document.getElementById('auth-submit-btn');
-  if(!email||!pass){errEl.textContent='⚠️ Podaj email i hasło';return;}
-  btn.disabled=true; btn.textContent='⏳...'; errEl.textContent='';
-  try{
-    let result;
-    if(authMode==='register'){
-      result=await supabase.auth.signUp({email,password:pass,options:{data:{name}}});
-      if(result.error) throw result.error;
-      if(result.data?.user&&!result.data.session){
-        errEl.style.color='#86efac';
-        errEl.textContent='✅ Sprawdź email i kliknij link weryfikacyjny, potem zaloguj się.';
-        btn.disabled=false; btn.textContent='Zaloguj się →'; return;
-      }
-    } else {
-      result=await supabase.auth.signInWithPassword({email,password:pass});
-      if(result.error) throw result.error;
-    }
-    currentUser=result.data.user;
-    if(name&&authMode==='register'){S.settings=S.settings||{};S.settings.name=name;}
-    await bootWithAuth();
-  }catch(e){
-    errEl.textContent='❌ '+(e.message||'Błąd logowania');
-    btn.disabled=false; btn.textContent=authMode==='login'?'Zaloguj się →':'Zarejestruj się →';
-  }
-}
-
-async function bootWithAuth(){
-  hideAuthScreen();
-  document.getElementById('loading-txt').textContent='Pobieranie danych z chmury...';
-  const loaded=await supaLoadState();
-  if(!loaded) loadS();
-  else { try{localStorage.setItem('mys_v2',JSON.stringify(S))}catch(e){} }
-  bootApp();
-  // Start realtime AFTER UI is ready
-  setTimeout(()=>initRealtimeSync(), 500);
-}
-
-function bootOffline(){
-  document.getElementById('auth-screen').classList.add('hidden');
-  loadS(); bootApp();
-}
-
+// ═══════════════ BOOT — bez logowania ═══════════════
 async function bootOnline(){
-  // Safety timeout — if nothing happens in 6s, go offline
-  const fallback = setTimeout(()=>{ loadS(); bootApp(); }, 6000);
+  const fallback = setTimeout(()=>{ loadS(); bootApp(); }, 5000);
   try{
     const ok = await supaInit();
-    if(!ok){
-      clearTimeout(fallback);
-      document.getElementById('supa-banner')?.classList.add('show');
-      loadS(); bootApp(); return;
-    }
-    document.getElementById('loading-txt').textContent='Sprawdzanie sesji...';
-    const {data:{session}} = await supabase.auth.getSession();
     clearTimeout(fallback);
-    if(session?.user){
-      currentUser = session.user;
-      await bootWithAuth();
+    if(ok){
+      const loaded = await supaLoadState();
+      if(loaded){ try{localStorage.setItem('mys_v2',JSON.stringify(S))}catch(e){} }
+      else { loadS(); }
+      bootApp();
+      setTimeout(()=>initRealtimeSync(), 500);
     } else {
-      showAuthScreen();
+      loadS(); bootApp();
     }
   }catch(e){
     clearTimeout(fallback);
-    console.warn('bootOnline error',e);
     loadS(); bootApp();
   }
 }
 
-function showSupaConfigHelp(){
-  alert('Konfiguracja Supabase:\n\n1. Idź na supabase.com → New project\n2. Settings → API → skopiuj "Project URL" i "anon public" key\n3. Otwórz plik desktop-manager.html w edytorze tekstu\n4. Znajdź: const SUPABASE_URL = \'\'\n   i wklej swój URL między apostrofami\n5. Znajdź: const SUPABASE_KEY = \'\'\n   i wklej swój anon key\n6. W Supabase SQL Editor uruchom skrypt z pliku setup-supabase.sql\n7. Hostuj pliki na GitHub Pages / Netlify\n\nTyle! Synchronizacja zacznie działać automatycznie.');
-}
-
-async function signOut(){
-  if(supabase) await supabase.auth.signOut().catch(()=>{});
-  currentUser=null;
-  toast('Wylogowano','info',2000);
-  setTimeout(()=>location.reload(),1500);
-}
-
-function renderUserBadge(){
-  const el=document.getElementById('pill-user-badge');
-  if(!el) return;
-  if(currentUser){
-    el.style.display='flex';
-    el.querySelector('.badge-lbl').textContent=currentUser.email.split('@')[0];
-    el.title='Zalogowany: '+currentUser.email+' — kliknij aby wylogować';
-  } else {
-    el.style.display='none';
-  }
-}
+function renderUserBadge(){}
 
 // ═══════════════ TOAST NOTIFICATIONS ═══════════════
 function toast(msg, type='info', duration=3500){
@@ -7729,12 +7549,12 @@ function initRealtimeSync(){
   }
 
   realtimeChannel = supabase
-    .channel('bizos-state-'+currentUser.id)
+    .channel('bizos-state-main')
     .on('postgres_changes', {
       event:  'UPDATE',
       schema: 'public',
-      table:  'user_state',
-      filter: `user_id=eq.${currentUser.id}`
+      table:  'app_state',
+      filter: `state_id=eq.${SUPA_STATE_ID}`
     }, (payload) => {
       if(isReceivingUpdate) return;
       const incoming    = payload.new?.data;
@@ -7762,9 +7582,9 @@ document.addEventListener('visibilitychange', async () => {
   if(document.visibilityState === 'visible' && supaReady()){
     try{
       const {data} = await supabase
-        .from('user_state')
+        .from('app_state')
         .select('data, updated_at')
-        .eq('user_id', currentUser.id)
+        .eq('state_id', SUPA_STATE_ID)
         .maybeSingle();
       if(!data) return;
       const remoteTs = new Date(data.updated_at).getTime();
