@@ -2961,10 +2961,10 @@ const QUOTES=[
 const SUPABASE_URL = 'https://usgjmtklmuzfkvlssttb.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzZ2ptdGtsbXV6Zmt2bHNzdHRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyMzkwNzMsImV4cCI6MjA4ODgxNTA3M30.Dr21caAeo_cEM3i8uAg6z6ncAU_Q9h7tluQVE0cZd-4';
 
-let supabase = null;
+let supaClient = null;
 let _saveTimer = null;
 
-function supaReady(){ return !!supabase; }
+function supaReady(){ return !!supaClient; }
 
 async function supaInit(){
   if(!SUPABASE_URL || !SUPABASE_KEY) return false;
@@ -2981,7 +2981,7 @@ async function supaInit(){
     const lib = window.supabase;
     const createClient = lib?.createClient || lib?.default?.createClient;
     if(!createClient) throw new Error('createClient not found');
-    supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    supaClient = createClient(SUPABASE_URL, SUPABASE_KEY);
     return true;
   }catch(e){ console.warn('Supabase init failed',e); return false; }
 }
@@ -2990,7 +2990,7 @@ const SUPA_STATE_ID = 'forzone-main-state';
 async function supaLoadState(){
   if(!supaReady()) return false;
   try{
-    const {data,error}=await supabase.from('app_state').select('data').eq('state_id',SUPA_STATE_ID).maybeSingle();
+    const {data,error}=await supaClient.from('app_state').select('data').eq('state_id',SUPA_STATE_ID).maybeSingle();
     if(error) throw error;
     if(data?.data){ S=data.data; }
     return true;
@@ -3003,7 +3003,7 @@ async function supaSaveState(){
   try{
     const now = new Date().toISOString();
     S._savedAt = Date.now();
-    await supabase.from('app_state').upsert(
+    await supaClient.from('app_state').upsert(
       {state_id:SUPA_STATE_ID, data:S, updated_at:now},
       {onConflict:'state_id'}
     );
@@ -7544,7 +7544,7 @@ function initRealtimeSync(){
 
   // Clean up existing channel if reconnecting
   if(realtimeChannel){
-    supabase.removeChannel(realtimeChannel);
+    supaClient.removeChannel(realtimeChannel);
     realtimeChannel = null;
   }
 
@@ -7659,7 +7659,6 @@ function bootApp(){
   initSidebarEvents();
   renderUserBadge();
   // Hide loading screen — show app
-  document.getElementById('loading-screen').classList.add('hidden');
   // Default quicklinks
   if(!S.quickLinks||!S.quickLinks.length){
     S.quickLinks=[
