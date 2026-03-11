@@ -1986,9 +1986,580 @@ body.dark .order-card{background:var(--surface2)}
   border-color:var(--accent);outline:none;box-shadow:0 0 0 3px rgba(79,126,248,.12)
 }
 
+/* ══════════════════════════════════════════
+   MOBILE LAYOUT — wyświetla się gdy szerokość < 768px
+   ══════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* Ukryj wszystkie elementy desktop */
+  #sb-tab, #left-sidebar, #sched-tab, #sched-panel,
+  #focus-panel, #desktop, #dock, #info-widget,
+  .launcher-overlay, #ctx-menu { display: none !important; }
+
+  /* Pokaż mobile shell */
+  #mob-shell { display: flex !important; }
+}
+
+/* Mobile shell — domyślnie ukryty na desktop */
+#mob-shell {
+  display: none;
+  flex-direction: column;
+  height: 100dvh;
+  height: 100vh;
+  background: var(--bg);
+  font-family: 'DM Sans', sans-serif;
+  overflow: hidden;
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+}
+
+/* ── Top bar ── */
+#mob-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  height: 56px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  padding-top: env(safe-area-inset-top);
+}
+.mob-topbar-left { display: flex; align-items: center; gap: 10px; }
+.mob-topbar-logo { font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -.03em; }
+.mob-topbar-sub { font-size: 11px; color: var(--text3); font-weight: 500; }
+.mob-dark-btn {
+  width: 34px; height: 34px; border-radius: 50%; border: none;
+  background: var(--surface2); font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+#mob-sync-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--green); flex-shrink: 0;
+}
+
+/* ── Content area ── */
+#mob-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 90px;
+}
+
+/* ── Bottom nav ── */
+#mob-nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: calc(62px + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-around;
+  padding-top: 8px;
+  z-index: 100;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.mob-nav-btn {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 3px;
+  background: none; border: none; cursor: pointer;
+  padding: 4px 8px; border-radius: 12px;
+  transition: background .15s;
+  min-width: 52px;
+}
+.mob-nav-btn:active { background: var(--surface2); }
+.mob-nav-btn.active .mob-nav-icon {
+  background: var(--accent);
+}
+.mob-nav-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--surface2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; transition: background .15s;
+}
+.mob-nav-btn.active .mob-nav-icon { background: var(--accent); }
+.mob-nav-label {
+  font-size: 10px; font-weight: 600; color: var(--text3);
+  transition: color .15s;
+}
+.mob-nav-btn.active .mob-nav-label { color: var(--accent); }
+
+/* ── Sections ── */
+.mob-section { display: none; }
+.mob-section.active { display: block; }
+
+/* ── Section header ── */
+.mob-sec-header {
+  padding: 20px 18px 12px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.mob-sec-title {
+  font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -.03em;
+}
+.mob-sec-btn {
+  height: 34px; padding: 0 14px; border-radius: 10px;
+  background: var(--accent); color: #fff; border: none;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+}
+
+/* ── Cards ── */
+.mob-card {
+  margin: 0 14px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px 16px;
+}
+.mob-card-title {
+  font-size: 15px; font-weight: 700; color: var(--text);
+  margin-bottom: 4px;
+}
+.mob-card-sub {
+  font-size: 12.5px; color: var(--text2); line-height: 1.4;
+}
+
+/* ── Task item ── */
+.mob-task {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.mob-task:last-child { border-bottom: none; }
+.mob-task-check {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid var(--border2); background: none; cursor: pointer;
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; transition: all .15s;
+}
+.mob-task-check.done { background: var(--green); border-color: var(--green); color: #fff; }
+.mob-task-text { flex: 1; font-size: 14px; color: var(--text); line-height: 1.35; }
+.mob-task-text.done { text-decoration: line-through; color: var(--text3); }
+.mob-task-prio {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.mob-task-prio.high { background: var(--red); }
+.mob-task-prio.med  { background: var(--orange); }
+.mob-task-prio.low  { background: var(--green); }
+.mob-tasks-wrap {
+  margin: 0 14px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+/* ── Quick add ── */
+.mob-quick-add {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 18px;
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+  position: sticky; bottom: 62px;
+  z-index: 10;
+}
+.mob-quick-add input {
+  flex: 1; height: 38px; border-radius: 10px;
+  border: 1.5px solid var(--border); background: var(--surface);
+  padding: 0 12px; font-size: 14px; color: var(--text);
+  outline: none;
+}
+.mob-quick-add input:focus { border-color: var(--accent); }
+.mob-quick-add button {
+  width: 38px; height: 38px; border-radius: 10px;
+  background: var(--accent); border: none; color: #fff;
+  font-size: 20px; cursor: pointer; flex-shrink: 0;
+}
+
+/* ── Shop card ── */
+.mob-shop-card {
+  margin: 0 14px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.mob-shop-head {
+  padding: 14px 16px 10px;
+  display: flex; align-items: center; gap: 12px;
+}
+.mob-shop-icon {
+  width: 40px; height: 40px; border-radius: 11px;
+  background: var(--accent-light); display: flex;
+  align-items: center; justify-content: center; font-size: 20px;
+}
+.mob-shop-info { flex: 1; }
+.mob-shop-name { font-size: 15px; font-weight: 700; color: var(--text); }
+.mob-shop-plat { font-size: 11.5px; color: var(--text3); font-weight: 500; }
+.mob-shop-status {
+  height: 22px; padding: 0 9px; border-radius: 20px;
+  font-size: 11px; font-weight: 700; display: flex; align-items: center;
+}
+.mob-shop-kpis {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  border-top: 1px solid var(--border);
+}
+.mob-kpi {
+  padding: 10px 12px; text-align: center;
+  border-right: 1px solid var(--border);
+}
+.mob-kpi:last-child { border-right: none; }
+.mob-kpi-val { font-size: 14px; font-weight: 800; color: var(--text); font-family: 'DM Mono',monospace; }
+.mob-kpi-lbl { font-size: 10px; color: var(--text3); font-weight: 600; margin-top: 2px; }
+
+/* ── Stats row ── */
+.mob-stats-row {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 10px; padding: 0 14px 10px;
+}
+.mob-stat-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 14px;
+}
+.mob-stat-val {
+  font-size: 22px; font-weight: 800; color: var(--text);
+  font-family: 'DM Mono', monospace; letter-spacing: -.03em;
+}
+.mob-stat-lbl {
+  font-size: 11px; color: var(--text3); font-weight: 600;
+  margin-top: 3px; text-transform: uppercase; letter-spacing: .04em;
+}
+
+/* ── Budget rows ── */
+.mob-budget-row {
+  display: flex; align-items: center;
+  padding: 12px 18px; border-bottom: 1px solid var(--border);
+  gap: 12px; background: var(--surface);
+}
+.mob-budget-row:last-child { border-bottom: none; }
+.mob-budget-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.mob-budget-info { flex: 1; }
+.mob-budget-label { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.mob-budget-cat { font-size: 11.5px; color: var(--text3); }
+.mob-budget-amt { font-size: 14px; font-weight: 700; font-family: 'DM Mono',monospace; }
+.mob-budget-wrap {
+  margin: 0 14px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px; overflow: hidden;
+}
+.mob-budget-tabs {
+  display: flex; padding: 14px 16px 0; gap: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.mob-budget-tab {
+  height: 32px; padding: 0 14px; border-radius: 8px 8px 0 0;
+  border: none; background: none; font-size: 12.5px; font-weight: 600;
+  color: var(--text3); cursor: pointer; transition: all .15s;
+}
+.mob-budget-tab.active {
+  background: var(--accent); color: #fff;
+}
+
+/* ── Mood ── */
+.mob-mood-row {
+  display: flex; justify-content: center; gap: 10px;
+  padding: 16px 18px;
+}
+.mob-mood-btn {
+  width: 52px; height: 52px; border-radius: 50%;
+  border: 2.5px solid var(--border); background: var(--surface2);
+  font-size: 24px; cursor: pointer; transition: all .15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.mob-mood-btn.active { transform: scale(1.15); border-color: var(--accent); }
+
+/* ── Habits ── */
+.mob-habit-row {
+  display: flex; align-items: center;
+  padding: 13px 18px; border-bottom: 1px solid var(--border);
+  gap: 12px; background: var(--surface);
+}
+.mob-habit-row:last-child { border-bottom: none; }
+.mob-habit-icon { font-size: 22px; width: 36px; text-align: center; flex-shrink: 0; }
+.mob-habit-name { flex: 1; font-size: 14px; font-weight: 600; color: var(--text); }
+.mob-habit-streak { font-size: 11.5px; color: var(--text3); }
+.mob-habit-check {
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 2px solid var(--border2); background: none;
+  cursor: pointer; font-size: 14px; transition: all .15s;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.mob-habit-check.done { background: var(--green); border-color: var(--green); color: #fff; }
+
+/* ── Orders kanban → list on mobile ── */
+.mob-order-card {
+  margin: 0 14px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px; padding: 14px 16px;
+}
+.mob-order-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.mob-order-client { font-size: 15px; font-weight: 700; color: var(--text); flex: 1; }
+.mob-order-status {
+  height: 22px; padding: 0 9px; border-radius: 20px;
+  font-size: 11px; font-weight: 700;
+}
+.mob-order-service { font-size: 13px; color: var(--text2); margin-bottom: 6px; }
+.mob-order-meta { display: flex; gap: 12px; }
+.mob-order-meta span { font-size: 12px; color: var(--text3); }
+
+/* ── Notes textarea ── */
+.mob-notes-area {
+  width: 100%; min-height: 200px;
+  border: none; outline: none; resize: none;
+  background: transparent; font-size: 14.5px;
+  color: var(--text); line-height: 1.6; padding: 16px 18px;
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* ── Empty state ── */
+.mob-empty {
+  text-align: center; padding: 40px 20px;
+  color: var(--text3); font-size: 14px;
+}
+.mob-empty .mob-empty-icon { font-size: 40px; margin-bottom: 10px; }
+
+/* ── Modal overlay (shared with desktop) ── */
+.mob-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.5);
+  z-index: 999999; display: flex; align-items: flex-end;
+  padding: 0;
+}
+.mob-modal {
+  background: var(--surface); border-radius: 24px 24px 0 0;
+  width: 100%; max-height: 90dvh; overflow-y: auto;
+  padding: 20px 18px calc(20px + env(safe-area-inset-bottom));
+  animation: mob-slide-up .25s ease;
+}
+@keyframes mob-slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.mob-modal-handle {
+  width: 40px; height: 4px; border-radius: 2px;
+  background: var(--border2); margin: 0 auto 18px;
+}
+.mob-modal-title {
+  font-size: 18px; font-weight: 800; color: var(--text);
+  margin-bottom: 16px; letter-spacing: -.02em;
+}
+.mob-form-label {
+  font-size: 11px; font-weight: 700; color: var(--text3);
+  text-transform: uppercase; letter-spacing: .07em;
+  display: block; margin-bottom: 5px; margin-top: 12px;
+}
+.mob-form-input {
+  width: 100%; height: 44px; border-radius: 12px;
+  border: 1.5px solid var(--border); background: var(--surface2);
+  padding: 0 14px; font-size: 14px; color: var(--text); outline: none;
+}
+.mob-form-input:focus { border-color: var(--accent); }
+.mob-form-textarea {
+  width: 100%; border-radius: 12px;
+  border: 1.5px solid var(--border); background: var(--surface2);
+  padding: 10px 14px; font-size: 14px; color: var(--text);
+  outline: none; resize: none; min-height: 80px;
+  font-family: 'DM Sans', sans-serif; line-height: 1.5;
+}
+.mob-form-textarea:focus { border-color: var(--accent); }
+.mob-form-submit {
+  width: 100%; height: 48px; border-radius: 14px;
+  background: var(--accent); border: none; color: #fff;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+  margin-top: 20px; letter-spacing: -.01em;
+}
+
+/* Dark mode adjustments */
+body.dark #mob-shell { background: #1a1815; }
+body.dark #mob-topbar,
+body.dark #mob-nav { background: #222; border-color: #333; }
+body.dark .mob-card,
+body.dark .mob-tasks-wrap,
+body.dark .mob-shop-card,
+body.dark .mob-budget-wrap,
+body.dark .mob-order-card { background: #222; border-color: #333; }
+body.dark .mob-task,
+body.dark .mob-budget-row,
+body.dark .mob-habit-row { background: #222; border-color: #333; }
+body.dark .mob-stat-box { background: #222; border-color: #333; }
+body.dark .mob-modal { background: #222; }
+body.dark .mob-form-input,
+body.dark .mob-form-textarea { background: #2a2a2a; border-color: #444; color: #f0ede8; }
+body.dark .mob-quick-add { background: #1a1815; border-color: #333; }
+body.dark .mob-quick-add input { background: #2a2a2a; border-color: #444; color: #f0ede8; }
+
 </style>
 </head>
 <body>
+
+<!-- ══════════════════════════════════════════
+     MOBILE SHELL
+     ══════════════════════════════════════════ -->
+<div id="mob-shell">
+
+  <!-- Top bar -->
+  <div id="mob-topbar">
+    <div class="mob-topbar-left">
+      <div id="mob-sync-dot" title="Sync status"></div>
+      <div>
+        <div class="mob-topbar-logo" id="mob-logo-text">BizOS</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span id="mob-sync-label" style="font-size:11px;color:var(--text3);font-weight:600"></span>
+      <button class="mob-dark-btn" onclick="toggleDark()">🌙</button>
+    </div>
+  </div>
+
+  <!-- Scrollable content -->
+  <div id="mob-content">
+
+    <!-- ── SEKCJA: PRZEGLĄD ── -->
+    <div class="mob-section active" id="mob-sec-home">
+      <div class="mob-sec-header">
+        <div class="mob-sec-title" id="mob-greeting">Cześć 👋</div>
+      </div>
+      <!-- Stats -->
+      <div class="mob-stats-row" id="mob-stats-row"></div>
+      <!-- Zadania dziś -->
+      <div style="padding:0 14px 8px">
+        <div style="font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Zadania na dziś</div>
+      </div>
+      <div class="mob-tasks-wrap" id="mob-home-tasks"></div>
+      <!-- Sklepy skrót -->
+      <div style="padding:14px 14px 8px">
+        <div style="font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Sklepy</div>
+      </div>
+      <div id="mob-home-shops"></div>
+    </div>
+
+    <!-- ── SEKCJA: ZADANIA ── -->
+    <div class="mob-section" id="mob-sec-tasks">
+      <div class="mob-sec-header">
+        <div class="mob-sec-title">Zadania</div>
+        <button class="mob-sec-btn" onclick="mobAddTask()">+ Dodaj</button>
+      </div>
+      <!-- Priority filter -->
+      <div style="display:flex;gap:6px;padding:0 14px 12px;overflow-x:auto">
+        <button class="mob-filter-btn active" data-filter="all" onclick="mobFilterTasks(this,'all')" style="height:30px;padding:0 14px;border-radius:20px;border:1.5px solid var(--accent);background:var(--accent);color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Wszystkie</button>
+        <button class="mob-filter-btn" data-filter="high" onclick="mobFilterTasks(this,'high')" style="height:30px;padding:0 14px;border-radius:20px;border:1.5px solid var(--border);background:none;color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🔴 Pilne</button>
+        <button class="mob-filter-btn" data-filter="med" onclick="mobFilterTasks(this,'med')" style="height:30px;padding:0 14px;border-radius:20px;border:1.5px solid var(--border);background:none;color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🟠 Normalne</button>
+        <button class="mob-filter-btn" data-filter="low" onclick="mobFilterTasks(this,'low')" style="height:30px;padding:0 14px;border-radius:20px;border:1.5px solid var(--border);background:none;color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🟢 Niskie</button>
+      </div>
+      <div class="mob-tasks-wrap" id="mob-tasks-list"></div>
+      <div class="mob-quick-add">
+        <input id="mob-task-inp" placeholder="Nowe zadanie..." onkeydown="if(event.key==='Enter')mobQuickAddTask()">
+        <button onclick="mobQuickAddTask()">+</button>
+      </div>
+    </div>
+
+    <!-- ── SEKCJA: SKLEPY ── -->
+    <div class="mob-section" id="mob-sec-shops">
+      <div class="mob-sec-header">
+        <div class="mob-sec-title">Sklepy</div>
+        <button class="mob-sec-btn" onclick="mobAddShop()">+ Dodaj</button>
+      </div>
+      <div id="mob-shops-list"></div>
+    </div>
+
+    <!-- ── SEKCJA: FINANSE ── -->
+    <div class="mob-section" id="mob-sec-budget">
+      <div class="mob-sec-header">
+        <div class="mob-sec-title">Finanse</div>
+        <div style="display:flex;gap:6px">
+          <button style="height:34px;padding:0 12px;border-radius:10px;border:1.5px solid var(--border);background:none;color:var(--text2);font-size:12px;font-weight:700;cursor:pointer" onclick="mobBudgetPrevMonth()">‹</button>
+          <div id="mob-budget-month" style="height:34px;padding:0 12px;display:flex;align-items:center;font-size:13px;font-weight:700;color:var(--text)"></div>
+          <button style="height:34px;padding:0 12px;border-radius:10px;border:1.5px solid var(--border);background:none;color:var(--text2);font-size:12px;font-weight:700;cursor:pointer" onclick="mobBudgetNextMonth()">›</button>
+        </div>
+      </div>
+      <!-- Summary boxes -->
+      <div class="mob-stats-row" id="mob-budget-stats"></div>
+      <!-- Tabs -->
+      <div style="margin:0 14px 0;background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden">
+        <div class="mob-budget-tabs">
+          <button class="mob-budget-tab active" onclick="mobBudgetTab(this,'income')">Przychody</button>
+          <button class="mob-budget-tab" onclick="mobBudgetTab(this,'expense')">Wydatki</button>
+          <button class="mob-budget-tab" onclick="mobBudgetTab(this,'payments')">Płatności</button>
+        </div>
+        <div id="mob-budget-body"></div>
+      </div>
+      <div style="height:12px"></div>
+      <div style="padding:0 14px">
+        <button class="mob-sec-btn" style="width:100%;height:44px;border-radius:12px" onclick="mobAddBudgetEntry()">+ Dodaj wpis</button>
+      </div>
+    </div>
+
+    <!-- ── SEKCJA: WIĘCEJ ── -->
+    <div class="mob-section" id="mob-sec-more">
+      <div class="mob-sec-header">
+        <div class="mob-sec-title">Więcej</div>
+      </div>
+      <!-- App grid -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 14px 14px" id="mob-more-grid"></div>
+      <!-- Nastrój -->
+      <div style="padding:0 14px 8px">
+        <div style="font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Nastrój dziś</div>
+      </div>
+      <div style="margin:0 14px 14px;background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden">
+        <div class="mob-mood-row" id="mob-mood-btns"></div>
+        <div style="padding:0 16px 14px">
+          <textarea class="mob-form-textarea" id="mob-mood-note" placeholder="Jak się czujesz? (opcjonalne)" rows="2" oninput="mobSaveMood()"></textarea>
+        </div>
+      </div>
+      <!-- Nawyki -->
+      <div style="padding:0 14px 8px">
+        <div style="font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Nawyki</div>
+      </div>
+      <div class="mob-tasks-wrap" id="mob-habits-list"></div>
+      <div style="height:20px"></div>
+    </div>
+
+  </div><!-- /mob-content -->
+
+  <!-- Bottom nav -->
+  <nav id="mob-nav">
+    <button class="mob-nav-btn active" id="mob-nav-home" onclick="mobNav(this,'home')">
+      <div class="mob-nav-icon">🏠</div>
+      <span class="mob-nav-label">Przegląd</span>
+    </button>
+    <button class="mob-nav-btn" id="mob-nav-tasks" onclick="mobNav(this,'tasks')">
+      <div class="mob-nav-icon">✅</div>
+      <span class="mob-nav-label">Zadania</span>
+    </button>
+    <button class="mob-nav-btn" id="mob-nav-shops" onclick="mobNav(this,'shops')">
+      <div class="mob-nav-icon">🏪</div>
+      <span class="mob-nav-label">Sklepy</span>
+    </button>
+    <button class="mob-nav-btn" id="mob-nav-budget" onclick="mobNav(this,'budget')">
+      <div class="mob-nav-icon">💳</div>
+      <span class="mob-nav-label">Finanse</span>
+    </button>
+    <button class="mob-nav-btn" id="mob-nav-more" onclick="mobNav(this,'more')">
+      <div class="mob-nav-icon">⋯</div>
+      <span class="mob-nav-label">Więcej</span>
+    </button>
+  </nav>
+
+</div><!-- /mob-shell -->
+
+<!-- Mobile modals -->
+<div id="mob-modal-overlay" class="mob-modal-overlay" style="display:none" onclick="if(event.target===this)closeMobModal()">
+  <div class="mob-modal" id="mob-modal-body">
+    <div class="mob-modal-handle"></div>
+    <div id="mob-modal-content"></div>
+  </div>
+</div>
 
 
 <!-- ══════════════════════ SIDEBAR TAB ══════════════════════ -->
@@ -7709,9 +8280,677 @@ function bootApp(){
   setTimeout(()=>renderDock(),50);
   setTimeout(()=>renderDock(),300);
   setTimeout(generateBriefing,1800);
+  // Mobile init
+  setTimeout(()=>initMobile(), 100);
 }
 
-// ── PWA Service Worker registration ──
+// ═══════════════════════════════════════════════════
+// MOBILE FUNCTIONS
+// ═══════════════════════════════════════════════════
+
+const isMobile = () => window.innerWidth <= 768;
+
+// ── Navigation ──
+let mobCurrentSection = 'home';
+let mobTaskFilter = 'all';
+let mobBudgetTabActive = 'income';
+let mobBudgetYear = new Date().getFullYear();
+let mobBudgetMonth = new Date().getMonth();
+
+function mobNav(btn, section) {
+  document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.mob-section').forEach(s => s.classList.remove('active'));
+  document.getElementById('mob-sec-' + section)?.classList.add('active');
+  mobCurrentSection = section;
+  document.getElementById('mob-content').scrollTop = 0;
+  mobRenderSection(section);
+}
+
+function mobRenderSection(section) {
+  if (section === 'home')   { mobRenderHome(); }
+  if (section === 'tasks')  { mobRenderTasks(); }
+  if (section === 'shops')  { mobRenderShops(); }
+  if (section === 'budget') { mobRenderBudget(); }
+  if (section === 'more')   { mobRenderMore(); }
+}
+
+// ── Home ──
+function mobRenderHome() {
+  if (!isMobile()) return;
+  // Greeting
+  const h = new Date().getHours();
+  const greet = h < 12 ? 'Dzień dobry 👋' : h < 18 ? 'Cześć 👋' : 'Dobry wieczór 👋';
+  const name = S.settings?.name || '';
+  document.getElementById('mob-greeting').textContent = greet + (name ? ', ' + name : '');
+
+  // Stats
+  const tasks = (S.tasks || []);
+  const done = tasks.filter(t => t.done).length;
+  const shops = (S.shops || []);
+  const today = new Date().toISOString().slice(0, 10);
+  const totalRev = shops.reduce((sum, sh) => {
+    return sum + (sh.entries || []).filter(e => e.date === today)
+      .reduce((s, e) => s + (e.revenues || []).reduce((r, rv) => r + (rv.amount || 0), 0), 0);
+  }, 0);
+  const bData = getBudgetData(mobBudgetYear, mobBudgetMonth);
+  const surplus = bData.totalIncome - bData.totalExpense;
+  const statsEl = document.getElementById('mob-stats-row');
+  statsEl.innerHTML = `
+    <div class="mob-stat-box">
+      <div class="mob-stat-val">${done}/${tasks.length}</div>
+      <div class="mob-stat-lbl">Zadania</div>
+    </div>
+    <div class="mob-stat-box">
+      <div class="mob-stat-val">${shops.length}</div>
+      <div class="mob-stat-lbl">Sklepy</div>
+    </div>
+    <div class="mob-stat-box">
+      <div class="mob-stat-val" style="font-size:16px">${surplus >= 0 ? '+' : ''}${Math.round(surplus).toLocaleString('pl')} zł</div>
+      <div class="mob-stat-lbl">Nadwyżka</div>
+    </div>
+    <div class="mob-stat-box">
+      <div class="mob-stat-val" style="font-size:16px">${Math.round(totalRev).toLocaleString('pl')} zł</div>
+      <div class="mob-stat-lbl">Dziś sprzedaż</div>
+    </div>`;
+
+  // Today tasks (undone, high priority first)
+  const todayTasks = tasks.filter(t => !t.done)
+    .sort((a, b) => (['high','med','low'].indexOf(a.priority) - ['high','med','low'].indexOf(b.priority)))
+    .slice(0, 5);
+  const homeTasksEl = document.getElementById('mob-home-tasks');
+  if (!todayTasks.length) {
+    homeTasksEl.innerHTML = '<div class="mob-empty"><div class="mob-empty-icon">🎉</div>Wszystko zrobione!</div>';
+  } else {
+    homeTasksEl.innerHTML = todayTasks.map(t => mobTaskHTML(t)).join('');
+  }
+
+  // Shops mini
+  const shopsEl = document.getElementById('mob-home-shops');
+  shopsEl.innerHTML = shops.slice(0, 3).map(sh => mobShopCardHTML(sh, true)).join('');
+}
+
+// ── Tasks ──
+function mobRenderTasks() {
+  if (!isMobile()) return;
+  let tasks = (S.tasks || []);
+  if (mobTaskFilter !== 'all') tasks = tasks.filter(t => t.priority === mobTaskFilter);
+  tasks = tasks.sort((a, b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    return ['high','med','low'].indexOf(a.priority) - ['high','med','low'].indexOf(b.priority);
+  });
+  const el = document.getElementById('mob-tasks-list');
+  if (!tasks.length) {
+    el.innerHTML = '<div class="mob-empty"><div class="mob-empty-icon">✅</div>Brak zadań w tej kategorii</div>';
+    return;
+  }
+  el.innerHTML = tasks.map(t => mobTaskHTML(t)).join('');
+}
+
+function mobTaskHTML(t) {
+  return `<div class="mob-task">
+    <button class="mob-task-check ${t.done ? 'done' : ''}" onclick="mobToggleTask(${t.id})">${t.done ? '✓' : ''}</button>
+    <div class="mob-task-text ${t.done ? 'done' : ''}">${escHtml(t.text)}</div>
+    <div class="mob-task-prio ${t.priority || 'low'}"></div>
+  </div>`;
+}
+
+function mobToggleTask(id) {
+  const t = (S.tasks || []).find(t => t.id === id);
+  if (t) { t.done = !t.done; saveS(); mobRenderTasks(); mobRenderHome(); renderTasks(); }
+}
+
+function mobFilterTasks(btn, filter) {
+  document.querySelectorAll('.mob-filter-btn').forEach(b => {
+    b.style.background = 'none'; b.style.color = 'var(--text2)'; b.style.borderColor = 'var(--border)';
+  });
+  btn.style.background = 'var(--accent)'; btn.style.color = '#fff'; btn.style.borderColor = 'var(--accent)';
+  mobTaskFilter = filter;
+  mobRenderTasks();
+}
+
+function mobQuickAddTask() {
+  const inp = document.getElementById('mob-task-inp');
+  const text = inp?.value?.trim();
+  if (!text) return;
+  if (!S.tasks) S.tasks = [];
+  S.tasks.push({ id: Date.now(), text, priority: 'med', done: false });
+  saveS(); inp.value = '';
+  mobRenderTasks(); mobRenderHome(); renderTasks();
+}
+
+function mobAddTask() {
+  showMobModal(`
+    <div class="mob-modal-title">Nowe zadanie</div>
+    <label class="mob-form-label">Treść zadania</label>
+    <input class="mob-form-input" id="mob-add-task-text" placeholder="Co trzeba zrobić?">
+    <label class="mob-form-label">Priorytet</label>
+    <select class="mob-form-input" id="mob-add-task-prio">
+      <option value="high">🔴 Wysoki</option>
+      <option value="med" selected>🟠 Normalny</option>
+      <option value="low">🟢 Niski</option>
+    </select>
+    <button class="mob-form-submit" onclick="mobSaveTask()">Dodaj zadanie</button>
+  `);
+  setTimeout(() => document.getElementById('mob-add-task-text')?.focus(), 100);
+}
+
+function mobSaveTask() {
+  const text = document.getElementById('mob-add-task-text')?.value?.trim();
+  const prio = document.getElementById('mob-add-task-prio')?.value || 'med';
+  if (!text) return;
+  if (!S.tasks) S.tasks = [];
+  S.tasks.push({ id: Date.now(), text, priority: prio, done: false });
+  saveS(); closeMobModal();
+  mobRenderTasks(); mobRenderHome(); renderTasks();
+}
+
+// ── Shops ──
+function mobRenderShops() {
+  if (!isMobile()) return;
+  const el = document.getElementById('mob-shops-list');
+  const shops = S.shops || [];
+  if (!shops.length) {
+    el.innerHTML = '<div class="mob-empty"><div class="mob-empty-icon">🏪</div>Brak sklepów. Dodaj pierwszy!</div>';
+    return;
+  }
+  el.innerHTML = shops.map(sh => mobShopCardHTML(sh, false)).join('');
+}
+
+function mobShopCardHTML(sh, mini) {
+  const today = new Date().toISOString().slice(0,10);
+  const todayEntry = (sh.entries||[]).find(e=>e.date===today);
+  const rev = (todayEntry?.revenues||[]).reduce((s,r)=>s+(r.amount||0),0);
+  const ads = (todayEntry?.adEntries||[]).reduce((s,a)=>s+(a.amount||0),0);
+  const roas = ads > 0 ? (rev/ads).toFixed(2)+'x' : '∞';
+  const statusColors = {active:'var(--green-bg)',warning:'var(--orange-bg)',paused:'var(--yellow-bg)',inactive:'var(--red-bg)'};
+  const statusTextColors = {active:'var(--green-text)',warning:'var(--orange-text)',paused:'var(--yellow-text)',inactive:'var(--red-text)'};
+  const statusLabels = {active:'Aktywny',warning:'Uwaga',paused:'Pauza',inactive:'Nieaktywny'};
+  const st = sh.status||'active';
+  return `<div class="mob-shop-card" onclick="mobOpenShop(${sh.id})">
+    <div class="mob-shop-head">
+      <div class="mob-shop-icon">🏪</div>
+      <div class="mob-shop-info">
+        <div class="mob-shop-name">${escHtml(sh.name)}</div>
+        <div class="mob-shop-plat">${escHtml(sh.platform||'')}</div>
+      </div>
+      <div class="mob-shop-status" style="background:${statusColors[st]};color:${statusTextColors[st]}">${statusLabels[st]||st}</div>
+    </div>
+    ${mini ? '' : `<div class="mob-shop-kpis">
+      <div class="mob-kpi"><div class="mob-kpi-val">${Math.round(rev).toLocaleString('pl')}</div><div class="mob-kpi-lbl">Sprzedaż dziś</div></div>
+      <div class="mob-kpi"><div class="mob-kpi-val">${Math.round(ads).toLocaleString('pl')}</div><div class="mob-kpi-lbl">Reklamy dziś</div></div>
+      <div class="mob-kpi"><div class="mob-kpi-val">${roas}</div><div class="mob-kpi-lbl">ROAS</div></div>
+    </div>`}
+  </div>`;
+}
+
+function mobOpenShop(id) {
+  const sh = (S.shops||[]).find(s=>s.id===id);
+  if (!sh) return;
+  const today = new Date().toISOString().slice(0,10);
+  const entry = (sh.entries||[]).find(e=>e.date===today);
+  const rev = (entry?.revenues||[]).reduce((s,r)=>s+(r.amount||0),0);
+  const ads = (entry?.adEntries||[]).reduce((s,a)=>s+(a.amount||0),0);
+  showMobModal(`
+    <div class="mob-modal-title">${escHtml(sh.name)}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      <div class="mob-stat-box"><div class="mob-stat-val" style="font-size:18px">${Math.round(rev).toLocaleString('pl')} zł</div><div class="mob-stat-lbl">Sprzedaż dziś</div></div>
+      <div class="mob-stat-box"><div class="mob-stat-val" style="font-size:18px">${Math.round(ads).toLocaleString('pl')} zł</div><div class="mob-stat-lbl">Reklamy dziś</div></div>
+    </div>
+    <label class="mob-form-label">Dodaj przychód (dziś)</label>
+    <input class="mob-form-input" id="mob-sh-rev" type="number" placeholder="0.00" style="margin-bottom:10px">
+    <label class="mob-form-label">Dodaj wydatek reklamowy (dziś)</label>
+    <input class="mob-form-input" id="mob-sh-ads" type="number" placeholder="0.00">
+    <button class="mob-form-submit" onclick="mobSaveShopEntry(${id})">Zapisz</button>
+  `);
+}
+
+function mobSaveShopEntry(shopId) {
+  const rev = parseFloat(document.getElementById('mob-sh-rev')?.value)||0;
+  const ads = parseFloat(document.getElementById('mob-sh-ads')?.value)||0;
+  if (!rev && !ads) { closeMobModal(); return; }
+  const sh = (S.shops||[]).find(s=>s.id===shopId);
+  if (!sh) return;
+  const today = new Date().toISOString().slice(0,10);
+  if (!sh.entries) sh.entries=[];
+  let entry = sh.entries.find(e=>e.date===today);
+  if (!entry) { entry={id:Date.now(),date:today,revenues:[],adEntries:[]}; sh.entries.push(entry); }
+  if (rev>0) entry.revenues.push({id:Date.now(),amount:rev});
+  if (ads>0) {
+    const pid = (sh.adPlatforms||[]).find(p=>p.enabled)?.id||'meta';
+    entry.adEntries.push({id:Date.now(),platformId:pid,amount:ads});
+  }
+  saveS(); closeMobModal(); mobRenderShops(); mobRenderHome(); renderShops();
+}
+
+function mobAddShop() {
+  showMobModal(`
+    <div class="mob-modal-title">Nowy sklep</div>
+    <label class="mob-form-label">Nazwa sklepu</label>
+    <input class="mob-form-input" id="mob-add-shop-name" placeholder="np. FashionDrop PL">
+    <label class="mob-form-label">Platforma</label>
+    <select class="mob-form-input" id="mob-add-shop-plat">
+      <option>Shopify</option><option>WooCommerce</option><option>Allegro</option>
+      <option>Amazon</option><option>eBay</option><option>Inne</option>
+    </select>
+    <button class="mob-form-submit" onclick="mobSaveNewShop()">Dodaj sklep</button>
+  `);
+  setTimeout(()=>document.getElementById('mob-add-shop-name')?.focus(),100);
+}
+
+function mobSaveNewShop() {
+  const name = document.getElementById('mob-add-shop-name')?.value?.trim();
+  const platform = document.getElementById('mob-add-shop-plat')?.value||'Shopify';
+  if (!name) return;
+  if (!S.shops) S.shops=[];
+  S.shops.push({id:Date.now(),name,platform,entries:[],adPlatforms:[{id:'meta',name:'Meta Ads',enabled:true,color:'#1877f2'}],status:'active',adsOn:false,campaignOk:false,vatRate:23,people:1,apiKey:'',notes:''});
+  saveS(); closeMobModal(); mobRenderShops(); renderShops();
+}
+
+// ── Budget ──
+function mobRenderBudget() {
+  if (!isMobile()) return;
+  const MONTHS = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
+  document.getElementById('mob-budget-month').textContent = MONTHS[mobBudgetMonth]+' '+mobBudgetYear;
+  const bd = getBudgetData(mobBudgetYear, mobBudgetMonth);
+  const surplus = bd.totalIncome - bd.totalExpense;
+  document.getElementById('mob-budget-stats').innerHTML = `
+    <div class="mob-stat-box">
+      <div class="mob-stat-val" style="font-size:17px;color:var(--green-text)">${Math.round(bd.totalIncome).toLocaleString('pl')} zł</div>
+      <div class="mob-stat-lbl">Przychody</div>
+    </div>
+    <div class="mob-stat-box">
+      <div class="mob-stat-val" style="font-size:17px;color:var(--red-text)">${Math.round(bd.totalExpense).toLocaleString('pl')} zł</div>
+      <div class="mob-stat-lbl">Wydatki</div>
+    </div>
+    <div class="mob-stat-box" style="grid-column:1/-1">
+      <div class="mob-stat-val" style="font-size:20px;color:${surplus>=0?'var(--green-text)':'var(--red-text)'}">${surplus>=0?'+':''}${Math.round(surplus).toLocaleString('pl')} zł</div>
+      <div class="mob-stat-lbl">Nadwyżka / Deficyt</div>
+    </div>`;
+  mobRenderBudgetBody(bd);
+}
+
+function mobBudgetTab(btn, tab) {
+  document.querySelectorAll('.mob-budget-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  mobBudgetTabActive = tab;
+  const bd = getBudgetData(mobBudgetYear, mobBudgetMonth);
+  mobRenderBudgetBody(bd);
+}
+
+function mobRenderBudgetBody(bd) {
+  const el = document.getElementById('mob-budget-body');
+  if (mobBudgetTabActive === 'income') {
+    if (!bd.incomes.length) { el.innerHTML='<div class="mob-empty">Brak przychodów</div>'; return; }
+    el.innerHTML = '<div class="mob-budget-wrap" style="margin:0;border:none;border-radius:0">'+bd.incomes.map(i=>`
+      <div class="mob-budget-row">
+        <div class="mob-budget-icon" style="background:var(--green-bg)">💚</div>
+        <div class="mob-budget-info">
+          <div class="mob-budget-label">${escHtml(i.label)}</div>
+          <div class="mob-budget-cat">${i.cat||''}</div>
+        </div>
+        <div class="mob-budget-amt" style="color:var(--green-text)">+${(i.amount||0).toLocaleString('pl')} zł</div>
+      </div>`).join('')+'</div>';
+  } else if (mobBudgetTabActive === 'expense') {
+    if (!bd.expenses.length) { el.innerHTML='<div class="mob-empty">Brak wydatków</div>'; return; }
+    el.innerHTML = '<div style="border:none">'+bd.expenses.map(e=>`
+      <div class="mob-budget-row">
+        <div class="mob-budget-icon" style="background:var(--red-bg)">${e.type==='fixed'?'🔁':'🧾'}</div>
+        <div class="mob-budget-info">
+          <div class="mob-budget-label">${escHtml(e.label)}</div>
+          <div class="mob-budget-cat">${e.type==='fixed'?'Stały':'Zmienny'}${e.dueDay?', '+e.dueDay+'. dnia':''}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          <div class="mob-budget-amt" style="color:var(--red-text)">-${(e.amount||0).toLocaleString('pl')} zł</div>
+          ${e.type==='fixed'?`<button onclick="mobTogglePaid('${e.id}')" style="height:22px;padding:0 8px;border-radius:6px;border:none;font-size:11px;font-weight:700;cursor:pointer;background:${e.paid?'var(--green-bg)':'var(--surface2)'};color:${e.paid?'var(--green-text)':'var(--text3)'}">${e.paid?'✓ Zapłacone':'○ Zapłać'}</button>`:''}
+        </div>
+      </div>`).join('')+'</div>';
+  } else {
+    // Payments view
+    const fixed = bd.expenses.filter(e=>e.type==='fixed').sort((a,b)=>(a.dueDay||0)-(b.dueDay||0));
+    if (!fixed.length) { el.innerHTML='<div class="mob-empty">Brak stałych płatności</div>'; return; }
+    const today = new Date().getDate();
+    el.innerHTML = '<div>'+fixed.map(e=>{
+      const overdue = !e.paid && e.dueDay && e.dueDay < today;
+      return `<div class="mob-budget-row" style="${overdue?'background:var(--red-bg)':''}">
+        <div class="mob-budget-icon" style="background:${e.paid?'var(--green-bg)':overdue?'var(--red-bg)':'var(--orange-bg)'}">${e.paid?'✓':overdue?'❗':'📅'}</div>
+        <div class="mob-budget-info">
+          <div class="mob-budget-label">${escHtml(e.label)}</div>
+          <div class="mob-budget-cat">${e.dueDay?e.dueDay+'. dnia miesiąca':''}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          <div class="mob-budget-amt">${(e.amount||0).toLocaleString('pl')} zł</div>
+          <button onclick="mobTogglePaid('${e.id}')" style="height:22px;padding:0 8px;border-radius:6px;border:none;font-size:11px;font-weight:700;cursor:pointer;background:${e.paid?'var(--green-bg)':'var(--accent)'};color:${e.paid?'var(--green-text)':'#fff'}">${e.paid?'✓ Zapłacone':'Zapłać'}</button>
+        </div>
+      </div>`;}).join('')+'</div>';
+  }
+}
+
+function mobTogglePaid(id) {
+  budgetTogglePaid(id);
+  const bd = getBudgetData(mobBudgetYear, mobBudgetMonth);
+  mobRenderBudgetBody(bd);
+}
+
+function mobBudgetPrevMonth() {
+  mobBudgetMonth--;
+  if (mobBudgetMonth < 0) { mobBudgetMonth=11; mobBudgetYear--; }
+  mobRenderBudget();
+}
+function mobBudgetNextMonth() {
+  mobBudgetMonth++;
+  if (mobBudgetMonth > 11) { mobBudgetMonth=0; mobBudgetYear++; }
+  mobRenderBudget();
+}
+
+function mobAddBudgetEntry() {
+  showMobModal(`
+    <div class="mob-modal-title">Nowy wpis</div>
+    <label class="mob-form-label">Typ</label>
+    <select class="mob-form-input" id="mob-entry-type" onchange="mobToggleBudgetEntryType()">
+      <option value="income">Przychód</option>
+      <option value="variable">Wydatek jednorazowy</option>
+      <option value="fixed">Wydatek stały</option>
+    </select>
+    <label class="mob-form-label">Opis</label>
+    <input class="mob-form-input" id="mob-entry-label" placeholder="np. Shopify, Meta Ads...">
+    <label class="mob-form-label">Kwota (zł)</label>
+    <input class="mob-form-input" id="mob-entry-amount" type="number" placeholder="0.00">
+    <div id="mob-entry-day-row" style="display:none">
+      <label class="mob-form-label">Dzień miesiąca (płatność)</label>
+      <input class="mob-form-input" id="mob-entry-day" type="number" min="1" max="31" placeholder="np. 15">
+    </div>
+    <button class="mob-form-submit" onclick="mobSaveBudgetEntry()">Dodaj</button>
+  `);
+}
+
+function mobToggleBudgetEntryType() {
+  const t = document.getElementById('mob-entry-type')?.value;
+  document.getElementById('mob-entry-day-row').style.display = t==='fixed'?'block':'none';
+}
+
+function mobSaveBudgetEntry() {
+  const type   = document.getElementById('mob-entry-type')?.value;
+  const label  = document.getElementById('mob-entry-label')?.value?.trim();
+  const amount = parseFloat(document.getElementById('mob-entry-amount')?.value)||0;
+  const day    = parseInt(document.getElementById('mob-entry-day')?.value)||null;
+  if (!label||!amount) return;
+  const key = `${mobBudgetYear}-${String(mobBudgetMonth+1).padStart(2,'0')}`;
+  if (!S.budget) S.budget={};
+  if (!S.budget[key]) S.budget[key]={incomes:[],expenses:[]};
+  if (type==='income') {
+    S.budget[key].incomes.push({id:Date.now(),cat:'inne',label,amount});
+  } else {
+    S.budget[key].expenses.push({id:Date.now(),cat:'inne',label,amount,type:type==='fixed'?'fixed':'variable',dueDay:day,paid:false});
+  }
+  saveS(); closeMobModal(); mobRenderBudget(); renderBudget();
+}
+
+// ── More / Habits / Mood ──
+function mobRenderMore() {
+  if (!isMobile()) return;
+  // App grid
+  const apps = [
+    {icon:'💡',label:'Pomysły',   action:"mobOpenIdeas()"},
+    {icon:'📋',label:'Plany',     action:"mobOpenPlans()"},
+    {icon:'📝',label:'Zlecenia',  action:"mobOpenOrders()"},
+    {icon:'📦',label:'Dostawcy',  action:"mobOpenSuppliers()"},
+    {icon:'📝',label:'Notatki',   action:"mobOpenNotes()"},
+    {icon:'🤖',label:'AI Asyst.', action:"mobOpenAI()"},
+  ];
+  document.getElementById('mob-more-grid').innerHTML = apps.map(a=>`
+    <button onclick="${a.action}" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px 12px;cursor:pointer;text-align:center;transition:all .15s" onactive="this.style.background='var(--surface2)'">
+      <div style="font-size:28px;margin-bottom:6px">${a.icon}</div>
+      <div style="font-size:13px;font-weight:700;color:var(--text)">${a.label}</div>
+    </button>`).join('');
+
+  // Mood
+  const todayKey = new Date().toISOString().slice(0,10);
+  const mood = (S.mood||{})[todayKey] || {};
+  const EMOJIS = ['😞','😕','😐','🙂','😁'];
+  document.getElementById('mob-mood-btns').innerHTML = EMOJIS.map((e,i)=>`
+    <button class="mob-mood-btn ${mood.score===i+1?'active':''}" onclick="mobSetMood(${i+1})">${e}</button>`).join('');
+  const noteEl = document.getElementById('mob-mood-note');
+  if (noteEl) noteEl.value = mood.note||'';
+
+  // Habits
+  mobRenderHabits();
+}
+
+function mobSetMood(score) {
+  const key = new Date().toISOString().slice(0,10);
+  if (!S.mood) S.mood={};
+  if (!S.mood[key]) S.mood[key]={score,tags:[],note:''};
+  S.mood[key].score = score;
+  saveS();
+  // re-render mood buttons
+  const EMOJIS = ['😞','😕','😐','🙂','😁'];
+  document.getElementById('mob-mood-btns').innerHTML = EMOJIS.map((e,i)=>`
+    <button class="mob-mood-btn ${score===i+1?'active':''}" onclick="mobSetMood(${i+1})">${e}</button>`).join('');
+}
+
+function mobSaveMood() {
+  const key = new Date().toISOString().slice(0,10);
+  const note = document.getElementById('mob-mood-note')?.value||'';
+  if (!S.mood) S.mood={};
+  if (!S.mood[key]) S.mood[key]={score:0,tags:[],note:''};
+  S.mood[key].note = note;
+  saveS();
+}
+
+function mobRenderHabits() {
+  const habits = S.habits||[];
+  const el = document.getElementById('mob-habits-list');
+  if (!el) return;
+  if (!habits.length) {
+    el.innerHTML='<div class="mob-empty"><div class="mob-empty-icon">💪</div>Brak nawyków. Dodaj pierwszy!</div>';
+    return;
+  }
+  const today = new Date().toISOString().slice(0,10);
+  el.innerHTML = habits.map(h=>{
+    const done = !!(h.completions||{})[today];
+    const streak = mobHabitStreak(h);
+    return `<div class="mob-habit-row">
+      <div class="mob-habit-icon">${h.icon||'⭐'}</div>
+      <div style="flex:1">
+        <div class="mob-habit-name">${escHtml(h.name)}</div>
+        ${streak>0?`<div class="mob-habit-streak">🔥 ${streak} dni z rzędu</div>`:''}
+      </div>
+      <button class="mob-habit-check ${done?'done':''}" onclick="mobToggleHabit(${h.id})">${done?'✓':''}</button>
+    </div>`;
+  }).join('');
+}
+
+function mobHabitStreak(h) {
+  let streak=0, d=new Date();
+  while(true) {
+    const k=d.toISOString().slice(0,10);
+    if(!(h.completions||{})[k]) break;
+    streak++; d.setDate(d.getDate()-1);
+  }
+  return streak;
+}
+
+function mobToggleHabit(id) {
+  const h=(S.habits||[]).find(h=>h.id===id); if(!h) return;
+  const today=new Date().toISOString().slice(0,10);
+  if(!h.completions) h.completions={};
+  h.completions[today]=!h.completions[today];
+  saveS(); mobRenderHabits(); renderHabits();
+}
+
+// ── More app openers ──
+function mobOpenOrders() {
+  const orders = (S.orders||[]).filter(o=>o.status!=='paid');
+  showMobModal(`
+    <div class="mob-modal-title">Zlecenia</div>
+    ${orders.length ? orders.map(o=>`
+      <div class="mob-order-card" style="margin:0 0 10px">
+        <div class="mob-order-head">
+          <div class="mob-order-client">${escHtml(o.client||'')}</div>
+          <div class="mob-order-status" style="background:var(--accent-light);color:var(--accent)">${o.status}</div>
+        </div>
+        <div class="mob-order-service">${escHtml(o.service||'')}</div>
+        <div class="mob-order-meta">
+          <span>💰 ${o.rate} ${o.currency}</span>
+          ${o.deadline?`<span>📅 ${o.deadline}</span>`:''}
+        </div>
+      </div>`).join('') : '<div class="mob-empty">Brak aktywnych zleceń</div>'}
+  `);
+}
+
+function mobOpenIdeas() {
+  const ideas = S.ideas||[];
+  showMobModal(`
+    <div class="mob-modal-title">Pomysły</div>
+    ${ideas.map(i=>`
+      <div class="mob-card" style="margin:0 0 10px">
+        <div class="mob-card-title">${escHtml(i.title||'')}</div>
+        <div class="mob-card-sub">${escHtml(i.desc||'')}</div>
+      </div>`).join('')}
+    <button class="mob-form-submit" onclick="mobAddIdea()">+ Nowy pomysł</button>
+  `);
+}
+
+function mobAddIdea() {
+  showMobModal(`
+    <div class="mob-modal-title">Nowy pomysł</div>
+    <label class="mob-form-label">Tytuł</label>
+    <input class="mob-form-input" id="mob-idea-title" placeholder="Nazwa pomysłu">
+    <label class="mob-form-label">Opis</label>
+    <textarea class="mob-form-textarea" id="mob-idea-desc" placeholder="Szczegóły..."></textarea>
+    <button class="mob-form-submit" onclick="mobSaveIdea()">Dodaj pomysł</button>
+  `);
+}
+
+function mobSaveIdea() {
+  const title = document.getElementById('mob-idea-title')?.value?.trim();
+  const desc  = document.getElementById('mob-idea-desc')?.value?.trim();
+  if (!title) return;
+  if (!S.ideas) S.ideas=[];
+  S.ideas.push({id:Date.now(),title,desc,priority:'med'});
+  saveS(); closeMobModal(); renderIdeas();
+}
+
+function mobOpenPlans() {
+  const plans = S.plans||[];
+  showMobModal(`
+    <div class="mob-modal-title">Plany & Cele</div>
+    ${plans.map(p=>`
+      <div class="mob-card" style="margin:0 0 10px">
+        <div class="mob-card-title">${escHtml(p.title||'')}</div>
+        <div style="margin-top:8px;height:6px;background:var(--surface3);border-radius:3px;overflow:hidden">
+          <div style="height:100%;width:${p.progress||0}%;background:var(--accent);border-radius:3px"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px">
+          <span style="font-size:11px;color:var(--text3)">${p.deadline||''}</span>
+          <span style="font-size:11px;font-weight:700;color:var(--accent)">${p.progress||0}%</span>
+        </div>
+      </div>`).join('')}
+  `);
+}
+
+function mobOpenNotes() {
+  showMobModal(`
+    <div class="mob-modal-title">Notatki</div>
+    <textarea class="mob-form-textarea" id="mob-notes-ta" style="min-height:200px" placeholder="Zapisz cokolwiek..." oninput="S.notes=this.value;saveS()">${escHtml(S.notes||'')}</textarea>
+  `);
+}
+
+function mobOpenSuppliers() {
+  const sups = S.suppliers||[];
+  showMobModal(`
+    <div class="mob-modal-title">Dostawcy</div>
+    ${sups.length ? sups.map(s=>`
+      <div class="mob-card" style="margin:0 0 10px">
+        <div class="mob-card-title">${escHtml(s.name||'')} <span style="font-size:11px;color:var(--text3)">${s.country||''}</span></div>
+        <div class="mob-card-sub">${escHtml(s.products||'')}</div>
+      </div>`).join('') : '<div class="mob-empty">Brak dostawców</div>'}
+  `);
+}
+
+function mobOpenAI() {
+  showMobModal(`
+    <div class="mob-modal-title">🤖 AI Asystent</div>
+    <div style="background:var(--surface2);border-radius:12px;padding:12px;margin-bottom:12px;font-size:13px;color:var(--text2);line-height:1.5" id="mob-ai-resp">Zadaj pytanie o swój biznes...</div>
+    <textarea class="mob-form-textarea" id="mob-ai-inp" placeholder="np. Jak idzie mi biznes w tym miesiącu?" rows="2"></textarea>
+    <button class="mob-form-submit" onclick="mobAskAI()">Zapytaj AI</button>
+  `);
+}
+
+async function mobAskAI() {
+  const inp = document.getElementById('mob-ai-inp')?.value?.trim();
+  if (!inp) return;
+  const respEl = document.getElementById('mob-ai-resp');
+  if (!respEl) return;
+  respEl.textContent = '⏳ Myślę...';
+  try {
+    const ctx = buildAIContext();
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,
+        messages:[{role:'user',content:`${ctx}\n\nPytanie: ${inp}`}]})
+    });
+    const data = await res.json();
+    respEl.textContent = data.content?.[0]?.text || 'Brak odpowiedzi';
+  } catch(e) { respEl.textContent = '❌ Błąd połączenia z AI'; }
+}
+
+// ── Modal helpers ──
+function showMobModal(html) {
+  document.getElementById('mob-modal-content').innerHTML = html;
+  document.getElementById('mob-modal-overlay').style.display = 'flex';
+  document.getElementById('mob-content').style.overflow = 'hidden';
+}
+function closeMobModal() {
+  document.getElementById('mob-modal-overlay').style.display = 'none';
+  document.getElementById('mob-content').style.overflow = 'auto';
+}
+
+// ── Sync status in mobile ──
+function mobShowSync(state) {
+  const dot = document.getElementById('mob-sync-dot');
+  const lbl = document.getElementById('mob-sync-label');
+  if (!dot||!lbl) return;
+  if (state==='online')  { dot.style.background='var(--green)';  lbl.textContent='Sync'; }
+  if (state==='saving')  { dot.style.background='var(--orange)'; lbl.textContent='Zapisywanie...'; }
+  if (state==='synced')  { dot.style.background='var(--accent)'; lbl.textContent='Zaktualizowano'; setTimeout(()=>mobShowSync('online'),2000); }
+  if (state==='offline') { dot.style.background='var(--text3)';  lbl.textContent='Offline'; }
+}
+
+// Hook sync badge to mobile too
+const _origShowSyncBadge = showSyncBadge;
+function showSyncBadge(state) {
+  _origShowSyncBadge(state);
+  mobShowSync(state);
+}
+
+// ── Boot mobile on load ──
+function initMobile() {
+  if (!isMobile()) return;
+  // Set name in topbar
+  const name = S.settings?.name;
+  if (name) document.getElementById('mob-logo-text').textContent = name.split(' ')[0]+'\'s OS';
+  mobRenderHome();
+}
+
+// Re-render mobile when data refreshes
+const _origRefreshAllUI = refreshAllUI;
+function refreshAllUI() {
+  _origRefreshAllUI();
+  if (isMobile()) {
+    mobRenderSection(mobCurrentSection);
+  }
+}
+
+// window resize: switch layouts
+window.addEventListener('resize', () => {
+  const m = isMobile();
+  document.getElementById('mob-shell').style.display = m ? 'flex' : 'none';
+  if (m) mobRenderSection(mobCurrentSection);
+});
+
+
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     navigator.serviceWorker.register('service-worker.js').catch(()=>{});
