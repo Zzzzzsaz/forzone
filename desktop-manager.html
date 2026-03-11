@@ -3027,7 +3027,7 @@ function applyMigrations(){
   if(!S.ideas)         S.ideas=[];
   if(!S.suppliers)     S.suppliers=[];
   if(!S.quickLinks)    S.quickLinks=[];
-  if(!S.habits)        S.habits={};
+  if(!S.habits || !Array.isArray(S.habits)) S.habits=[];
   if(!S.savings)       S.savings={};
   if(!S.savingsCats)   S.savingsCats=[];
   if(!S.budget)        S.budget={};
