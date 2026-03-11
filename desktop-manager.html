@@ -2992,7 +2992,10 @@ async function supaLoadState(){
   try{
     const {data,error}=await supaClient.from('app_state').select('data').eq('state_id',SUPA_STATE_ID).maybeSingle();
     if(error) throw error;
-    if(data?.data){ S=data.data; }
+    if(data?.data && Object.keys(data.data).length > 0){
+      S = {...S, ...data.data}; // merge so default arrays survive
+    }
+    applyMigrations(); // always ensure all fields exist
     return true;
   }catch(e){ console.warn('supaLoad error',e); return false; }
 }
@@ -3017,11 +3020,26 @@ function loadS(){
 }
 
 function applyMigrations(){
+  // Ensure all top-level arrays/objects exist
+  if(!S.shops)         S.shops=[];
+  if(!S.tasks)         S.tasks=[];
+  if(!S.plans)         S.plans=[];
+  if(!S.ideas)         S.ideas=[];
+  if(!S.suppliers)     S.suppliers=[];
+  if(!S.quickLinks)    S.quickLinks=[];
+  if(!S.habits)        S.habits={};
+  if(!S.savings)       S.savings={};
+  if(!S.savingsCats)   S.savingsCats=[];
+  if(!S.budget)        S.budget={};
+  if(!S.finance)       S.finance={};
   if(!S.desktopFolders) S.desktopFolders=[];
-  if(!S.desktopNotes) S.desktopNotes=[];
-  if(!S.schedule) S.schedule={};
-  if(!S.mood) S.mood={};
-  if(!S.orders) S.orders=[];
+  if(!S.desktopNotes)  S.desktopNotes=[];
+  if(!S.schedule)      S.schedule={};
+  if(!S.mood)          S.mood={};
+  if(!S.orders)        S.orders=[];
+  if(!S.calTasks)      S.calTasks={};
+  if(!S.notes)         S.notes='';
+  if(!S.settings)      S.settings={};
   (S.shops||[]).forEach(shop=>{
     if(!shop.apiKey) shop.apiKey='';
     if(!shop.people) shop.people=1;
