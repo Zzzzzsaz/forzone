@@ -469,6 +469,40 @@ body.dark .window{
 .win-body{flex:1;overflow-y:auto;padding:16px;scrollbar-width:thin;scrollbar-color:var(--border2) transparent}
 .win-body::-webkit-scrollbar{width:4px}
 .win-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+
+/* ── Notes app ── */
+.note-item{
+  padding:10px 12px;border-radius:10px;cursor:pointer;
+  border:1.5px solid transparent;margin-bottom:3px;transition:all .12s;
+}
+.note-item:hover{background:var(--surface2)}
+.note-item.active{background:var(--accent-light);border-color:var(--accent)}
+.note-item-title{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.note-item-preview{font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.note-item-date{font-size:10px;color:var(--text3);margin-top:2px}
+.ntb{
+  min-width:28px;height:28px;padding:0 6px;border:1.5px solid var(--border);
+  border-radius:6px;background:var(--surface);color:var(--text);
+  cursor:pointer;font-size:12px;font-weight:600;display:flex;align-items:center;
+  justify-content:center;transition:all .1s;white-space:nowrap;flex-shrink:0;
+}
+.ntb:hover{background:var(--surface2);border-color:var(--accent)}
+.ntb.active{background:var(--accent-light);border-color:var(--accent);color:var(--accent)}
+.ntb-sep{width:1px;height:20px;background:var(--border);margin:0 2px;flex-shrink:0}
+#notes-editor[data-placeholder]:empty::before{
+  content:attr(data-placeholder);color:var(--text3);pointer-events:none;font-style:italic;
+}
+#notes-editor h1{font-size:24px;font-weight:800;margin:10px 0 6px;color:var(--text)}
+#notes-editor h2{font-size:19px;font-weight:700;margin:8px 0 5px;color:var(--text)}
+#notes-editor h3{font-size:16px;font-weight:700;margin:6px 0 4px;color:var(--text)}
+#notes-editor ul{padding-left:22px;margin:4px 0}
+#notes-editor ol{padding-left:22px;margin:4px 0}
+#notes-editor li{margin:2px 0;line-height:1.6}
+#notes-editor table{border-collapse:collapse;margin:8px 0;width:100%}
+#notes-editor td,#notes-editor th{border:1.5px solid var(--border);padding:7px 10px;font-size:13px;min-width:60px}
+#notes-editor th{background:var(--surface2);font-weight:700}
+#notes-editor blockquote{border-left:3px solid var(--accent);margin:8px 0;padding:4px 12px;color:var(--text2);font-style:italic}
+
 #win-shops .win-body,#win-shops .shops-layout{padding:0;overflow:hidden;}
 
 .resize-handle{
@@ -2045,226 +2079,339 @@ body.dark .order-card{background:var(--surface2)}
 /* ══════════════ MOBILE ══════════════ */
 @media (max-width: 768px) {
 
-  /* ─── WINDOWS: pełny ekran, jedno naraz ─── */
-  .window {
-    position: fixed !important;
-    left: 0 !important; top: 0 !important;
-    width: 100vw !important; height: 100dvh !important;
-    border-radius: 0 !important; border: none !important;
-    box-shadow: none !important; transform: none !important;
-    z-index: 9000 !important; display: flex !important;
-    flex-direction: column !important;
-  }
-  .window.minimized { display: none !important; }
-  .resize-handle { display: none !important; }
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SHELL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.window {
+  position: fixed !important; left: 0 !important; top: 0 !important;
+  width: 100vw !important; height: 100dvh !important;
+  border-radius: 0 !important; border: none !important;
+  box-shadow: none !important; transform: none !important;
+  z-index: 9000 !important; display: flex !important;
+  flex-direction: column !important; overflow: hidden !important;
+}
+.window.minimized { display: none !important; }
+.resize-handle { display: none !important; }
+.dw { display: none !important; }
 
-  /* ─── TITLEBAR: duży, dotykowy ─── */
-  .win-titlebar {
-    cursor: default !important;
-    height: 56px !important;
-    padding: 0 16px !important;
-    flex-shrink: 0 !important;
-  }
-  .win-btn { width: 22px !important; height: 22px !important; font-size: 10px !important; }
-  .win-btn.maximize { display: none !important; }
-  .win-title { font-size: 15px !important; }
-  .win-icon { font-size: 18px !important; }
+/* Titlebar — wyśrodkowany nagłówek */
+.win-titlebar {
+  height: 52px !important; min-height: 52px !important;
+  padding: 0 10px !important; flex-shrink: 0 !important;
+  cursor: default !important; position: relative !important;
+  display: flex !important; align-items: center !important;
+}
+.win-controls { flex-shrink: 0 !important; }
+.win-btn { width: 26px !important; height: 26px !important; font-size: 13px !important; }
+.win-btn.maximize { display: none !important; }
+/* Title: absolutely centered in titlebar */
+.win-title {
+  position: absolute !important; left: 50% !important; top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  font-size: 16px !important; font-weight: 800 !important;
+  pointer-events: none !important; white-space: nowrap !important;
+}
+.win-icon { font-size: 20px !important; margin-right: 4px !important; }
+/* spacer after icon (the "width:52px" div) — hide it */
+.win-titlebar > div:last-child:not(.win-controls):not([id]) { display: none !important; }
 
-  /* ─── WIN-BODY: scrolluje się, zajmuje resztę ekranu ─── */
-  .win-body { padding: 16px !important; flex: 1 !important; overflow-y: auto !important; }
-  .win-tabs { padding: 0 12px !important; flex-shrink: 0 !important; }
-  .win-tab { padding: 10px 16px !important; font-size: 13px !important; }
+/* Info widget */
+#info-widget {
+  left: 0 !important; right: 0 !important; top: 0 !important;
+  width: 100% !important; transform: none !important;
+  border-radius: 0 !important; height: 46px !important;
+  padding: 0 12px !important; box-sizing: border-box !important;
+}
+#iw-date, #pill-stats-row, #mb-alerts, #pill-user-badge,
+.iw-sep, #sync-badge { display: none !important; }
+#iw-time { font-size: 15px !important; font-weight: 800 !important; }
+.iw-logo-text { font-size: 14px !important; }
+.iw-btn { width: 36px !important; height: 36px !important; font-size: 20px !important; }
 
-  /* ─── DOCK ─── */
-  #dock {
-    bottom: 8px !important; left: 50% !important;
-    transform: translateX(-50%) !important;
-    padding: 6px 12px !important;
-    max-width: calc(100vw - 16px) !important;
-    overflow-x: auto !important; gap: 0 !important;
-    border-radius: 18px !important;
-  }
-  #dock::-webkit-scrollbar { display: none !important; }
-  .dock-btn {
-    width: 52px !important; height: 58px !important;
-    font-size: 22px !important; border-radius: 14px !important;
-    flex-shrink: 0 !important;
-  }
-  .dock-btn:hover { transform: none !important; }
-  .dock-label { font-size: 9px !important; }
-  .dock-sep { display: none !important; }
-  #dock-time { display: none !important; }
-  #launcher-btn { width: 44px !important; height: 44px !important; flex-shrink: 0 !important; }
+#desktop { top: 46px !important; bottom: 72px !important; }
+#left-sidebar { top: 0 !important; bottom: 72px !important; width: 82vw !important; max-width: 310px !important; }
+#sched-panel, #finance-panel { width: 100% !important; right: -100% !important; top: 0 !important; bottom: 72px !important; }
+#sched-panel.open, #finance-panel.open { right: 0 !important; }
+#focus-panel { width: 100% !important; left: -100% !important; top: 0 !important; bottom: 72px !important; }
+#focus-panel.open { left: 0 !important; }
+#sched-tab, #finance-tab, #focus-tab { display: none !important; }
 
-  /* ─── INFO WIDGET: pasek na górze ─── */
-  #info-widget {
-    left: 0 !important; right: 0 !important; top: 0 !important;
-    transform: none !important; width: 100% !important;
-    border-radius: 0 !important; padding: 8px 14px !important;
-    gap: 8px !important; justify-content: space-between !important;
-    box-sizing: border-box !important; height: 48px !important;
-  }
-  #iw-date { display: none !important; }
-  #iw-time { font-size: 13px !important; font-weight: 700 !important; }
-  .iw-sep { display: none !important; }
-  #pill-stats-row { display: none !important; }
-  #mb-alerts { display: none !important; }
-  .iw-logo-text { font-size: 13px !important; }
-  .iw-btn { width: 32px !important; height: 32px !important; font-size: 16px !important; }
-  #sync-badge { display: none !important; }
+#dock {
+  bottom: 6px !important; left: 8px !important; right: 8px !important;
+  transform: translateX(0) !important; padding: 5px 8px !important;
+  max-width: none !important; overflow-x: auto !important;
+  gap: 0 !important; scrollbar-width: none !important;
+  -webkit-overflow-scrolling: touch !important;
+  justify-content: flex-start !important;
+}
+#dock::-webkit-scrollbar { display: none !important; }
+.dock-btn { width: 52px !important; height: 54px !important; font-size: 22px !important; flex-shrink: 0 !important; border-radius: 12px !important; }
+.dock-btn:hover { transform: none !important; }
+.dock-label { font-size: 9px !important; }
+.dock-sep { display: none !important; }
+#dock-time { display: none !important; }
+#toast-stack { bottom: 84px !important; }
 
-  /* ─── SIDEBAR ─── */
-  #left-sidebar { top: 0 !important; bottom: 76px !important; width: 280px !important; }
-  #sb-tab {
-    top: 8px !important; left: 8px !important;
-    z-index: 9999 !important; font-size: 10px !important;
-    padding: 8px 10px !important;
-  }
-  #desktop { top: 48px !important; }
+/* Inputs — iOS no-zoom (≥16px) */
+input, select, textarea {
+  font-size: 16px !important; padding: 11px 13px !important;
+  border-radius: 10px !important; box-sizing: border-box !important;
+  min-height: 46px !important; max-width: 100% !important;
+}
+textarea { min-height: 80px !important; line-height: 1.6 !important; }
+.btn { min-height: 46px !important; padding: 11px 16px !important; font-size: 15px !important; border-radius: 10px !important; }
+.btn-sm { min-height: 40px !important; padding: 9px 14px !important; font-size: 14px !important; }
+.form-group { margin-bottom: 10px !important; }
+.form-row { flex-direction: column !important; gap: 8px !important; }
+.lbl, .form-group label { font-size: 13px !important; font-weight: 700 !important; margin-bottom: 5px !important; display: block !important; }
+.sep { margin: 10px 0 !important; }
+.sec-title { font-size: 15px !important; font-weight: 800 !important; margin-bottom: 10px !important; }
+.del-btn { width: 38px !important; height: 38px !important; font-size: 18px !important; }
+.win-body { padding: 14px !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; flex: 1 !important; min-height: 0 !important; }
 
-  /* ─── PANELE ─── */
-  #sched-panel { width: 100% !important; right: -100% !important; top: 0 !important; bottom: 0 !important; }
-  #sched-panel.open { right: 0 !important; }
-  #focus-panel { width: 100% !important; left: -100% !important; top: 0 !important; bottom: 0 !important; }
-  #focus-panel.open { left: 0 !important; }
-  #finance-panel { width: 100% !important; top: 0 !important; bottom: 0 !important; }
-  #sched-tab { display: none !important; }
-  #finance-tab { display: none !important; }
-  #focus-tab { display: none !important; }
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ZADANIA & KALENDARZ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* The outer flex row wrapper → column, fill window below titlebar */
+#win-tasks > div:nth-child(2) {
+  flex-direction: column !important;
+  flex: 1 !important; min-height: 0 !important;
+  overflow: hidden !important;
+}
+/* Tasks panel: fills all space */
+#win-tasks > div:nth-child(2) > div:first-child {
+  flex: 1 !important; min-height: 0 !important;
+  border-right: none !important;
+  overflow: hidden !important;
+  display: flex !important; flex-direction: column !important;
+}
+/* Calendar: collapsed accordion, toggled via .mob-cal-open */
+#win-tasks > div:nth-child(2) > div:last-child {
+  width: 100% !important; flex-shrink: 0 !important;
+  overflow: hidden !important; max-height: 0 !important;
+  transition: max-height 0.3s ease !important;
+}
+#win-tasks > div:nth-child(2) > div:last-child.mob-cal-open {
+  max-height: 360px !important;
+  overflow-y: auto !important; -webkit-overflow-scrolling: touch !important;
+}
+/* Filter bar */
+.todo-filters {
+  display: flex !important; overflow-x: auto !important; flex-wrap: nowrap !important;
+  scrollbar-width: none !important; padding: 8px 12px !important;
+  gap: 6px !important; flex-shrink: 0 !important;
+}
+.todo-filters::-webkit-scrollbar { display: none !important; }
+.filter-btn { flex-shrink: 0 !important; padding: 9px 14px !important; font-size: 13px !important; min-height: 38px !important; }
+/* Task list: scrollable */
+#tasks-list { flex: 1 !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; padding: 8px 12px !important; min-height: 0 !important; }
+.task-item { padding: 12px 12px !important; gap: 10px !important; border-radius: 11px !important; margin-bottom: 6px !important; }
+.task-check { width: 26px !important; height: 26px !important; flex-shrink: 0 !important; }
+.task-text { font-size: 15px !important; line-height: 1.45 !important; }
+/* Add task — pinned to bottom, no overflow */
+#win-tasks > div:nth-child(2) > div:first-child > div:last-child {
+  padding: 10px 12px !important; flex-shrink: 0 !important;
+  border-top: 1.5px solid var(--border) !important;
+}
+#win-tasks .form-row { flex-direction: row !important; gap: 6px !important; flex-wrap: nowrap !important; }
+#task-inp { flex: 1 !important; min-width: 0 !important; }
+#task-priority { width: 100px !important; flex-shrink: 0 !important; }
+/* Date modal: center on mobile */
+#task-date-modal { width: calc(100vw - 32px) !important; max-width: 360px !important; max-height: 85dvh !important; overflow-y: auto !important; }
+#task-date-modal-overlay { align-items: center !important; padding: 16px !important; box-sizing: border-box !important; }
+/* Calendar */
+.cal-nav { padding: 10px 12px !important; }
+.cal-month-lbl { font-size: 16px !important; }
+.cal-nav-btn { width: 36px !important; height: 36px !important; font-size: 18px !important; min-height: 36px !important; }
+.cal-grid { padding: 4px 8px !important; gap: 3px !important; }
+.cal-day { font-size: 14px !important; height: 36px !important; border-radius: 9px !important; }
+.cal-day-name { font-size: 11px !important; }
 
-  /* ─── LAUNCHER ─── */
-  #launcher-box {
-    width: 100vw !important; max-width: 100vw !important;
-    border-radius: 0 !important; max-height: 100dvh !important;
-    height: 100dvh !important;
-  }
-  #launcher-apps { grid-template-columns: repeat(4, 1fr) !important; gap: 4px !important; padding: 10px !important; }
-  .lapp-btn { padding: 14px 6px !important; border-radius: 12px !important; }
-  .lapp-icon { font-size: 26px !important; }
-  .lapp-label { font-size: 10px !important; }
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SKLEPY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.shops-layout { flex-direction: column !important; overflow: hidden !important; flex: 1 !important; min-height: 0 !important; }
+.shops-sidebar { width: 100% !important; max-height: 50px !important; border-right: none !important; border-bottom: 1.5px solid var(--border) !important; overflow: hidden !important; flex-shrink: 0 !important; }
+.shops-sb-hdr { display: none !important; }
+.shops-sb-scroll { display: flex !important; flex-direction: row !important; overflow-x: auto !important; padding: 7px 10px !important; gap: 6px !important; scrollbar-width: none !important; height: 50px !important; align-items: center !important; }
+.shops-sb-scroll::-webkit-scrollbar { display: none !important; }
+.shop-sb-summary, .shop-sb-item { display: inline-flex !important; align-items: center !important; gap: 5px !important; padding: 5px 12px !important; border-radius: 20px !important; background: var(--surface2) !important; border: 1.5px solid var(--border) !important; white-space: nowrap !important; flex-shrink: 0 !important; height: 34px !important; }
+.shop-sb-summary.active, .shop-sb-item.active { background: var(--accent-light) !important; border-color: var(--accent) !important; }
+.shop-sb-name, .shop-sb-summary-lbl { font-size: 12px !important; font-weight: 700 !important; }
+.shop-sb-plat, .shop-sb-sep { display: none !important; }
+.shops-detail { flex: 1 !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; min-height: 0 !important; display: flex !important; flex-direction: column !important; }
+.shop-tabs { display: flex !important; overflow-x: auto !important; scrollbar-width: none !important; flex-shrink: 0 !important; flex-wrap: nowrap !important; border-bottom: 1.5px solid var(--border) !important; }
+.shop-tabs::-webkit-scrollbar { display: none !important; }
+.shop-tab { flex-shrink: 0 !important; padding: 12px 16px !important; font-size: 13px !important; white-space: nowrap !important; }
+.shop-kpi-row { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 8px !important; padding: 10px !important; flex-shrink: 0 !important; }
+.shop-kpi { padding: 10px 8px !important; } .shop-kpi-val { font-size: 15px !important; } .shop-kpi-lbl { font-size: 9px !important; }
+.shop-entry-form { padding: 10px !important; flex-shrink: 0 !important; }
+.shop-entry-row { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+.shop-entry-row > .shop-ei:first-child { grid-column: 1 / -1 !important; }
+.shop-ei { width: 100% !important; } .shop-ei input, .shop-ei select { width: 100% !important; min-height: 42px !important; }
+.shop-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
+.shop-table { min-width: 480px !important; font-size: 12px !important; }
+.shop-month-bar { padding: 8px 10px !important; flex-shrink: 0 !important; }
+.shop-sett-body { padding: 12px !important; overflow-y: auto !important; flex: 1 !important; -webkit-overflow-scrolling: touch !important; }
+#win-shops .form-row { flex-direction: column !important; gap: 8px !important; }
+#win-shops .form-group { max-width: none !important; width: 100% !important; }
 
-  /* ─── PRZYCISKI: większe touch area ─── */
-  .btn { padding: 10px 16px !important; font-size: 14px !important; min-height: 44px !important; }
-  .btn-sm { padding: 8px 14px !important; font-size: 13px !important; min-height: 38px !important; }
-  .btn-xs { padding: 6px 12px !important; font-size: 12px !important; min-height: 34px !important; }
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   BUDŻET — nie przycinać dołu
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#win-budget .win-body { padding: 0 !important; overflow: hidden !important; display: flex !important; flex-direction: column !important; }
+#budget-inner {
+  flex: 1 !important; overflow-y: auto !important; overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  display: flex !important; flex-direction: column !important; min-height: 0 !important;
+}
+/* Tab bar */
+#budget-inner > div:first-child { flex-shrink: 0 !important; overflow-x: auto !important; scrollbar-width: none !important; white-space: nowrap !important; }
+#budget-inner > div:first-child::-webkit-scrollbar { display: none !important; }
+#budget-inner > div:first-child button { padding: 9px 12px !important; font-size: 13px !important; }
+.budget-nav { padding: 10px 12px !important; flex-shrink: 0 !important; }
+.budget-nav-month { font-size: 16px !important; font-weight: 800 !important; }
+.budget-nb { width: 34px !important; height: 34px !important; min-height: 34px !important; }
+.budget-summary { grid-template-columns: 1fr 1fr !important; gap: 7px !important; padding: 8px 10px !important; flex-shrink: 0 !important; }
+.bsum-box { padding: 10px !important; } .bsum-val { font-size: 16px !important; } .bsum-lbl { font-size: 10px !important; }
+/* Columns → vertical stack, no overflow clipping */
+.budget-columns { display: flex !important; flex-direction: column !important; grid-template-columns: none !important; overflow: visible !important; flex-shrink: 0 !important; }
+.budget-col { overflow: visible !important; min-height: 0 !important; border-right: none !important; border-bottom: 1.5px solid var(--border) !important; }
+.budget-col-scroll { overflow: visible !important; max-height: none !important; padding: 6px 8px !important; }
+.budget-col-hdr { padding: 10px 12px !important; }
+.budget-col-title { font-size: 12px !important; } .budget-col-total { font-size: 13px !important; }
+.budget-row { padding: 11px 10px !important; gap: 8px !important; border-radius: 10px !important; margin-bottom: 4px !important; }
+.budget-row-label { font-size: 14px !important; } .budget-row-amount { font-size: 14px !important; }
+.budget-row-del { width: 32px !important; height: 32px !important; }
+/* Add form: stacked, no overflow cut */
+.budget-add-form { padding: 10px !important; flex-shrink: 0 !important; }
+.budget-add-row { flex-direction: column !important; gap: 7px !important; margin-top: 6px !important; }
+.budget-add-inp-label, .budget-add-inp-amt, #bi-cat, #be-cat, #be-type { width: 100% !important; }
+.budget-add-btn { width: 100% !important; min-height: 46px !important; font-size: 15px !important; border-radius: 10px !important; }
 
-  /* ─── FORMULARZE ─── */
-  input, select, textarea {
-    font-size: 16px !important; /* zapobiega zoom na iOS */
-    min-height: 44px !important;
-    padding: 10px 14px !important;
-    border-radius: 10px !important;
-  }
-  textarea { min-height: 80px !important; }
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ZLECENIA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#win-orders .win-body { padding: 0 !important; overflow: hidden !important; display: flex !important; flex-direction: column !important; }
+#orders-inner { flex: 1 !important; overflow: hidden !important; display: flex !important; flex-direction: column !important; min-height: 0 !important; }
+#orders-inner > div:first-child { flex-shrink: 0 !important; padding: 10px 12px !important; border-bottom: 1.5px solid var(--border) !important; }
+.orders-kanban { flex: 1 !important; display: flex !important; flex-direction: row !important; overflow-x: auto !important; overflow-y: hidden !important; -webkit-overflow-scrolling: touch !important; padding: 10px 8px !important; gap: 10px !important; align-items: flex-start !important; }
+.orders-col { flex: 0 0 78vw !important; max-width: 280px !important; border-right: none !important; border: 1.5px solid var(--border) !important; border-radius: 12px !important; }
+.orders-col-hdr { padding: 12px 12px !important; font-size: 13px !important; border-radius: 12px 12px 0 0 !important; }
+.orders-col-body { max-height: calc(100dvh - 210px) !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; padding: 8px !important; }
+.order-card { padding: 14px !important; border-radius: 10px !important; }
+.order-client { font-size: 14px !important; font-weight: 800 !important; }
+.order-service { font-size: 13px !important; }
+.order-meta { flex-wrap: wrap !important; }
+#order-modal-overlay { align-items: flex-end !important; }
+#order-modal { border-radius: 20px 20px 0 0 !important; width: 100% !important; max-height: 88dvh !important; overflow-y: auto !important; padding: 20px 16px 30px !important; box-sizing: border-box !important; }
 
-  /* ══ SKLEPY ══ */
-  .shops-layout { flex-direction: column !important; overflow-y: auto !important; }
-  .shops-sidebar {
-    width: 100% !important; max-height: 160px !important;
-    border-right: none !important;
-    border-bottom: 1px solid var(--border) !important;
-    overflow-y: auto !important; flex-shrink: 0 !important;
-  }
-  .shops-detail { overflow-y: auto !important; flex: 1 !important; }
-  .shop-sb-item { padding: 12px 14px !important; }
-  .shop-sb-name { font-size: 14px !important; }
-  .shop-kpi-row { gap: 6px !important; padding: 12px !important; }
-  .shop-kpi { padding: 12px 8px !important; }
-  .shop-kpi-val { font-size: 16px !important; }
-  .shop-entry-row { padding: 10px 12px !important; flex-wrap: wrap !important; gap: 8px !important; }
-  .shop-tabs { overflow-x: auto !important; flex-wrap: nowrap !important; }
-  .shop-tab { flex-shrink: 0 !important; padding: 10px 14px !important; font-size: 13px !important; }
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   NAWYKI
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.habits-stats { display: grid !important; grid-template-columns: repeat(3,1fr) !important; gap: 8px !important; margin-bottom: 14px !important; }
+.habits-stat { padding: 12px 8px !important; } .habits-stat-n { font-size: 22px !important; } .habits-stat-l { font-size: 11px !important; }
+.habit-item { padding: 14px !important; margin-bottom: 8px !important; border-radius: 12px !important; }
+.habit-hdr { margin-bottom: 10px !important; }
+.habit-name { font-size: 15px !important; }
+.habit-week { gap: 4px !important; display: flex !important; }
+.habit-day { flex: 1 !important; min-width: 0 !important; height: 38px !important; border-radius: 8px !important; font-size: 11px !important; font-weight: 700 !important; }
+#win-habits .form-row { flex-direction: row !important; gap: 8px !important; align-items: flex-end !important; }
+#hab-name-inp { flex: 1 !important; } #hab-icon-inp { width: 70px !important; flex-shrink: 0 !important; }
+#win-habits .btn-primary { width: 100% !important; margin-top: 8px !important; }
 
-  /* ══ ZADANIA ══ */
-  .task-item { padding: 14px 14px !important; gap: 12px !important; }
-  .task-check { width: 26px !important; height: 26px !important; flex-shrink: 0 !important; }
-  .task-text { font-size: 15px !important; line-height: 1.4 !important; }
-  .todo-filters { gap: 8px !important; padding: 0 0 10px !important; flex-wrap: nowrap !important; overflow-x: auto !important; }
-  .filter-btn { flex-shrink: 0 !important; padding: 8px 16px !important; font-size: 13px !important; }
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   WYKRESY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#win-charts .win-body { padding: 10px !important; display: flex !important; flex-direction: column !important; gap: 8px !important; overflow-y: auto !important; }
+.chart-tabs { display: flex !important; overflow-x: auto !important; flex-wrap: nowrap !important; scrollbar-width: none !important; flex-shrink: 0 !important; }
+.chart-tabs::-webkit-scrollbar { display: none !important; }
+.chart-tab { flex-shrink: 0 !important; padding: 10px 16px !important; font-size: 14px !important; min-height: 42px !important; }
+#chart-canvas { width: 100% !important; max-height: 240px !important; }
+.chart-legend { flex-wrap: wrap !important; gap: 8px !important; }
 
-  /* ══ BUDŻET ══ */
-  .budget-columns { flex-direction: column !important; overflow-y: auto !important; }
-  .budget-col { border-right: none !important; border-bottom: 1px solid var(--border) !important; flex-shrink: 0 !important; }
-  .budget-col-scroll { max-height: 280px !important; overflow-y: auto !important; }
-  .budget-row { padding: 12px 12px !important; gap: 10px !important; }
-  .budget-row-label { font-size: 14px !important; }
-  .budget-row-amount { font-size: 14px !important; }
-  .budget-nav { padding: 12px 14px !important; }
-  .budget-nav-month { font-size: 16px !important; }
-  .bsum-box { padding: 12px !important; }
-  .bsum-val { font-size: 17px !important; }
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   KALKULATOR MARŻY — nie przycinać
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#win-margin .win-body { overflow-y: auto !important; padding: 12px !important; -webkit-overflow-scrolling: touch !important; }
+.margin-calc { padding: 0 !important; display: flex !important; flex-direction: column !important; gap: 6px !important; }
+/* Pair of small inputs: side by side */
+.margin-calc > div[style*="display:flex;gap"] { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+.margin-result { padding: 14px !important; border-radius: 12px !important; margin-top: 6px !important; }
+.mres-item { padding: 12px 0 !important; border-bottom: 1px solid var(--border) !important; }
+.mres-item:last-child { border-bottom: none !important; }
+.mres-label { font-size: 14px !important; } .mres-val { font-size: 16px !important; font-weight: 800 !important; }
+#win-margin .btn { width: 100% !important; margin-top: 8px !important; }
 
-  /* ══ ZLECENIA / KANBAN ══ */
-  .orders-kanban { padding: 10px !important; gap: 10px !important; overflow-x: auto !important; }
-  .orders-col { flex: 0 0 260px !important; }
-  .orders-col-hdr { padding: 12px 14px !important; font-size: 13px !important; }
-  .order-card { padding: 14px !important; }
-  .order-service { font-size: 14px !important; }
-  .order-client { font-size: 13px !important; }
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   AI
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#win-ai .win-body { padding: 0 !important; display: flex !important; flex-direction: column !important; overflow: hidden !important; }
+.ai-context-badge { font-size: 12px !important; padding: 6px 12px !important; flex-shrink: 0 !important; }
+.ai-messages { flex: 1 !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; padding: 12px !important; gap: 10px !important; }
+.ai-bubble { font-size: 15px !important; padding: 12px 14px !important; max-width: 90% !important; }
+.ai-input-row { flex-shrink: 0 !important; padding: 10px 12px !important; gap: 8px !important; border-top: 1.5px solid var(--border) !important; }
+.ai-input-row input { flex: 1 !important; font-size: 16px !important; min-height: 46px !important; }
+#ai-send-btn { width: 46px !important; height: 46px !important; flex-shrink: 0 !important; font-size: 20px !important; min-height: 46px !important; }
 
-  /* ══ HARMONOGRAM ══ */
-  .sched-item { padding: 12px 12px !important; gap: 10px !important; }
-  .sched-time { font-size: 13px !important; }
-  .sched-text { font-size: 14px !important; }
-  .sched-cb { width: 22px !important; height: 22px !important; }
-  .sp-hdr { padding: 18px 16px !important; }
-  .sp-title { font-size: 16px !important; }
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   DOSTAWCY / PLANY / POMYSŁY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#win-suppliers .win-body, #win-plans .win-body, #win-ideas .win-body {
+  overflow-y: auto !important; -webkit-overflow-scrolling: touch !important;
+}
+#win-suppliers .form-row, #win-plans .form-row, #win-ideas .form-row { flex-direction: column !important; gap: 8px !important; }
+#win-suppliers .form-group, #win-plans .form-group, #win-ideas .form-group { max-width: none !important; width: 100% !important; }
+#win-suppliers .btn-primary, #win-plans .btn-primary, #win-ideas .btn-primary { width: 100% !important; min-height: 46px !important; }
+#idea-desc-inp { min-height: 80px !important; }
 
-  /* ══ AI ══ */
-  .ai-bubble { font-size: 14px !important; padding: 12px 16px !important; max-width: 90% !important; }
-  .ai-input-row { padding: 12px !important; gap: 10px !important; }
-  .ai-input-row input { flex: 1 !important; }
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   NOTATKI (multi-note)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* Full height layout */
+#win-notes #notes-layout {
+  height: calc(100dvh - 52px) !important;
+  overflow: hidden !important;
+}
+/* On mobile: list takes full width, editor slides in */
+#win-notes #notes-sidebar {
+  width: 100% !important;
+  border-right: none !important;
+  border-bottom: 1.5px solid var(--border) !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+/* When sidebar is visible, hide editor panel */
+#win-notes #notes-editor-panel { display: none !important; }
+/* When sidebar is hidden (note open), show editor */
+#win-notes #notes-sidebar[style*="display: none"] ~ #notes-editor-panel,
+#win-notes #notes-sidebar[style*="display:none"] ~ #notes-editor-panel { display: flex !important; }
+/* Toolbar: two rows, smaller buttons */
+#notes-toolbar { gap: 4px !important; padding: 8px !important; flex-wrap: wrap !important; }
+.ntb { min-width: 36px !important; height: 36px !important; font-size: 13px !important; }
+/* Editor: full space */
+#notes-editor { font-size: 16px !important; padding: 14px !important; }
+#notes-title-inp { font-size: 18px !important; padding: 12px 14px !important; min-height: 50px !important; }
+/* List items: bigger touch targets */
+.note-item { padding: 14px 12px !important; }
+.note-item-title { font-size: 15px !important; }
+.note-item-preview { font-size: 13px !important; }
+/* Back button: only on mobile */
+#notes-mob-back { display: none; }
 
-  /* ══ NAWYKI ══ */
-  .habit-item { padding: 14px !important; gap: 12px !important; }
-  .habit-cal-row { gap: 4px !important; flex-wrap: wrap !important; }
-  .habit-dot { width: 14px !important; height: 14px !important; }
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   PANELE (Harmonogram, Focus)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.sp-hdr { padding: 16px 14px !important; flex-shrink: 0 !important; }
+.sp-title { font-size: 17px !important; font-weight: 800 !important; }
+.sp-body { padding: 8px 10px !important; flex: 1 !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; }
+.sched-item { padding: 12px 10px !important; gap: 10px !important; margin-bottom: 5px !important; border-radius: 11px !important; }
+.sched-cb { width: 24px !important; height: 24px !important; flex-shrink: 0 !important; }
+.sched-text { font-size: 15px !important; }
+.sp-add { padding: 10px !important; flex-shrink: 0 !important; }
+.sp-text-inp { min-height: 46px !important; font-size: 16px !important; margin-bottom: 8px !important; }
+.sp-add-btn { flex: 1 !important; min-height: 46px !important; }
 
-  /* ══ KALENDARZE ══ */
-  .cal-day { font-size: 14px !important; border-radius: 10px !important; }
-  .cal-day-name { font-size: 11px !important; }
-  .cal-grid { gap: 4px !important; }
-  .wcal-day { font-size: 13px !important; }
-
-  /* ══ KALKULATOR MARŻY ══ */
-  .margin-calc { padding: 20px 16px !important; gap: 14px !important; }
-  .mres-item { padding: 12px 0 !important; }
-  .mres-label { font-size: 14px !important; }
-  .mres-val { font-size: 16px !important; }
-
-  /* ══ DOSTAWCY ══ */
-  .supplier-card { padding: 16px !important; }
-
-  /* ══ NOTATKI / PLANY / POMYSŁY ══ */
-  .fe-note-ta { font-size: 15px !important; line-height: 1.6 !important; }
-  .fe-idea-desc { font-size: 15px !important; }
-  .fe-todo-row { padding: 12px 0 !important; gap: 12px !important; }
-  .fe-todo-cb { width: 22px !important; height: 22px !important; }
-  .fe-todo-text { font-size: 14px !important; }
-  .fe-section-lbl { font-size: 12px !important; margin: 14px 0 8px !important; }
-
-  /* ══ WYKRESY ══ */
-  .chart-tabs { overflow-x: auto !important; flex-wrap: nowrap !important; }
-  .chart-tab { flex-shrink: 0 !important; padding: 8px 14px !important; font-size: 13px !important; }
-
-  /* ══ POWIADOMIENIA / FOCUS / SCHED ══ */
-  .fp-header { padding: 20px !important; }
-  .focus-mode { padding: 14px !important; }
-  .focus-mode-name { font-size: 14px !important; }
-  .focus-mode-desc { font-size: 12px !important; }
-
-  /* ══ MISC ══ */
-  .dw { display: none !important; }
-  .sec-title { font-size: 15px !important; }
-  .lbl { font-size: 12px !important; }
-  .badge { font-size: 11px !important; padding: 3px 10px !important; }
-  .card { padding: 16px !important; }
-  .ctx-item { padding: 14px 12px !important; font-size: 14px !important; }
-  #ctx-menu { border-radius: 16px !important; padding: 8px !important; min-width: 200px !important; }
-  .notif-item { padding: 12px !important; }
-  .notif-text { font-size: 14px !important; }
-  .notif-sub { font-size: 12px !important; }
-  .notif-emoji { font-size: 22px !important; }
 }
 </style>
 </head>
@@ -2404,7 +2551,7 @@ body.dark .order-card{background:var(--surface2)}
         <button class="win-btn maximize" onclick="toggleMaxWin('win-tasks')">+</button>
       </div>
       <span class="win-icon">✅</span><span class="win-title">Zadania & Kalendarz</span>
-      <div style="width:52px"></div>
+      <button onclick="toggleMobCal()" id="mob-cal-btn" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;font-size:18px;display:none;align-items:center;justify-content:center">📅</button>
     </div>
     <div style="display:flex;height:100%;overflow:hidden;">
 
@@ -2508,7 +2655,7 @@ body.dark .order-card{background:var(--surface2)}
   </div>
 
   <!-- NOTES -->
-  <div class="window minimized" id="win-notes" style="left:810px;top:490px;width:340px;height:320px;z-index:100">
+  <div class="window minimized" id="win-notes" style="left:810px;top:490px;width:680px;height:500px;z-index:100">
     <div class="win-titlebar" onmousedown="startDrag(event,'win-notes')">
       <div class="win-controls">
         <button class="win-btn close" onclick="closeWin('win-notes','btn-notes')">✕</button>
@@ -2516,13 +2663,65 @@ body.dark .order-card{background:var(--surface2)}
         <button class="win-btn maximize" onclick="toggleMaxWin('win-notes')">+</button>
       </div>
       <span class="win-icon">📝</span><span class="win-title">Notatki</span>
-      <div style="width:52px"></div>
+      <button id="notes-mob-back" onclick="notesMobBack()" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;font-size:18px;align-items:center;justify-content:center;display:none">←</button>
     </div>
-    <div class="win-body" style="display:flex;flex-direction:column;gap:7px">
-      <textarea id="notes-ta" style="flex:1;min-height:160px;font-size:13px;line-height:1.6" placeholder="Szybkie notatki..." oninput="saveNotes()"></textarea>
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <div style="font-size:10px;color:var(--text3)" id="notes-saved"></div>
-        <button class="btn btn-ghost btn-sm" onclick="saveNotesToFolder()" title="Zapisz jako plik w folderze Notatki">📁 Zapisz do folderu</button>
+    <div style="display:flex;height:100%;overflow:hidden;" id="notes-layout">
+      <!-- LEFT: note list -->
+      <div id="notes-sidebar" style="width:200px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;">
+        <div style="padding:8px 10px;border-bottom:1px solid var(--border);display:flex;gap:6px;background:var(--surface2);flex-shrink:0">
+          <button class="btn btn-primary btn-sm" style="flex:1" onclick="notesNew()">+ Nowa</button>
+        </div>
+        <div id="notes-list" style="flex:1;overflow-y:auto;padding:6px;scrollbar-width:thin;scrollbar-color:var(--border2) transparent"></div>
+      </div>
+      <!-- RIGHT: editor -->
+      <div id="notes-editor-panel" style="flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;">
+        <!-- Toolbar -->
+        <div id="notes-toolbar" style="display:flex;align-items:center;gap:2px;padding:6px 10px;border-bottom:1px solid var(--border);background:var(--surface2);flex-shrink:0;flex-wrap:wrap">
+          <button class="ntb" onclick="notesFmt('bold')" title="Pogrubienie (Ctrl+B)"><b>B</b></button>
+          <button class="ntb" onclick="notesFmt('italic')" title="Kursywa (Ctrl+I)"><i>I</i></button>
+          <button class="ntb" onclick="notesFmt('underline')" title="Podkreślenie"><u>U</u></button>
+          <button class="ntb" onclick="notesFmt('strikeThrough')" title="Przekreślenie"><s>S</s></button>
+          <div class="ntb-sep"></div>
+          <button class="ntb" onclick="notesFmtBlock('h1')" title="Nagłówek 1">H1</button>
+          <button class="ntb" onclick="notesFmtBlock('h2')" title="Nagłówek 2">H2</button>
+          <button class="ntb" onclick="notesFmtBlock('h3')" title="Nagłówek 3">H3</button>
+          <div class="ntb-sep"></div>
+          <button class="ntb" onclick="notesFmt('insertUnorderedList')" title="Lista punktowana">• List</button>
+          <button class="ntb" onclick="notesFmt('insertOrderedList')" title="Lista numerowana">1. List</button>
+          <button class="ntb" onclick="notesInsertTable()" title="Tabela">⊞ Tab</button>
+          <div class="ntb-sep"></div>
+          <button class="ntb" onclick="notesFmt('justifyLeft')" title="Do lewej">⬅</button>
+          <button class="ntb" onclick="notesFmt('justifyCenter')" title="Wyśrodkuj">⬌</button>
+          <button class="ntb" onclick="notesFmt('justifyRight')" title="Do prawej">➡</button>
+          <div class="ntb-sep"></div>
+          <select onchange="notesFmt('foreColor',this.value);this.value=''" style="width:28px;height:28px;border:1.5px solid var(--border);border-radius:6px;padding:0;cursor:pointer;background:var(--surface);font-size:10px" title="Kolor tekstu">
+            <option value="">🎨</option>
+            <option value="#ef4444" style="background:#ef4444">🔴</option>
+            <option value="#f97316" style="background:#f97316">🟠</option>
+            <option value="#eab308" style="background:#eab308">🟡</option>
+            <option value="#22c55e" style="background:#22c55e">🟢</option>
+            <option value="#3b82f6" style="background:#3b82f6">🔵</option>
+            <option value="#8b5cf6" style="background:#8b5cf6">🟣</option>
+          </select>
+          <div style="flex:1"></div>
+          <span id="notes-saved" style="font-size:10px;color:var(--text3)"></span>
+        </div>
+        <!-- Title -->
+        <input id="notes-title-inp" placeholder="Tytuł notatki..." 
+          style="border:none;border-bottom:1px solid var(--border);padding:10px 14px;font-size:16px;font-weight:700;background:var(--surface);color:var(--text);outline:none;flex-shrink:0;border-radius:0"
+          oninput="notesSaveTitle()">
+        <!-- Content editable -->
+        <div id="notes-editor" contenteditable="true"
+          style="flex:1;overflow-y:auto;padding:14px;font-size:14px;line-height:1.7;color:var(--text);outline:none;-webkit-overflow-scrolling:touch"
+          oninput="notesAutoSave()"
+          onkeydown="notesKeydown(event)"
+          data-placeholder="Zacznij pisać..."></div>
+        <!-- Empty state -->
+        <div id="notes-empty-state" style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;color:var(--text3)">
+          <div style="font-size:40px">📝</div>
+          <div style="font-size:14px;font-weight:600">Wybierz notatkę lub utwórz nową</div>
+          <button class="btn btn-primary" onclick="notesNew()">+ Nowa notatka</button>
+        </div>
       </div>
     </div>
     <div class="resize-handle" onmousedown="startResize(event,'win-notes')"></div>
@@ -3138,6 +3337,22 @@ let schedOpen=false, schedPrio='high';
 
 var MONTHS=['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
 function isMobile(){ return window.innerWidth <= 768; }
+
+function toggleMobCal(){
+  const calDiv = document.querySelector('#win-tasks > div:nth-child(2) > div:last-child');
+  if(!calDiv) return;
+  calDiv.classList.toggle('mob-cal-open');
+  const btn = document.getElementById('mob-cal-btn');
+  if(btn) btn.style.background = calDiv.classList.contains('mob-cal-open') ? 'var(--accent-light)' : 'var(--surface2)';
+}
+
+function initMobileUI(){
+  if(!isMobile()) return;
+  // Show calendar toggle button in tasks
+  const btn = document.getElementById('mob-cal-btn');
+  if(btn) btn.style.display = 'flex';
+}
+
 var DAYS_PL=['Niedziela','Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota'];
 var POMO_DURATIONS={work:25*60,short:5*60,long:15*60};
 var FT_META={
@@ -3298,6 +3513,7 @@ function applyMigrations(){
   if(!S.finance)       S.finance={};
   if(!S.desktopFolders) S.desktopFolders=[];
   if(!S.desktopNotes)  S.desktopNotes=[];
+  if(!S.appNotes)      S.appNotes=[];
   if(!S.schedule)      S.schedule={};
   if(!S.mood)          S.mood={};
   if(!S.orders)        S.orders=[];
@@ -4283,6 +4499,7 @@ function toggleWin(winId,btnId){
     if(winId==='win-tasks'){ setTimeout(renderTasks, 10); setTimeout(renderCal, 50); }
     if(winId==='win-budget') setTimeout(renderBudget, 50);
     if(winId==='win-orders') setTimeout(renderOrders, 50);
+    if(winId==='win-notes') setTimeout(notesInit, 50);
   }else{
     win.classList.add('minimized');
   }
@@ -5592,31 +5809,184 @@ function renderIdeas(){
     </div>`).join('');
 }
 
-// ═══════════════ NOTES ═══════════════
-function saveNotes(){
-  S.notes=document.getElementById('notes-ta').value;saveS();
-  document.getElementById('notes-saved').textContent='Zapisano ✓';
-  setTimeout(()=>document.getElementById('notes-saved').textContent='',1600);
+// ═══════════════ NOTES (multi-note system) ═══════════════
+let activeNoteId = null;
+let notesAutoSaveTimer = null;
+
+function notesInit(){
+  if(!S.appNotes) S.appNotes = [];
+  renderNotesList();
+  // Show empty state by default
+  notesShowEmpty();
 }
 
-function saveNotesToFolder(){
-  const content=document.getElementById('notes-ta').value.trim();
-  if(!content){toast('Notatka jest pusta','warning');return;}
-  // Find or create Notatki folder
-  let folder=S.desktopFolders.find(f=>f.name==='Notatki');
-  if(!folder){
-    folder={id:Date.now(),name:'Notatki',icon:'📝',x:20,y:80,color:'#fef9c3'};
-    S.desktopFolders.push(folder);
-    renderDesktopIcons();
+function renderNotesList(){
+  const list = document.getElementById('notes-list'); if(!list) return;
+  const notes = S.appNotes || [];
+  if(!notes.length){
+    list.innerHTML = `<div style="padding:20px 10px;text-align:center;color:var(--text3);font-size:12px">Brak notatek.<br>Utwórz pierwszą!</div>`;
+    return;
   }
-  const now=new Date();
-  const name=`Notatka ${now.getDate()}.${now.getMonth()+1} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-  const n={id:Date.now()+1,name,content,folderId:folder.id,createdAt:Date.now()};
-  S.desktopNotes.push(n);
-  saveS();refreshFolderWindow(folder.id);
-  document.getElementById('notes-ta').value='';S.notes='';saveS();
-  toast(`Zapisano do folderu Notatki ✓`,'success');
+  // Sort by updatedAt desc
+  const sorted = [...notes].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  list.innerHTML = sorted.map(n=>{
+    const preview = (n.content||'').replace(/<[^>]+>/g,'').slice(0,60);
+    const date = n.updatedAt ? new Date(n.updatedAt).toLocaleDateString('pl-PL',{day:'numeric',month:'short'}) : '';
+    return `<div class="note-item${n.id===activeNoteId?' active':''}" onclick="notesOpen(${n.id})">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px">
+        <div class="note-item-title">${escHtml(n.title||'Bez tytułu')}</div>
+        <button onclick="event.stopPropagation();notesDelete(${n.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0;flex-shrink:0;line-height:1">✕</button>
+      </div>
+      <div class="note-item-preview">${escHtml(preview)||'(pusta)'}</div>
+      <div class="note-item-date">${date}</div>
+    </div>`;
+  }).join('');
 }
+
+function notesShowEmpty(){
+  const editor = document.getElementById('notes-editor');
+  const titleInp = document.getElementById('notes-title-inp');
+  const toolbar = document.getElementById('notes-toolbar');
+  const emptyState = document.getElementById('notes-empty-state');
+  if(editor) { editor.style.display='none'; editor.innerHTML=''; }
+  if(titleInp) { titleInp.style.display='none'; titleInp.value=''; }
+  if(toolbar) toolbar.style.opacity='0.4';
+  if(emptyState) emptyState.style.display='flex';
+  activeNoteId = null;
+}
+
+function notesShowEditor(){
+  const editor = document.getElementById('notes-editor');
+  const titleInp = document.getElementById('notes-title-inp');
+  const toolbar = document.getElementById('notes-toolbar');
+  const emptyState = document.getElementById('notes-empty-state');
+  if(editor) editor.style.display='block';
+  if(titleInp) titleInp.style.display='block';
+  if(toolbar) toolbar.style.opacity='1';
+  if(emptyState) emptyState.style.display='none';
+}
+
+function notesNew(){
+  if(!S.appNotes) S.appNotes = [];
+  const note = {id:Date.now(), title:'', content:'', updatedAt:Date.now()};
+  S.appNotes.unshift(note);
+  saveS();
+  renderNotesList();
+  notesOpen(note.id);
+  // Focus title
+  setTimeout(()=>{
+    const t = document.getElementById('notes-title-inp');
+    if(t){ t.focus(); }
+  }, 50);
+}
+
+function notesOpen(id){
+  // Save current before switching
+  notesSaveNow();
+  const note = (S.appNotes||[]).find(n=>n.id===id); if(!note) return;
+  activeNoteId = id;
+  notesShowEditor();
+  const titleInp = document.getElementById('notes-title-inp');
+  const editor = document.getElementById('notes-editor');
+  if(titleInp) titleInp.value = note.title||'';
+  if(editor) editor.innerHTML = note.content||'';
+  renderNotesList(); // refresh active state
+  // On mobile: collapse sidebar after opening
+  if(isMobile()){
+    const sb = document.getElementById('notes-sidebar');
+    if(sb) sb.style.display='none';
+    const btn = document.getElementById('notes-mob-back');
+    if(btn) btn.style.display='flex';
+  }
+}
+
+function notesDelete(id){
+  S.appNotes = (S.appNotes||[]).filter(n=>n.id!==id);
+  saveS();
+  if(activeNoteId===id){ activeNoteId=null; notesShowEmpty(); }
+  renderNotesList();
+  notify('🗑️ Notatka usunięta');
+}
+
+function notesSaveTitle(){
+  const note = (S.appNotes||[]).find(n=>n.id===activeNoteId); if(!note) return;
+  note.title = document.getElementById('notes-title-inp')?.value||'';
+  note.updatedAt = Date.now();
+  saveS();
+  renderNotesList();
+}
+
+function notesAutoSave(){
+  clearTimeout(notesAutoSaveTimer);
+  notesAutoSaveTimer = setTimeout(notesSaveNow, 600);
+}
+
+function notesSaveNow(){
+  if(!activeNoteId) return;
+  const note = (S.appNotes||[]).find(n=>n.id===activeNoteId); if(!note) return;
+  const editor = document.getElementById('notes-editor');
+  if(editor) note.content = editor.innerHTML;
+  note.updatedAt = Date.now();
+  saveS();
+  const saved = document.getElementById('notes-saved');
+  if(saved){ saved.textContent='Zapisano ✓'; clearTimeout(saved._t); saved._t=setTimeout(()=>saved.textContent='',1400); }
+}
+
+function notesFmt(cmd, val){
+  document.getElementById('notes-editor')?.focus();
+  document.execCommand(cmd, false, val||null);
+  notesAutoSave();
+}
+
+function notesFmtBlock(tag){
+  document.getElementById('notes-editor')?.focus();
+  document.execCommand('formatBlock', false, tag);
+  notesAutoSave();
+}
+
+function notesInsertTable(){
+  const rows=3, cols=3;
+  let html='<table><thead><tr>';
+  for(let c=0;c<cols;c++) html+=`<th>Nagłówek ${c+1}</th>`;
+  html+='</tr></thead><tbody>';
+  for(let r=0;r<rows-1;r++){
+    html+='<tr>';
+    for(let c=0;c<cols;c++) html+='<td>&nbsp;</td>';
+    html+='</tr>';
+  }
+  html+='</tbody></table><p></p>';
+  document.getElementById('notes-editor')?.focus();
+  document.execCommand('insertHTML', false, html);
+  notesAutoSave();
+}
+
+function notesKeydown(e){
+  if((e.ctrlKey||e.metaKey)&&e.key==='b'){e.preventDefault();notesFmt('bold');}
+  if((e.ctrlKey||e.metaKey)&&e.key==='i'){e.preventDefault();notesFmt('italic');}
+  if((e.ctrlKey||e.metaKey)&&e.key==='u'){e.preventDefault();notesFmt('underline');}
+  if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();notesSaveNow();}
+}
+
+// Mobile back button for notes
+function notesMobBack(){
+  notesSaveNow();
+  const sb = document.getElementById('notes-sidebar');
+  if(sb) sb.style.display='flex';
+  const btn = document.getElementById('notes-mob-back');
+  if(btn) btn.style.display='none';
+  notesShowEmpty();
+}
+
+// Legacy compat
+function saveNotes(){
+  notesSaveNow();
+}
+function saveNotesToFolder(){
+  notesSaveNow();
+  notify('💾 Notatka zapisana!');
+}
+
+
 
 // ═══════════════ BUDGET / FINANSE ═══════════════
 
@@ -8214,6 +8584,7 @@ function bootApp(){
   // Desktop boot
   try { renderDock(); } catch(e){}
   try { renderShops();renderTasks();renderPlans();renderIdeas();renderSuppliers(); } catch(e){}
+  try { notesInit(); } catch(e){}
   try { initCal(); } catch(e){}
   try { initDesktop(); } catch(e){}
   try { renderWidgets(); } catch(e){}
@@ -8270,6 +8641,7 @@ function bootApp(){
   try{renderDock();}catch(e){}
   setTimeout(()=>{try{renderDock();}catch(e){}},50);
   setTimeout(()=>{try{renderDock();}catch(e){}},300);
+  try { initMobileUI(); } catch(e){}
 }
 
 // ═══════════════════════════════════════════════════
