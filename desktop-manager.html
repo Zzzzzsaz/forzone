@@ -3490,6 +3490,8 @@ let schedOpen=false, schedPrio='high';
 
 var MONTHS=['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
 var DAYS_PL=['Niedziela','Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota'];
+function isMobile(){ return window.innerWidth <= 768; }
+var POMO_DURATIONS={work:25*60,short:5*60,long:15*60};
 var FT_META={
   note:{icon:'📝',label:'Notatka',    color:'#f8f7f5'},
   todo:{icon:'✅',label:'Lista zadań', color:'#dcfce7'},
@@ -4323,7 +4325,7 @@ function setFocusMode(mode){
   S.focusMode=mode;saveS();
 }
 
-const POMO_DURATIONS={work:25*60,short:5*60,long:15*60};
+// POMO_DURATIONS moved to top of script
 let pomoPhase='work',pomoSeconds=25*60,pomoRunning=false,pomoInterval=null;
 let pomoSessionsToday=0,pomoSecondsToday=0,pomoStreak=0;
 
@@ -4633,7 +4635,7 @@ function toggleWin(winId,btnId){
     win.style.animation='none';void win.offsetHeight;
     win.style.animation=isMobile()?'mob-win-open .22s cubic-bezier(.34,1.56,.64,1)':'winOpen .25s cubic-bezier(.34,1.56,.64,1)';
     if(winId==='win-charts') setTimeout(renderChart, 80);
-    if(winId==='win-tasks') setTimeout(renderCal, 50);
+    if(winId==='win-tasks'){ setTimeout(renderTasks, 10); setTimeout(renderCal, 50); }
     if(winId==='win-budget') setTimeout(renderBudget, 50);
     if(winId==='win-mood') setTimeout(renderMood, 50);
     if(winId==='win-orders') setTimeout(renderOrders, 50);
@@ -4667,13 +4669,13 @@ function toggleMaxWin(winId){
 
 // ═══════════════ FINANCE PANEL ═══════════════
 let financeOpen=false;
-const finPanel=document.getElementById('finance-panel');
-const finTab=document.getElementById('finance-tab');
 
 function toggleFinance(){
   financeOpen=!financeOpen;
-  finPanel.classList.toggle('open',financeOpen);
-  finTab.classList.toggle('hidden',financeOpen);
+  const finPanel=document.getElementById('finance-panel');
+  const finTab=document.getElementById('finance-tab');
+  if(finPanel) finPanel.classList.toggle('open',financeOpen);
+  if(finTab) finTab.classList.toggle('hidden',financeOpen);
   if(financeOpen)renderFinance();
 }
 
@@ -4717,7 +4719,7 @@ function renderFinance(){
   const key=todayFinKey();
   const fin=S.finance[key]||{};
   const today=new Date().toLocaleDateString('pl-PL',{weekday:'long',day:'numeric',month:'long'});
-  document.getElementById('finance-date').textContent=today;
+  const _fd=document.getElementById('finance-date');if(_fd)_fd.textContent=today;
 
   let html='';
   if(!S.shops.length){
@@ -4761,7 +4763,7 @@ function renderFinance(){
     });
     html+=`<div class="fin-total" id="fin-totals"></div>`;
   }
-  document.getElementById('finance-body').innerHTML=html;
+  const _fb=document.getElementById('finance-body');if(_fb)_fb.innerHTML=html;
   renderFinanceTotals();
   updateMenubar();
 }
@@ -6618,7 +6620,7 @@ function setMood(mood,btn){
 }
 
 function saveQuickNote(){
-  S.quickNote=document.getElementById('sb-quick-note').value;
+  S.quickNote=document.getElementById('sb-quick-note')?.value||'';
   saveS();
 }
 
@@ -7127,10 +7129,10 @@ function setInvFilter(f,btn){
 }
 
 function addInvoice(){
-  const client=document.getElementById('inv-client-inp').value.trim();
-  const amount=parseFloat(document.getElementById('inv-amount-inp').value)||0;
-  const desc=document.getElementById('inv-desc-inp').value.trim();
-  const due=document.getElementById('inv-due-inp').value;
+  const client=document.getElementById('inv-client-inp')?.value.trim();
+  const amount=parseFloat(document.getElementById('inv-amount-inp')?.value)||0;
+  const desc=(document.getElementById('inv-desc-inp')?.value||'').trim();
+  const due=document.getElementById('inv-due-inp')?.value;
   if(!client||!amount)return;
   if(!S.invoices)S.invoices=[];
   const today=new Date().toISOString().split('T')[0];
@@ -7164,9 +7166,9 @@ function renderInvoices(){
   const paid=invs.filter(i=>i.status==='paid').reduce((s,i)=>s+i.amount,0);
   const pending=invs.filter(i=>i.status==='pending').reduce((s,i)=>s+i.amount,0);
   const overdue=invs.filter(i=>i.status==='overdue').reduce((s,i)=>s+i.amount,0);
-  document.getElementById('inv-paid-sum').textContent=paid.toLocaleString()+' zł';
-  document.getElementById('inv-pending-sum').textContent=pending.toLocaleString()+' zł';
-  document.getElementById('inv-overdue-sum').textContent=overdue.toLocaleString()+' zł';
+  const _ip=document.getElementById('inv-paid-sum');if(_ip)_ip.textContent=paid.toLocaleString()+' zł';
+  const _ipe=document.getElementById('inv-pending-sum');if(_ipe)_ipe.textContent=pending.toLocaleString()+' zł';
+  const _iov=document.getElementById('inv-overdue-sum');if(_iov)_iov.textContent=overdue.toLocaleString()+' zł';
 
   const filtered=invFilter==='all'?invs:invs.filter(i=>i.status===invFilter);
   if(!filtered.length){
@@ -8465,7 +8467,7 @@ function bootApp(){
 // MOBILE FUNCTIONS
 // ═══════════════════════════════════════════════════
 
-const isMobile = () => window.innerWidth <= 768;
+// isMobile moved to top of script
 
 // ── Navigation ──
 let mobCurrentSection = 'home';
@@ -8900,7 +8902,7 @@ function mobAddBudgetEntry() {
 
 function mobToggleBudgetEntryType() {
   const t = document.getElementById('mob-entry-type')?.value;
-  document.getElementById('mob-entry-day-row').style.display = t==='fixed'?'block':'none';
+  const _medr=document.getElementById('mob-entry-day-row');if(_medr)_medr.style.display = t==='fixed'?'block':'none';
 }
 
 function mobSaveBudgetEntry() {
