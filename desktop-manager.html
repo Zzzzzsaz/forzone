@@ -4477,6 +4477,7 @@ function shopCycleStatus(shopId){
   const idx=SHOP_STATUS_ORDER.indexOf(cur);
   shop.status=SHOP_STATUS_ORDER[(idx+1)%SHOP_STATUS_ORDER.length];
   saveS(); renderShopsSidebar();
+  if(activeShopId===shopId) renderShopDetail(shopId);
   notify(`Status: ${SHOP_STATUS_COLORS[shop.status].emoji} ${SHOP_STATUS_COLORS[shop.status].label}`);
 }
 
@@ -4630,10 +4631,28 @@ function renderShopDetail(shopId){
   let html=`
     <div class="shop-tabs">
       <div class="shop-tab${shopTab==='results'?' active':''}" onclick="shopSwitchTab('results')">📊 Wyniki</div>
+      <div class="shop-tab${shopTab==='ops'?' active':''}" onclick="shopSwitchTab('ops')">🎯 Operacje</div>
       <div class="shop-tab${shopTab==='settings'?' active':''}" onclick="shopSwitchTab('settings')">⚙️ Ustawienia</div>
     </div>`;
 
   if(shopTab==='results'){
+    // STATUS BAR — shop on/off + campaigns
+    const sc=SHOP_STATUS_COLORS[shop.status||'active'];
+    const activePlats=(shop.adPlatforms||[]).filter(p=>p.enabled);
+    html+=`<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface2);border-bottom:1px solid var(--border);flex-wrap:wrap">
+      <button onclick="shopCycleStatus(${shop.id})" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;border:2px solid ${sc.color};background:${sc.color}18;cursor:pointer;font-size:12px;font-weight:700;color:${sc.color}">
+        ${sc.emoji} ${sc.label}
+      </button>
+      ${activePlats.map((p,i)=>{
+        const idx=(shop.adPlatforms||[]).indexOf(p);
+        const isOn=p.campaignOn;
+        return `<button onclick="shopToggleCampaign(${shop.id},${idx},${!isOn})" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;border:2px solid ${isOn?p.color:'var(--border)'};background:${isOn?p.color+'18':'transparent'};cursor:pointer;font-size:11px;font-weight:700;color:${isOn?p.color:'var(--text3)'}">
+          <span style="width:7px;height:7px;border-radius:50%;background:${isOn?p.color:'var(--border)'};display:inline-block"></span>
+          ${escHtml(p.name)}: ${isOn?'ON':'OFF'}
+        </button>`;
+      }).join('')}
+      ${shop.shopUrl?`<a href="${escHtml(shop.shopUrl)}" target="_blank" style="margin-left:auto;font-size:12px;font-weight:700;color:var(--accent);text-decoration:none">🔗 Otwórz sklep</a>`:''}
+    </div>`;
     // KPI row
     html+=`<div class="shop-kpi-row" id="shop-kpi-row">
       <div class="shop-kpi"><div class="shop-kpi-val">${summ?shopFmt(summ.totalRev):'—'}</div><div class="shop-kpi-lbl">Przychód</div></div>
@@ -4777,6 +4796,63 @@ function renderShopDetail(shopId){
       }
     }
     html+=`</tbody></table></div>`;
+  } else if(shopTab==='ops'){
+    // OPERACJE — notatki, cele, todo, linki
+    const now=new Date(); const yr=now.getFullYear(); const mo=now.getMonth();
+    const summ=getMonthSummary(shop,yr,mo);
+    const target=shop.monthTarget||0;
+    const progress=target>0&&summ?Math.min(100,Math.round(summ.totalRev/target*100)):0;
+    const prevMo=mo===0?11:mo-1; const prevYr=mo===0?yr-1:yr;
+    const prevSumm=getMonthSummary(shop,prevYr,prevMo);
+    const trend=summ&&prevSumm&&prevSumm.totalRev>0?((summ.totalRev-prevSumm.totalRev)/prevSumm.totalRev*100):null;
+
+    html+=`<div class="win-body" style="display:flex;flex-direction:column;gap:16px">
+
+      <!-- CEL MIESIĘCZNY -->
+      <div>
+        <div class="lbl" style="margin-bottom:8px">🎯 Cel miesięczny (${MONTHS[mo]})</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <input type="number" id="shop-target-inp" value="${target||''}" placeholder="Cel przychodu brutto..." 
+            style="flex:1;padding:8px 12px;border-radius:9px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px"
+            oninput="shopSaveTarget(${shop.id})">
+          <span style="font-size:12px;color:var(--text3);white-space:nowrap">zł / mies.</span>
+        </div>
+        ${target>0?`
+          <div style="background:var(--surface2);border-radius:8px;overflow:hidden;height:10px;margin-bottom:6px">
+            <div style="height:100%;width:${progress}%;background:${progress>=100?'var(--green)':progress>=70?'var(--accent)':'var(--orange)'};border-radius:8px;transition:width .4s"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3)">
+            <span>${summ?shopFmt(summ.totalRev):'0 zł'} osiągnięte</span>
+            <span style="font-weight:700;color:${progress>=100?'var(--green)':'var(--text)'}">${progress}%</span>
+            <span>${shopFmt(target)} cel</span>
+          </div>` : ''}
+        ${trend!==null?`<div style="margin-top:6px;font-size:12px;font-weight:700;color:${trend>=0?'var(--green)':'var(--red)'}">
+          ${trend>=0?'↑':'↓'} ${Math.abs(trend).toFixed(1)}% vs ${MONTHS[prevMo]}
+        </div>`:''}
+      </div>
+
+      <!-- TODO SKLEPU -->
+      <div>
+        <div class="lbl" style="margin-bottom:8px">📌 Do zrobienia w sklepie</div>
+        <div id="shop-todos-list">${renderShopTodos(shop)}</div>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <input id="shop-todo-inp-${shop.id}" placeholder="Nowe zadanie..." 
+            style="flex:1;padding:8px 12px;border-radius:9px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px"
+            onkeydown="if(event.key==='Enter')shopAddTodo(${shop.id})">
+          <button class="btn btn-primary btn-sm" onclick="shopAddTodo(${shop.id})">+ Dodaj</button>
+        </div>
+      </div>
+
+      <!-- NOTATKI OPERACYJNE -->
+      <div>
+        <div class="lbl" style="margin-bottom:8px">📝 Notatki operacyjne</div>
+        <textarea id="shop-opnotes-${shop.id}" placeholder="Szybkie notatki, obserwacje, pomysły dla tego sklepu..."
+          style="width:100%;min-height:100px;padding:10px 12px;border-radius:9px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;resize:vertical;font-family:'DM Sans',sans-serif;line-height:1.5;box-sizing:border-box"
+          oninput="shopSaveOpNotes(${shop.id})">${escHtml(shop.opNotes||'')}</textarea>
+      </div>
+
+    </div>`;
+
   } else {
     // SETTINGS TAB
     html+=`<div class="shop-sett-body">
@@ -4807,6 +4883,7 @@ function renderShopDetail(shopId){
           <div class="form-group"><label class="lbl">API Key (Shopify)</label><input id="ss-api" value="${escHtml(shop.apiKey||'')}" placeholder="shpat_..." oninput="shopSettSave(${shop.id})" style="margin-top:4px;font-family:'DM Mono',monospace;font-size:11px"></div>
         </div>
         <div class="form-group"><label class="lbl">Notatki</label><textarea id="ss-notes" oninput="shopSettSave(${shop.id})" style="margin-top:4px;height:52px">${escHtml(shop.notes||'')}</textarea></div>
+        <div class="form-group"><label class="lbl">URL sklepu</label><input id="ss-url" value="${escHtml(shop.shopUrl||'')}" placeholder="https://mojsklep.pl" oninput="shopSettSave(${shop.id})" style="margin-top:4px"></div>
       </div>
 
       <div class="shop-sett-sec">
@@ -4836,13 +4913,28 @@ function renderAdPlatforms(shop){
     <div class="ad-plat-row">
       <div class="ad-plat-dot" style="background:${p.color}"></div>
       <span class="ad-plat-name">${escHtml(p.name)}</span>
-      <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2);cursor:pointer;margin-right:6px">
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2);cursor:pointer;margin-right:4px">
         <input type="checkbox" ${p.enabled?'checked':''} onchange="shopTogglePlatform(${shop.id},${i},this.checked)" style="width:14px;height:14px;accent-color:var(--accent)"> Aktywna
+      </label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;margin-right:4px;color:${p.campaignOn?'var(--green)':'var(--text3)'}">
+        <input type="checkbox" ${p.campaignOn?'checked':''} onchange="shopToggleCampaign(${shop.id},${i},this.checked)" style="width:14px;height:14px;accent-color:#22c55e"> Kampania
       </label>
       ${['meta','tiktok','google'].includes(p.id)?'':
         `<button class="ad-plat-del" onclick="shopDeletePlatform(${shop.id},${i})" title="Usuń">✕</button>`
       }
     </div>`).join('');
+}
+
+function shopToggleCampaign(shopId, idx, on){
+  const shop=S.shops.find(s=>s.id===shopId); if(!shop) return;
+  if(shop.adPlatforms[idx]) shop.adPlatforms[idx].campaignOn=on;
+  saveS();
+  // Refresh settings plats if open
+  const el=document.getElementById('ss-plats'); if(el) el.innerHTML=renderAdPlatforms(shop);
+  renderShopsSidebar();
+  // Re-render full detail to update the status bar buttons
+  renderShopDetail(shopId);
+  notify(`${on?'🟢':'🔴'} Kampania ${shop.adPlatforms[idx]?.name}: ${on?'ON':'OFF'}`);
 }
 
 function shopSwitchTab(tab){ shopTab=tab; renderShopDetail(activeShopId); }
@@ -5093,11 +5185,20 @@ function renderShopsSidebar(){
     <div class="shop-sb-sep"></div>
     `+S.shops.map(s=>{
       const sc=SHOP_STATUS_COLORS[s.status||'active'];
+      const activePlats=(s.adPlatforms||[]).filter(p=>p.enabled);
+      const campaignsOn=(s.adPlatforms||[]).filter(p=>p.enabled&&p.campaignOn);
+      const campaignDot=activePlats.length>0
+        ? (campaignsOn.length===activePlats.length ? '🟢' : campaignsOn.length>0 ? '🟡' : '🔴')
+        : '';
       return `<div class="shop-sb-item${activeShopId===s.id?' active':''}" onclick="shopSelect(${s.id})">
-        <div class="shop-sb-dot" style="background:${sc.color};cursor:pointer" onclick="event.stopPropagation();shopCycleStatus(${s.id})" title="Status: ${sc.label} (klik aby zmienić)"></div>
+        <div class="shop-sb-dot" style="background:${sc.color};cursor:pointer" onclick="event.stopPropagation();shopCycleStatus(${s.id})" title="Status: ${sc.label} — kliknij aby zmienić"></div>
         <div class="shop-sb-info">
           <div class="shop-sb-name">${escHtml(s.name)}</div>
-          <div class="shop-sb-plat" style="display:flex;align-items:center;gap:4px"><span style="font-size:9px">${sc.emoji}</span>${s.platform||''}</div>
+          <div class="shop-sb-plat" style="display:flex;align-items:center;gap:4px">
+            <span style="font-size:9px">${sc.emoji}</span>${s.platform||''}
+            ${campaignDot?`<span style="margin-left:3px;font-size:9px" title="Kampanie">${campaignDot}</span>`:''}
+            ${s.shopUrl?`<span style="font-size:9px;color:var(--accent);cursor:pointer" onclick="event.stopPropagation();window.open('${escHtml(s.shopUrl)}','_blank')" title="Otwórz sklep">🔗</span>`:''}
+          </div>
         </div>
       </div>`;
     }).join('');
@@ -5156,6 +5257,51 @@ function deleteShop(id){
 }
 function updateShopField(id,field,val){const s=S.shops.find(s=>s.id===id);if(s){s[field]=val;saveS()}}
 
+function renderShopTodos(shop){
+  const todos=shop.todos||[];
+  if(!todos.length) return `<div style="font-size:12px;color:var(--text3);padding:6px 0">Brak zadań — dodaj pierwsze!</div>`;
+  return todos.map((t,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
+      <div onclick="shopToggleTodo(${shop.id},${i})" style="width:18px;height:18px;border-radius:50%;border:2px solid ${t.done?'var(--green)':'var(--border)'};background:${t.done?'var(--green)':'transparent'};cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:white">${t.done?'✓':''}</div>
+      <span style="flex:1;font-size:13px;color:${t.done?'var(--text3)':'var(--text)'};text-decoration:${t.done?'line-through':'none'}">${escHtml(t.text)}</span>
+      <button onclick="shopDeleteTodo(${shop.id},${i})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0 2px">✕</button>
+    </div>`).join('');
+}
+function shopAddTodo(shopId){
+  const shop=S.shops.find(s=>s.id===shopId); if(!shop) return;
+  const inp=document.getElementById('shop-todo-inp-'+shopId);
+  const text=(inp?.value||'').trim(); if(!text) return;
+  if(!shop.todos) shop.todos=[];
+  shop.todos.push({text,done:false});
+  if(inp) inp.value='';
+  saveS();
+  const el=document.getElementById('shop-todos-list');
+  if(el) el.innerHTML=renderShopTodos(shop);
+}
+function shopToggleTodo(shopId,idx){
+  const shop=S.shops.find(s=>s.id===shopId); if(!shop||!shop.todos) return;
+  shop.todos[idx].done=!shop.todos[idx].done;
+  saveS();
+  const el=document.getElementById('shop-todos-list');
+  if(el) el.innerHTML=renderShopTodos(shop);
+}
+function shopDeleteTodo(shopId,idx){
+  const shop=S.shops.find(s=>s.id===shopId); if(!shop||!shop.todos) return;
+  shop.todos.splice(idx,1); saveS();
+  const el=document.getElementById('shop-todos-list');
+  if(el) el.innerHTML=renderShopTodos(shop);
+}
+function shopSaveTarget(shopId){
+  const shop=S.shops.find(s=>s.id===shopId); if(!shop) return;
+  shop.monthTarget=parseFloat(document.getElementById('shop-target-inp')?.value)||0;
+  saveS();
+}
+function shopSaveOpNotes(shopId){
+  const shop=S.shops.find(s=>s.id===shopId); if(!shop) return;
+  shop.opNotes=document.getElementById('shop-opnotes-'+shopId)?.value||'';
+  saveS();
+}
+
 function shopSettSave(shopId){
   const shop=S.shops.find(s=>s.id===shopId); if(!shop) return;
   const n=document.getElementById('ss-name')?.value; if(n) shop.name=n;
@@ -5163,6 +5309,7 @@ function shopSettSave(shopId){
   const vat=document.getElementById('ss-vat')?.value; if(vat!==undefined) shop.vatRate=parseInt(vat)||23;
   const api=document.getElementById('ss-api')?.value; if(api!==undefined) shop.apiKey=api;
   const notes=document.getElementById('ss-notes')?.value; if(notes!==undefined) shop.notes=notes;
+  const url=document.getElementById('ss-url')?.value; if(url!==undefined) shop.shopUrl=url.trim();
   saveS(); renderShops();
 }
 
@@ -5177,8 +5324,9 @@ function shopChangePeople(shopId, d){
 function shopTogglePlatform(shopId, idx, enabled){
   const shop=S.shops.find(s=>s.id===shopId); if(!shop) return;
   if(shop.adPlatforms[idx]) shop.adPlatforms[idx].enabled=enabled;
-  saveS(); renderShops();
-  const el=document.getElementById('ss-plats'); if(el) el.innerHTML=renderAdPlatforms(shop);
+  saveS();
+  renderShopsSidebar();
+  if(activeShopId===shopId) renderShopDetail(shopId);
 }
 
 function shopDeletePlatform(shopId, idx){
