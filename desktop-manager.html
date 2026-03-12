@@ -2079,338 +2079,470 @@ body.dark .order-card{background:var(--surface2)}
 /* ══════════════ MOBILE ══════════════ */
 @media (max-width: 768px) {
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   SHELL
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* ══════════════════════════════════════════
+   SHELL — okna fullscreen, dock, topbar
+══════════════════════════════════════════ */
+
 .window {
-  position: fixed !important; left: 0 !important; top: 0 !important;
-  width: 100vw !important; height: 100dvh !important;
-  border-radius: 0 !important; border: none !important;
-  box-shadow: none !important; transform: none !important;
-  z-index: 9000 !important; display: flex !important;
-  flex-direction: column !important; overflow: hidden !important;
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  transform: none !important;
+  z-index: 9000 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
 }
 .window.minimized { display: none !important; }
 .resize-handle { display: none !important; }
 .dw { display: none !important; }
 
-/* Titlebar — wyśrodkowany nagłówek */
+/* Titlebar — wysoki, tytuł absolutnie wyśrodkowany */
 .win-titlebar {
-  height: 52px !important; min-height: 52px !important;
-  padding: 0 10px !important; flex-shrink: 0 !important;
-  cursor: default !important; position: relative !important;
-  display: flex !important; align-items: center !important;
+  height: 56px !important;
+  min-height: 56px !important;
+  padding: 0 12px !important;
+  flex-shrink: 0 !important;
+  cursor: default !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  background: var(--surface) !important;
+  border-bottom: 1.5px solid var(--border) !important;
 }
-.win-controls { flex-shrink: 0 !important; }
-.win-btn { width: 26px !important; height: 26px !important; font-size: 13px !important; }
+.win-controls { display: flex !important; gap: 8px !important; flex-shrink: 0 !important; z-index: 1 !important; }
+.win-btn { width: 28px !important; height: 28px !important; border-radius: 50% !important; font-size: 14px !important; }
 .win-btn.maximize { display: none !important; }
-/* Title: absolutely centered in titlebar */
+.win-icon { display: none !important; }
 .win-title {
-  position: absolute !important; left: 50% !important; top: 50% !important;
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
   transform: translate(-50%, -50%) !important;
-  font-size: 16px !important; font-weight: 800 !important;
-  pointer-events: none !important; white-space: nowrap !important;
+  font-size: 17px !important;
+  font-weight: 800 !important;
+  white-space: nowrap !important;
+  pointer-events: none !important;
+  color: var(--text) !important;
 }
-.win-icon { font-size: 20px !important; margin-right: 4px !important; }
-/* spacer after icon (the "width:52px" div) — hide it */
-.win-titlebar > div:last-child:not(.win-controls):not([id]) { display: none !important; }
+/* Spacer div (width:52px) — ukryty na mobile */
+.win-titlebar > div[style*="width:52px"] { display: none !important; }
 
-/* Info widget */
+/* Info bar — wąski top strip */
 #info-widget {
   left: 0 !important; right: 0 !important; top: 0 !important;
   width: 100% !important; transform: none !important;
-  border-radius: 0 !important; height: 46px !important;
+  border-radius: 0 !important; height: 44px !important;
   padding: 0 12px !important; box-sizing: border-box !important;
+  gap: 8px !important;
 }
-#iw-date, #pill-stats-row, #mb-alerts, #pill-user-badge,
-.iw-sep, #sync-badge { display: none !important; }
+#iw-date, #pill-stats-row, #mb-alerts, #pill-user-badge, .iw-sep, #sync-badge { display: none !important; }
 #iw-time { font-size: 15px !important; font-weight: 800 !important; }
-.iw-logo-text { font-size: 14px !important; }
-.iw-btn { width: 36px !important; height: 36px !important; font-size: 20px !important; }
+.iw-logo-text { font-size: 14px !important; font-weight: 800 !important; }
+.iw-btn { width: 34px !important; height: 34px !important; font-size: 18px !important; border-radius: 8px !important; }
 
-#desktop { top: 46px !important; bottom: 72px !important; }
-#left-sidebar { top: 0 !important; bottom: 72px !important; width: 82vw !important; max-width: 310px !important; }
-#sched-panel, #finance-panel { width: 100% !important; right: -100% !important; top: 0 !important; bottom: 72px !important; }
+#desktop { top: 44px !important; bottom: 74px !important; }
+#left-sidebar { top: 0 !important; bottom: 74px !important; width: 82vw !important; max-width: 320px !important; }
+#sched-panel, #finance-panel { width: 100% !important; right: -100% !important; top: 0 !important; bottom: 74px !important; }
 #sched-panel.open, #finance-panel.open { right: 0 !important; }
-#focus-panel { width: 100% !important; left: -100% !important; top: 0 !important; bottom: 72px !important; }
+#focus-panel { width: 100% !important; left: -100% !important; top: 0 !important; bottom: 74px !important; }
 #focus-panel.open { left: 0 !important; }
 #sched-tab, #finance-tab, #focus-tab { display: none !important; }
 
+/* Dock */
 #dock {
-  bottom: 6px !important; left: 8px !important; right: 8px !important;
-  transform: translateX(0) !important; padding: 5px 8px !important;
+  bottom: 8px !important; left: 8px !important; right: 8px !important;
+  transform: none !important; padding: 6px 10px !important;
   max-width: none !important; overflow-x: auto !important;
-  gap: 0 !important; scrollbar-width: none !important;
-  -webkit-overflow-scrolling: touch !important;
-  justify-content: flex-start !important;
+  scrollbar-width: none !important; -webkit-overflow-scrolling: touch !important;
+  justify-content: flex-start !important; gap: 0 !important;
 }
 #dock::-webkit-scrollbar { display: none !important; }
-.dock-btn { width: 52px !important; height: 54px !important; font-size: 22px !important; flex-shrink: 0 !important; border-radius: 12px !important; }
+.dock-btn { width: 54px !important; height: 56px !important; font-size: 22px !important; flex-shrink: 0 !important; border-radius: 12px !important; }
 .dock-btn:hover { transform: none !important; }
-.dock-label { font-size: 9px !important; }
+.dock-label { font-size: 9px !important; margin-top: 2px !important; }
 .dock-sep { display: none !important; }
 #dock-time { display: none !important; }
-#toast-stack { bottom: 84px !important; }
+#toast-stack { bottom: 88px !important; }
 
-/* Inputs — iOS no-zoom (≥16px) */
+/* Global form controls — iOS no-zoom */
 input, select, textarea {
-  font-size: 16px !important; padding: 11px 13px !important;
-  border-radius: 10px !important; box-sizing: border-box !important;
-  min-height: 46px !important; max-width: 100% !important;
+  font-size: 16px !important;
+  padding: 13px 14px !important;
+  border-radius: 12px !important;
+  box-sizing: border-box !important;
+  min-height: 50px !important;
+  width: 100% !important;
 }
 textarea { min-height: 80px !important; line-height: 1.6 !important; }
-.btn { min-height: 46px !important; padding: 11px 16px !important; font-size: 15px !important; border-radius: 10px !important; }
-.btn-sm { min-height: 40px !important; padding: 9px 14px !important; font-size: 14px !important; }
-.form-group { margin-bottom: 10px !important; }
-.form-row { flex-direction: column !important; gap: 8px !important; }
-.lbl, .form-group label { font-size: 13px !important; font-weight: 700 !important; margin-bottom: 5px !important; display: block !important; }
+.btn {
+  min-height: 50px !important; padding: 13px 18px !important;
+  font-size: 15px !important; font-weight: 700 !important;
+  border-radius: 12px !important;
+}
+.btn-sm { min-height: 42px !important; padding: 10px 14px !important; font-size: 14px !important; }
+.lbl, label { font-size: 13px !important; font-weight: 700 !important; letter-spacing: .04em !important; }
 .sep { margin: 10px 0 !important; }
-.sec-title { font-size: 15px !important; font-weight: 800 !important; margin-bottom: 10px !important; }
-.del-btn { width: 38px !important; height: 38px !important; font-size: 18px !important; }
-.win-body { padding: 14px !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; flex: 1 !important; min-height: 0 !important; }
+.sec-title { font-size: 16px !important; font-weight: 800 !important; }
+.del-btn { width: 40px !important; height: 40px !important; font-size: 20px !important; border-radius: 10px !important; }
+.win-body { padding: 16px !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; flex: 1 !important; min-height: 0 !important; }
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   ZADANIA & KALENDARZ
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-/* The outer flex row wrapper → column, fill window below titlebar */
+
+/* ══════════════════════════════════════════
+   ✅ ZADANIA
+══════════════════════════════════════════ */
+
+/* Outer flex wrapper → column, fill everything under titlebar */
 #win-tasks > div:nth-child(2) {
-  flex-direction: column !important;
-  flex: 1 !important; min-height: 0 !important;
-  overflow: hidden !important;
-}
-/* Tasks panel: fills all space */
-#win-tasks > div:nth-child(2) > div:first-child {
-  flex: 1 !important; min-height: 0 !important;
-  border-right: none !important;
-  overflow: hidden !important;
-  display: flex !important; flex-direction: column !important;
-}
-/* Calendar: collapsed accordion, toggled via .mob-cal-open */
-#win-tasks > div:nth-child(2) > div:last-child {
-  width: 100% !important; flex-shrink: 0 !important;
-  overflow: hidden !important; max-height: 0 !important;
-  transition: max-height 0.3s ease !important;
-}
-#win-tasks > div:nth-child(2) > div:last-child.mob-cal-open {
-  max-height: 360px !important;
-  overflow-y: auto !important; -webkit-overflow-scrolling: touch !important;
-}
-/* Filter bar */
-.todo-filters {
-  display: flex !important; overflow-x: auto !important; flex-wrap: nowrap !important;
-  scrollbar-width: none !important; padding: 8px 12px !important;
-  gap: 6px !important; flex-shrink: 0 !important;
-}
-.todo-filters::-webkit-scrollbar { display: none !important; }
-.filter-btn { flex-shrink: 0 !important; padding: 9px 14px !important; font-size: 13px !important; min-height: 38px !important; }
-/* Task list: scrollable */
-#tasks-list { flex: 1 !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; padding: 8px 12px !important; min-height: 0 !important; }
-.task-item { padding: 12px 12px !important; gap: 10px !important; border-radius: 11px !important; margin-bottom: 6px !important; }
-.task-check { width: 26px !important; height: 26px !important; flex-shrink: 0 !important; }
-.task-text { font-size: 15px !important; line-height: 1.45 !important; }
-/* Add task — pinned to bottom, no overflow */
-#win-tasks > div:nth-child(2) > div:first-child > div:last-child {
-  padding: 10px 12px !important; flex-shrink: 0 !important;
-  border-top: 1.5px solid var(--border) !important;
-}
-#win-tasks .form-row { flex-direction: row !important; gap: 6px !important; flex-wrap: nowrap !important; }
-#task-inp { flex: 1 !important; min-width: 0 !important; }
-#task-priority { width: 100px !important; flex-shrink: 0 !important; }
-/* Date modal: center on mobile */
-#task-date-modal { width: calc(100vw - 32px) !important; max-width: 360px !important; max-height: 85dvh !important; overflow-y: auto !important; }
-#task-date-modal-overlay { align-items: center !important; padding: 16px !important; box-sizing: border-box !important; }
-/* Calendar */
-.cal-nav { padding: 10px 12px !important; }
-.cal-month-lbl { font-size: 16px !important; }
-.cal-nav-btn { width: 36px !important; height: 36px !important; font-size: 18px !important; min-height: 36px !important; }
-.cal-grid { padding: 4px 8px !important; gap: 3px !important; }
-.cal-day { font-size: 14px !important; height: 36px !important; border-radius: 9px !important; }
-.cal-day-name { font-size: 11px !important; }
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   SKLEPY
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.shops-layout { flex-direction: column !important; overflow: hidden !important; flex: 1 !important; min-height: 0 !important; }
-.shops-sidebar { width: 100% !important; max-height: 50px !important; border-right: none !important; border-bottom: 1.5px solid var(--border) !important; overflow: hidden !important; flex-shrink: 0 !important; }
-.shops-sb-hdr { display: none !important; }
-.shops-sb-scroll { display: flex !important; flex-direction: row !important; overflow-x: auto !important; padding: 7px 10px !important; gap: 6px !important; scrollbar-width: none !important; height: 50px !important; align-items: center !important; }
-.shops-sb-scroll::-webkit-scrollbar { display: none !important; }
-.shop-sb-summary, .shop-sb-item { display: inline-flex !important; align-items: center !important; gap: 5px !important; padding: 5px 12px !important; border-radius: 20px !important; background: var(--surface2) !important; border: 1.5px solid var(--border) !important; white-space: nowrap !important; flex-shrink: 0 !important; height: 34px !important; }
-.shop-sb-summary.active, .shop-sb-item.active { background: var(--accent-light) !important; border-color: var(--accent) !important; }
-.shop-sb-name, .shop-sb-summary-lbl { font-size: 12px !important; font-weight: 700 !important; }
-.shop-sb-plat, .shop-sb-sep { display: none !important; }
-.shops-detail { flex: 1 !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; min-height: 0 !important; display: flex !important; flex-direction: column !important; }
-.shop-tabs { display: flex !important; overflow-x: auto !important; scrollbar-width: none !important; flex-shrink: 0 !important; flex-wrap: nowrap !important; border-bottom: 1.5px solid var(--border) !important; }
-.shop-tabs::-webkit-scrollbar { display: none !important; }
-.shop-tab { flex-shrink: 0 !important; padding: 12px 16px !important; font-size: 13px !important; white-space: nowrap !important; }
-.shop-kpi-row { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 8px !important; padding: 10px !important; flex-shrink: 0 !important; }
-.shop-kpi { padding: 10px 8px !important; } .shop-kpi-val { font-size: 15px !important; } .shop-kpi-lbl { font-size: 9px !important; }
-.shop-entry-form { padding: 10px !important; flex-shrink: 0 !important; }
-.shop-entry-row { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
-.shop-entry-row > .shop-ei:first-child { grid-column: 1 / -1 !important; }
-.shop-ei { width: 100% !important; } .shop-ei input, .shop-ei select { width: 100% !important; min-height: 42px !important; }
-.shop-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
-.shop-table { min-width: 480px !important; font-size: 12px !important; }
-.shop-month-bar { padding: 8px 10px !important; flex-shrink: 0 !important; }
-.shop-sett-body { padding: 12px !important; overflow-y: auto !important; flex: 1 !important; -webkit-overflow-scrolling: touch !important; }
-#win-shops .form-row { flex-direction: column !important; gap: 8px !important; }
-#win-shops .form-group { max-width: none !important; width: 100% !important; }
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   BUDŻET — nie przycinać dołu
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-#win-budget .win-body { padding: 0 !important; overflow: hidden !important; display: flex !important; flex-direction: column !important; }
-#budget-inner {
-  flex: 1 !important; overflow-y: auto !important; overflow-x: hidden !important;
-  -webkit-overflow-scrolling: touch !important;
-  display: flex !important; flex-direction: column !important; min-height: 0 !important;
-}
-/* Tab bar */
-#budget-inner > div:first-child { flex-shrink: 0 !important; overflow-x: auto !important; scrollbar-width: none !important; white-space: nowrap !important; }
-#budget-inner > div:first-child::-webkit-scrollbar { display: none !important; }
-#budget-inner > div:first-child button { padding: 9px 12px !important; font-size: 13px !important; }
-.budget-nav { padding: 10px 12px !important; flex-shrink: 0 !important; }
-.budget-nav-month { font-size: 16px !important; font-weight: 800 !important; }
-.budget-nb { width: 34px !important; height: 34px !important; min-height: 34px !important; }
-.budget-summary { grid-template-columns: 1fr 1fr !important; gap: 7px !important; padding: 8px 10px !important; flex-shrink: 0 !important; }
-.bsum-box { padding: 10px !important; } .bsum-val { font-size: 16px !important; } .bsum-lbl { font-size: 10px !important; }
-/* Columns → vertical stack, no overflow clipping */
-.budget-columns { display: flex !important; flex-direction: column !important; grid-template-columns: none !important; overflow: visible !important; flex-shrink: 0 !important; }
-.budget-col { overflow: visible !important; min-height: 0 !important; border-right: none !important; border-bottom: 1.5px solid var(--border) !important; }
-.budget-col-scroll { overflow: visible !important; max-height: none !important; padding: 6px 8px !important; }
-.budget-col-hdr { padding: 10px 12px !important; }
-.budget-col-title { font-size: 12px !important; } .budget-col-total { font-size: 13px !important; }
-.budget-row { padding: 11px 10px !important; gap: 8px !important; border-radius: 10px !important; margin-bottom: 4px !important; }
-.budget-row-label { font-size: 14px !important; } .budget-row-amount { font-size: 14px !important; }
-.budget-row-del { width: 32px !important; height: 32px !important; }
-/* Add form: stacked, no overflow cut */
-.budget-add-form { padding: 10px !important; flex-shrink: 0 !important; }
-.budget-add-row { flex-direction: column !important; gap: 7px !important; margin-top: 6px !important; }
-.budget-add-inp-label, .budget-add-inp-amt, #bi-cat, #be-cat, #be-type { width: 100% !important; }
-.budget-add-btn { width: 100% !important; min-height: 46px !important; font-size: 15px !important; border-radius: 10px !important; }
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   ZLECENIA
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-#win-orders .win-body { padding: 0 !important; overflow: hidden !important; display: flex !important; flex-direction: column !important; }
-#orders-inner { flex: 1 !important; overflow: hidden !important; display: flex !important; flex-direction: column !important; min-height: 0 !important; }
-#orders-inner > div:first-child { flex-shrink: 0 !important; padding: 10px 12px !important; border-bottom: 1.5px solid var(--border) !important; }
-.orders-kanban { flex: 1 !important; display: flex !important; flex-direction: row !important; overflow-x: auto !important; overflow-y: hidden !important; -webkit-overflow-scrolling: touch !important; padding: 10px 8px !important; gap: 10px !important; align-items: flex-start !important; }
-.orders-col { flex: 0 0 78vw !important; max-width: 280px !important; border-right: none !important; border: 1.5px solid var(--border) !important; border-radius: 12px !important; }
-.orders-col-hdr { padding: 12px 12px !important; font-size: 13px !important; border-radius: 12px 12px 0 0 !important; }
-.orders-col-body { max-height: calc(100dvh - 210px) !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; padding: 8px !important; }
-.order-card { padding: 14px !important; border-radius: 10px !important; }
-.order-client { font-size: 14px !important; font-weight: 800 !important; }
-.order-service { font-size: 13px !important; }
-.order-meta { flex-wrap: wrap !important; }
-#order-modal-overlay { align-items: flex-end !important; }
-#order-modal { border-radius: 20px 20px 0 0 !important; width: 100% !important; max-height: 88dvh !important; overflow-y: auto !important; padding: 20px 16px 30px !important; box-sizing: border-box !important; }
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   NAWYKI
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.habits-stats { display: grid !important; grid-template-columns: repeat(3,1fr) !important; gap: 8px !important; margin-bottom: 14px !important; }
-.habits-stat { padding: 12px 8px !important; } .habits-stat-n { font-size: 22px !important; } .habits-stat-l { font-size: 11px !important; }
-.habit-item { padding: 14px !important; margin-bottom: 8px !important; border-radius: 12px !important; }
-.habit-hdr { margin-bottom: 10px !important; }
-.habit-name { font-size: 15px !important; }
-.habit-week { gap: 4px !important; display: flex !important; }
-.habit-day { flex: 1 !important; min-width: 0 !important; height: 38px !important; border-radius: 8px !important; font-size: 11px !important; font-weight: 700 !important; }
-#win-habits .form-row { flex-direction: row !important; gap: 8px !important; align-items: flex-end !important; }
-#hab-name-inp { flex: 1 !important; } #hab-icon-inp { width: 70px !important; flex-shrink: 0 !important; }
-#win-habits .btn-primary { width: 100% !important; margin-top: 8px !important; }
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   WYKRESY
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-#win-charts .win-body { padding: 10px !important; display: flex !important; flex-direction: column !important; gap: 8px !important; overflow-y: auto !important; }
-.chart-tabs { display: flex !important; overflow-x: auto !important; flex-wrap: nowrap !important; scrollbar-width: none !important; flex-shrink: 0 !important; }
-.chart-tabs::-webkit-scrollbar { display: none !important; }
-.chart-tab { flex-shrink: 0 !important; padding: 10px 16px !important; font-size: 14px !important; min-height: 42px !important; }
-#chart-canvas { width: 100% !important; max-height: 240px !important; }
-.chart-legend { flex-wrap: wrap !important; gap: 8px !important; }
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   KALKULATOR MARŻY — nie przycinać
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-#win-margin .win-body { overflow-y: auto !important; padding: 12px !important; -webkit-overflow-scrolling: touch !important; }
-.margin-calc { padding: 0 !important; display: flex !important; flex-direction: column !important; gap: 6px !important; }
-/* Pair of small inputs: side by side */
-.margin-calc > div[style*="display:flex;gap"] { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
-.margin-result { padding: 14px !important; border-radius: 12px !important; margin-top: 6px !important; }
-.mres-item { padding: 12px 0 !important; border-bottom: 1px solid var(--border) !important; }
-.mres-item:last-child { border-bottom: none !important; }
-.mres-label { font-size: 14px !important; } .mres-val { font-size: 16px !important; font-weight: 800 !important; }
-#win-margin .btn { width: 100% !important; margin-top: 8px !important; }
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   AI
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-#win-ai .win-body { padding: 0 !important; display: flex !important; flex-direction: column !important; overflow: hidden !important; }
-.ai-context-badge { font-size: 12px !important; padding: 6px 12px !important; flex-shrink: 0 !important; }
-.ai-messages { flex: 1 !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; padding: 12px !important; gap: 10px !important; }
-.ai-bubble { font-size: 15px !important; padding: 12px 14px !important; max-width: 90% !important; }
-.ai-input-row { flex-shrink: 0 !important; padding: 10px 12px !important; gap: 8px !important; border-top: 1.5px solid var(--border) !important; }
-.ai-input-row input { flex: 1 !important; font-size: 16px !important; min-height: 46px !important; }
-#ai-send-btn { width: 46px !important; height: 46px !important; flex-shrink: 0 !important; font-size: 20px !important; min-height: 46px !important; }
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   DOSTAWCY / PLANY / POMYSŁY
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-#win-suppliers .win-body, #win-plans .win-body, #win-ideas .win-body {
-  overflow-y: auto !important; -webkit-overflow-scrolling: touch !important;
-}
-#win-suppliers .form-row, #win-plans .form-row, #win-ideas .form-row { flex-direction: column !important; gap: 8px !important; }
-#win-suppliers .form-group, #win-plans .form-group, #win-ideas .form-group { max-width: none !important; width: 100% !important; }
-#win-suppliers .btn-primary, #win-plans .btn-primary, #win-ideas .btn-primary { width: 100% !important; min-height: 46px !important; }
-#idea-desc-inp { min-height: 80px !important; }
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   NOTATKI (multi-note)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-/* Full height layout */
-#win-notes #notes-layout {
-  height: calc(100dvh - 52px) !important;
-  overflow: hidden !important;
-}
-/* On mobile: list takes full width, editor slides in */
-#win-notes #notes-sidebar {
-  width: 100% !important;
-  border-right: none !important;
-  border-bottom: 1.5px solid var(--border) !important;
+  flex: 1 !important;
+  min-height: 0 !important;
   display: flex !important;
   flex-direction: column !important;
+  overflow: hidden !important;
 }
-/* When sidebar is visible, hide editor panel */
-#win-notes #notes-editor-panel { display: none !important; }
-/* When sidebar is hidden (note open), show editor */
-#win-notes #notes-sidebar[style*="display: none"] ~ #notes-editor-panel,
-#win-notes #notes-sidebar[style*="display:none"] ~ #notes-editor-panel { display: flex !important; }
-/* Toolbar: two rows, smaller buttons */
-#notes-toolbar { gap: 4px !important; padding: 8px !important; flex-wrap: wrap !important; }
-.ntb { min-width: 36px !important; height: 36px !important; font-size: 13px !important; }
-/* Editor: full space */
-#notes-editor { font-size: 16px !important; padding: 14px !important; }
-#notes-title-inp { font-size: 18px !important; padding: 12px 14px !important; min-height: 50px !important; }
-/* List items: bigger touch targets */
-.note-item { padding: 14px 12px !important; }
-.note-item-title { font-size: 15px !important; }
-.note-item-preview { font-size: 13px !important; }
-/* Back button: only on mobile */
-#notes-mob-back { display: none; }
+/* Tasks panel = full height */
+#win-tasks > div:nth-child(2) > div:first-child {
+  flex: 1 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  border-right: none !important;
+}
+/* Calendar panel = collapsed by default */
+#win-tasks > div:nth-child(2) > div:last-child {
+  width: 100% !important;
+  flex-shrink: 0 !important;
+  overflow: hidden !important;
+  max-height: 0 !important;
+  border-top: none !important;
+  transition: max-height .3s ease !important;
+}
+#win-tasks > div:nth-child(2) > div:last-child.mob-cal-open {
+  max-height: 350px !important;
+  overflow-y: auto !important;
+  border-top: 1.5px solid var(--border) !important;
+}
+/* Filter chips */
+.todo-filters {
+  display: flex !important;
+  overflow-x: auto !important;
+  flex-wrap: nowrap !important;
+  scrollbar-width: none !important;
+  padding: 10px 14px !important;
+  gap: 8px !important;
+  flex-shrink: 0 !important;
+  background: var(--surface2) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+.todo-filters::-webkit-scrollbar { display: none !important; }
+.filter-btn {
+  flex-shrink: 0 !important;
+  padding: 8px 18px !important;
+  font-size: 14px !important;
+  min-height: 36px !important;
+  border-radius: 20px !important;
+}
+/* Task list: all remaining space */
+#tasks-list {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  padding: 10px 14px !important;
+  min-height: 0 !important;
+}
+/* Task items: native feel */
+.task-item {
+  padding: 16px 14px !important;
+  gap: 12px !important;
+  border-radius: 14px !important;
+  margin-bottom: 8px !important;
+  background: var(--surface2) !important;
+  border: 1.5px solid var(--border) !important;
+}
+.task-check { width: 28px !important; height: 28px !important; flex-shrink: 0 !important; border-width: 2.5px !important; border-radius: 50% !important; }
+.task-text { font-size: 16px !important; line-height: 1.4 !important; font-weight: 500 !important; }
+.task-due { font-size: 12px !important; }
+.task-del { width: 38px !important; height: 38px !important; border-radius: 10px !important; }
+/* Add task — pinned bottom bar */
+#win-tasks > div:nth-child(2) > div:first-child > div:last-child {
+  flex-shrink: 0 !important;
+  padding: 12px 14px !important;
+  border-top: 1.5px solid var(--border) !important;
+  background: var(--surface2) !important;
+}
+#task-inp { flex: 1 !important; min-width: 0 !important; min-height: 46px !important; }
+#task-priority { width: 120px !important; flex-shrink: 0 !important; min-height: 46px !important; }
+/* Task date modal */
+#task-date-modal-overlay { align-items: flex-end !important; padding: 0 !important; }
+#task-date-modal {
+  width: 100% !important;
+  max-width: 100% !important;
+  border-radius: 24px 24px 0 0 !important;
+  max-height: 88dvh !important;
+  overflow-y: auto !important;
+  padding-bottom: 24px !important;
+}
+.tdm-hdr { padding: 20px 20px 14px !important; }
+.tdm-title { font-size: 18px !important; }
+.tdm-body { padding: 16px 20px !important; }
+.tdm-day { font-size: 15px !important; padding: 10px 4px !important; border-radius: 10px !important; }
+.tdm-dow { font-size: 11px !important; }
+.tdm-time-row { gap: 12px !important; margin-bottom: 16px !important; }
+.tdm-foot { padding: 0 20px 10px !important; gap: 10px !important; }
+.tdm-foot .btn { flex: 1 !important; }
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   PANELE (Harmonogram, Focus)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.sp-hdr { padding: 16px 14px !important; flex-shrink: 0 !important; }
-.sp-title { font-size: 17px !important; font-weight: 800 !important; }
-.sp-body { padding: 8px 10px !important; flex: 1 !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; }
-.sched-item { padding: 12px 10px !important; gap: 10px !important; margin-bottom: 5px !important; border-radius: 11px !important; }
-.sched-cb { width: 24px !important; height: 24px !important; flex-shrink: 0 !important; }
-.sched-text { font-size: 15px !important; }
-.sp-add { padding: 10px !important; flex-shrink: 0 !important; }
-.sp-text-inp { min-height: 46px !important; font-size: 16px !important; margin-bottom: 8px !important; }
-.sp-add-btn { flex: 1 !important; min-height: 46px !important; }
+
+/* ══════════════════════════════════════════
+   🏪 SKLEPY
+══════════════════════════════════════════ */
+
+.shops-layout { flex: 1 !important; min-height: 0 !important; flex-direction: column !important; overflow: hidden !important; }
+/* Sidebar → horizontal scrollable pills */
+.shops-sidebar {
+  width: 100% !important; max-height: 52px !important;
+  border-right: none !important; border-bottom: 1.5px solid var(--border) !important;
+  overflow: hidden !important; flex-shrink: 0 !important;
+}
+.shops-sb-hdr { display: none !important; }
+.shops-sb-scroll {
+  display: flex !important; flex-direction: row !important;
+  overflow-x: auto !important; padding: 8px 12px !important;
+  gap: 8px !important; scrollbar-width: none !important;
+  height: 52px !important; align-items: center !important;
+}
+.shops-sb-scroll::-webkit-scrollbar { display: none !important; }
+.shop-sb-summary, .shop-sb-item {
+  display: inline-flex !important; align-items: center !important; gap: 6px !important;
+  padding: 6px 14px !important; border-radius: 20px !important;
+  background: var(--surface2) !important; border: 1.5px solid var(--border) !important;
+  white-space: nowrap !important; flex-shrink: 0 !important; height: 36px !important;
+  cursor: pointer !important;
+}
+.shop-sb-summary.active, .shop-sb-item.active { background: var(--accent-light) !important; border-color: var(--accent) !important; }
+.shop-sb-name, .shop-sb-summary-lbl { font-size: 13px !important; font-weight: 700 !important; }
+.shop-sb-plat, .shop-sb-sep { display: none !important; }
+/* Detail area */
+.shops-detail { flex: 1 !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; min-height: 0 !important; }
+.shop-tabs { display: flex !important; overflow-x: auto !important; scrollbar-width: none !important; flex-wrap: nowrap !important; border-bottom: 1.5px solid var(--border) !important; flex-shrink: 0 !important; background: var(--surface2) !important; }
+.shop-tabs::-webkit-scrollbar { display: none !important; }
+.shop-tab { flex-shrink: 0 !important; padding: 14px 18px !important; font-size: 14px !important; font-weight: 600 !important; }
+.shop-kpi-row { display: grid !important; grid-template-columns: 1fr 1fr 1fr !important; gap: 8px !important; padding: 12px !important; }
+.shop-kpi { padding: 12px 8px !important; border-radius: 12px !important; }
+.shop-kpi-val { font-size: 16px !important; } .shop-kpi-lbl { font-size: 9px !important; }
+.shop-entry-form { padding: 12px !important; }
+.shop-entry-row { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+.shop-entry-row > .shop-ei:first-child { grid-column: 1 / -1 !important; }
+.shop-ei input, .shop-ei select { min-height: 46px !important; font-size: 15px !important; }
+.shop-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; padding: 0 12px 12px !important; }
+.shop-table { min-width: 500px !important; font-size: 12px !important; }
+.shop-sett-body { padding: 14px !important; overflow-y: auto !important; flex: 1 !important; -webkit-overflow-scrolling: touch !important; }
+#win-shops .form-group { max-width: none !important; }
+
+
+/* ══════════════════════════════════════════
+   💰 BUDŻET
+══════════════════════════════════════════ */
+
+#win-budget .win-body { padding: 0 !important; overflow: hidden !important; }
+#budget-inner {
+  flex: 1 !important; min-height: 0 !important;
+  overflow-y: auto !important; overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  display: flex !important; flex-direction: column !important;
+}
+/* Tab bar */
+#budget-inner > div:first-child {
+  flex-shrink: 0 !important; overflow-x: auto !important;
+  scrollbar-width: none !important; white-space: nowrap !important;
+  background: var(--surface2) !important;
+}
+#budget-inner > div:first-child::-webkit-scrollbar { display: none !important; }
+#budget-inner > div:first-child > button { padding: 12px 14px !important; font-size: 13px !important; }
+.budget-nav { padding: 12px 14px !important; flex-shrink: 0 !important; }
+.budget-nav-month { font-size: 18px !important; font-weight: 800 !important; }
+.budget-nb { width: 36px !important; height: 36px !important; min-height: 36px !important; }
+/* Summary: 2×2 grid */
+.budget-summary { grid-template-columns: 1fr 1fr !important; gap: 8px !important; padding: 0 12px 12px !important; flex-shrink: 0 !important; }
+.bsum-box { padding: 12px !important; border-radius: 14px !important; }
+.bsum-val { font-size: 18px !important; } .bsum-lbl { font-size: 10px !important; }
+/* Columns: vertical stack, no clipping */
+.budget-columns { display: flex !important; flex-direction: column !important; grid-template-columns: none !important; overflow: visible !important; flex-shrink: 0 !important; min-height: 0 !important; }
+.budget-col { overflow: visible !important; border-right: none !important; border-bottom: 1.5px solid var(--border) !important; }
+.budget-col-scroll { overflow: visible !important; max-height: none !important; padding: 8px 12px !important; }
+.budget-col-hdr { padding: 12px 14px !important; }
+.budget-col-title { font-size: 13px !important; font-weight: 800 !important; }
+.budget-col-total { font-size: 15px !important; }
+.budget-row { padding: 13px 12px !important; gap: 10px !important; border-radius: 12px !important; margin-bottom: 6px !important; }
+.budget-row-label { font-size: 15px !important; } .budget-row-amount { font-size: 15px !important; }
+.budget-row-del { width: 34px !important; height: 34px !important; }
+.budget-add-form { padding: 12px !important; flex-shrink: 0 !important; }
+.budget-add-row { flex-direction: column !important; gap: 8px !important; margin-top: 8px !important; }
+.budget-add-inp-label, .budget-add-inp-amt, #bi-cat, #be-cat, #be-type { width: 100% !important; }
+.budget-add-btn { width: 100% !important; min-height: 50px !important; font-size: 15px !important; font-weight: 700 !important; border-radius: 12px !important; }
+
+
+/* ══════════════════════════════════════════
+   📋 ZLECENIA (Kanban)
+══════════════════════════════════════════ */
+
+#win-orders .win-body { padding: 0 !important; overflow: hidden !important; }
+#orders-inner { flex: 1 !important; min-height: 0 !important; overflow: hidden !important; display: flex !important; flex-direction: column !important; }
+#orders-inner > div:first-child { flex-shrink: 0 !important; padding: 12px 14px !important; border-bottom: 1.5px solid var(--border) !important; background: var(--surface2) !important; }
+.orders-kanban { flex: 1 !important; display: flex !important; flex-direction: row !important; overflow-x: auto !important; overflow-y: hidden !important; -webkit-overflow-scrolling: touch !important; padding: 12px !important; gap: 12px !important; align-items: flex-start !important; }
+.orders-col { flex: 0 0 80vw !important; max-width: 300px !important; border-right: none !important; border: 1.5px solid var(--border) !important; border-radius: 16px !important; overflow: hidden !important; }
+.orders-col-hdr { padding: 14px 14px !important; font-size: 14px !important; font-weight: 800 !important; border-radius: 14px 14px 0 0 !important; }
+.orders-col-body { max-height: calc(100dvh - 220px) !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; padding: 10px !important; display: flex !important; flex-direction: column !important; gap: 8px !important; }
+.order-card { padding: 16px !important; border-radius: 12px !important; border: 1.5px solid var(--border) !important; }
+.order-client { font-size: 16px !important; font-weight: 800 !important; margin-bottom: 4px !important; }
+.order-service { font-size: 14px !important; margin-bottom: 8px !important; }
+.order-meta { gap: 8px !important; flex-wrap: wrap !important; }
+.order-rate { font-size: 14px !important; } .order-deadline { font-size: 13px !important; }
+#order-modal-overlay { align-items: flex-end !important; padding: 0 !important; }
+#order-modal { border-radius: 24px 24px 0 0 !important; width: 100% !important; max-height: 88dvh !important; overflow-y: auto !important; padding: 20px 18px 30px !important; box-sizing: border-box !important; }
+.order-modal-title { font-size: 20px !important; margin-bottom: 16px !important; }
+
+
+/* ══════════════════════════════════════════
+   💪 NAWYKI
+══════════════════════════════════════════ */
+
+.habits-stats { display: grid !important; grid-template-columns: repeat(3,1fr) !important; gap: 10px !important; margin-bottom: 16px !important; }
+.habits-stat { padding: 14px 10px !important; border-radius: 14px !important; text-align: center !important; }
+.habits-stat-n { font-size: 24px !important; font-weight: 900 !important; }
+.habits-stat-l { font-size: 11px !important; margin-top: 2px !important; }
+.habit-item { padding: 16px !important; margin-bottom: 10px !important; border-radius: 16px !important; border: 1.5px solid var(--border) !important; }
+.habit-hdr { margin-bottom: 12px !important; gap: 10px !important; align-items: center !important; }
+.habit-icon { font-size: 24px !important; }
+.habit-name { font-size: 16px !important; font-weight: 700 !important; }
+.habit-streak { font-size: 14px !important; font-weight: 700 !important; }
+.habit-week { gap: 5px !important; }
+.habit-day { flex: 1 !important; min-width: 0 !important; height: 42px !important; border-radius: 10px !important; font-size: 12px !important; font-weight: 700 !important; }
+/* Add form: compact row */
+#win-habits .sep { margin: 10px 0 6px !important; }
+#win-habits .sec-title { font-size: 14px !important; margin-bottom: 8px !important; }
+#win-habits .form-row { display: flex !important; flex-direction: row !important; gap: 8px !important; align-items: flex-end !important; }
+#hab-name-inp { flex: 1 !important; }
+#hab-icon-inp { width: 72px !important; flex-shrink: 0 !important; }
+#win-habits .btn-primary { width: 100% !important; margin-top: 10px !important; }
+
+
+/* ══════════════════════════════════════════
+   📊 WYKRESY
+══════════════════════════════════════════ */
+
+#win-charts .win-body { padding: 12px !important; display: flex !important; flex-direction: column !important; gap: 10px !important; overflow-y: auto !important; }
+.chart-tabs { display: flex !important; overflow-x: auto !important; flex-wrap: nowrap !important; scrollbar-width: none !important; flex-shrink: 0 !important; gap: 6px !important; }
+.chart-tabs::-webkit-scrollbar { display: none !important; }
+.chart-tab { flex-shrink: 0 !important; padding: 10px 18px !important; font-size: 14px !important; font-weight: 700 !important; border-radius: 20px !important; min-height: 44px !important; }
+#chart-canvas { width: 100% !important; max-height: 240px !important; }
+.chart-legend { flex-wrap: wrap !important; gap: 10px !important; }
+
+
+/* ══════════════════════════════════════════
+   💰 KALKULATOR MARŻY
+══════════════════════════════════════════ */
+
+#win-margin .win-body { overflow-y: auto !important; padding: 14px !important; -webkit-overflow-scrolling: touch !important; }
+.margin-calc { padding: 0 !important; display: flex !important; flex-direction: column !important; gap: 8px !important; }
+.margin-calc .form-group { margin-bottom: 0 !important; }
+.margin-result { padding: 16px !important; border-radius: 16px !important; margin-top: 8px !important; }
+.mres-item { padding: 13px 0 !important; border-bottom: 1px solid var(--border) !important; display: flex !important; justify-content: space-between !important; align-items: center !important; }
+.mres-item:last-child { border-bottom: none !important; }
+.mres-label { font-size: 15px !important; } .mres-val { font-size: 17px !important; font-weight: 800 !important; }
+
+
+/* ══════════════════════════════════════════
+   🤖 AI ASYSTENT
+══════════════════════════════════════════ */
+
+#win-ai .win-body { padding: 0 !important; display: flex !important; flex-direction: column !important; overflow: hidden !important; }
+.ai-context-badge { font-size: 13px !important; padding: 8px 14px !important; flex-shrink: 0 !important; }
+.ai-messages { flex: 1 !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; padding: 14px !important; gap: 12px !important; min-height: 0 !important; }
+.ai-bubble { font-size: 15px !important; line-height: 1.6 !important; padding: 14px 16px !important; max-width: 88% !important; border-radius: 18px !important; }
+.ai-input-row { flex-shrink: 0 !important; padding: 12px 14px !important; gap: 10px !important; border-top: 1.5px solid var(--border) !important; background: var(--surface2) !important; }
+.ai-input-row input { flex: 1 !important; font-size: 16px !important; min-height: 50px !important; }
+#ai-send-btn { width: 50px !important; height: 50px !important; flex-shrink: 0 !important; font-size: 22px !important; min-height: 50px !important; border-radius: 12px !important; }
+
+
+/* ══════════════════════════════════════════
+   📦 DOSTAWCY
+══════════════════════════════════════════ */
+
+#win-suppliers .win-body { overflow-y: auto !important; padding: 14px !important; -webkit-overflow-scrolling: touch !important; }
+#win-suppliers .form-group { max-width: none !important; }
+
+
+/* ══════════════════════════════════════════
+   📋 PLANY & CELE
+══════════════════════════════════════════ */
+
+#win-plans .win-body { padding: 0 !important; overflow: hidden !important; }
+#plans-list { padding: 14px !important; }
+/* Form pinned bottom: already in HTML with flex-shrink:0 */
+#win-plans input, #win-plans select { min-height: 50px !important; }
+#win-plans .btn { min-height: 50px !important; }
+.progress-bar { height: 8px !important; border-radius: 6px !important; }
+.plan-item, .card { border-radius: 16px !important; margin-bottom: 10px !important; padding: 16px !important; }
+
+
+/* ══════════════════════════════════════════
+   💡 POMYSŁY
+══════════════════════════════════════════ */
+
+#win-ideas .win-body { padding: 0 !important; overflow: hidden !important; }
+#ideas-list { padding: 14px !important; }
+#win-ideas input, #win-ideas select, #win-ideas textarea { min-height: 50px !important; }
+#idea-desc-inp { min-height: 80px !important; }
+#win-ideas .btn { min-height: 50px !important; }
+.idea-card, #win-ideas .card { border-radius: 16px !important; margin-bottom: 10px !important; }
+
+
+/* ══════════════════════════════════════════
+   📝 NOTATKI
+══════════════════════════════════════════ */
+
+#win-notes #notes-layout { height: calc(100dvh - 56px) !important; overflow: hidden !important; }
+/* Mobile: list = full width, editor hidden */
+#win-notes #notes-sidebar { width: 100% !important; border-right: none !important; flex-shrink: 0 !important; }
+#win-notes #notes-editor-panel { display: none !important; flex-direction: column !important; flex: 1 !important; }
+/* When sidebar hidden, show editor */
+#win-notes #notes-sidebar[style*="none"] ~ #notes-editor-panel { display: flex !important; }
+/* List items */
+.note-item { padding: 16px 14px !important; border-radius: 14px !important; margin-bottom: 6px !important; }
+.note-item-title { font-size: 16px !important; }
+.note-item-preview { font-size: 13px !important; margin-top: 3px !important; }
+.note-item-date { font-size: 12px !important; }
+/* Sidebar header */
+#win-notes #notes-sidebar > div:first-child { padding: 12px !important; }
+#win-notes #notes-list { flex: 1 !important; overflow-y: auto !important; padding: 8px !important; }
+/* Toolbar: wrappable */
+#notes-toolbar { flex-wrap: wrap !important; gap: 5px !important; padding: 10px !important; }
+.ntb { min-width: 38px !important; height: 38px !important; font-size: 14px !important; border-radius: 8px !important; }
+/* Editor */
+#notes-title-inp { font-size: 20px !important; padding: 14px !important; min-height: 56px !important; }
+#notes-editor { font-size: 16px !important; padding: 16px !important; line-height: 1.75 !important; }
+/* Back button */
+#notes-mob-back { display: none !important; }
+
+
+/* ══════════════════════════════════════════
+   📅 HARMONOGRAM + FOCUS
+══════════════════════════════════════════ */
+
+.sp-hdr { padding: 18px 16px !important; flex-shrink: 0 !important; }
+.sp-title { font-size: 18px !important; font-weight: 800 !important; }
+.sp-body { flex: 1 !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; padding: 10px 12px !important; }
+.sched-item { padding: 14px 12px !important; gap: 12px !important; margin-bottom: 8px !important; border-radius: 14px !important; }
+.sched-cb { width: 26px !important; height: 26px !important; flex-shrink: 0 !important; }
+.sched-text { font-size: 16px !important; }
+.sp-add { flex-shrink: 0 !important; padding: 12px !important; border-top: 1.5px solid var(--border) !important; background: var(--surface2) !important; }
+.sp-text-inp { min-height: 50px !important; font-size: 16px !important; margin-bottom: 8px !important; }
+.sp-add-btn { flex: 1 !important; min-height: 50px !important; }
 
 }
 </style>
@@ -2615,14 +2747,21 @@ textarea { min-height: 80px !important; line-height: 1.6 !important; }
       <span class="win-icon">📋</span><span class="win-title">Plany & Cele</span>
       <div style="width:52px"></div>
     </div>
-    <div class="win-body">
-      <div id="plans-list"></div>
-      <div class="sep"></div>
-      <div class="form-group" style="margin-bottom:8px"><label class="lbl">Plan / Cel</label><input id="plan-title-inp" placeholder="np. Uruchomić 3 sklepy do końca Q1"></div>
-      <div class="form-row">
-        <div class="form-group"><label class="lbl">Postęp %</label><input type="number" id="plan-prog-inp" min="0" max="100" value="0" style="width:70px"></div>
-        <div class="form-group"><label class="lbl">Deadline</label><input type="date" id="plan-date-inp"></div>
-        <button class="btn btn-primary" onclick="addPlan()" style="margin-top:16px;flex-shrink:0">➕</button>
+    <div class="win-body" style="padding:0;display:flex;flex-direction:column;overflow:hidden;">
+      <div id="plans-list" style="flex:1;overflow-y:auto;padding:14px;-webkit-overflow-scrolling:touch;min-height:0"></div>
+      <div style="flex-shrink:0;border-top:1.5px solid var(--border);padding:14px;background:var(--surface2)">
+        <input id="plan-title-inp" placeholder="Nowy plan / cel..." style="width:100%;margin-bottom:10px;box-sizing:border-box">
+        <div style="display:flex;gap:8px;align-items:center">
+          <div style="display:flex;flex-direction:column;gap:3px;flex:1">
+            <label class="lbl">Postęp %</label>
+            <input type="number" id="plan-prog-inp" min="0" max="100" value="0" style="width:80px">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px;flex:2">
+            <label class="lbl">Deadline</label>
+            <input type="date" id="plan-date-inp">
+          </div>
+          <button class="btn btn-primary" onclick="addPlan()" style="flex-shrink:0;align-self:flex-end">➕ Dodaj</button>
+        </div>
       </div>
     </div>
     <div class="resize-handle" onmousedown="startResize(event,'win-plans')"></div>
@@ -2639,16 +2778,19 @@ textarea { min-height: 80px !important; line-height: 1.6 !important; }
       <span class="win-icon">💡</span><span class="win-title">Pomysły</span>
       <div style="width:52px"></div>
     </div>
-    <div class="win-body">
-      <div id="ideas-list"></div>
-      <div class="sep"></div>
-      <div class="form-group" style="margin-bottom:7px"><label class="lbl">Pomysł</label><input id="idea-title-inp" placeholder="np. Dropshipping z Japonii"></div>
-      <div class="form-group" style="margin-bottom:7px"><label class="lbl">Opis</label><textarea id="idea-desc-inp" placeholder="Szczegóły..." style="min-height:55px"></textarea></div>
-      <div class="form-row">
-        <div class="form-group"><label class="lbl">Priorytet</label>
-          <select id="idea-priority-inp"><option value="high">🔥 Gorący</option><option value="med" selected>💭 Przemyśl</option><option value="low">❄️ Odłóż</option></select>
+    <div class="win-body" style="padding:0;display:flex;flex-direction:column;overflow:hidden;">
+      <div id="ideas-list" style="flex:1;overflow-y:auto;padding:14px;-webkit-overflow-scrolling:touch;min-height:0"></div>
+      <div style="flex-shrink:0;border-top:1.5px solid var(--border);padding:14px;background:var(--surface2)">
+        <input id="idea-title-inp" placeholder="Nowy pomysł..." style="width:100%;margin-bottom:8px;box-sizing:border-box">
+        <textarea id="idea-desc-inp" placeholder="Opis (opcjonalnie)..." style="width:100%;min-height:60px;margin-bottom:8px;box-sizing:border-box;resize:none"></textarea>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="idea-priority-inp" style="flex:1">
+            <option value="high">🔥 Gorący</option>
+            <option value="med" selected>💭 Przemyśl</option>
+            <option value="low">❄️ Odłóż</option>
+          </select>
+          <button class="btn btn-primary" onclick="addIdea()" style="flex-shrink:0">➕ Dodaj</button>
         </div>
-        <button class="btn btn-primary" onclick="addIdea()" style="margin-top:16px;flex-shrink:0">➕ Dodaj</button>
       </div>
     </div>
     <div class="resize-handle" onmousedown="startResize(event,'win-ideas')"></div>
