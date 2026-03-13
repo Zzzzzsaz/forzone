@@ -3069,6 +3069,15 @@ body.dark .order-card{background:var(--surface2)}
   </div>
 </div>
 
+<div id="task-editor-pop" style="display:none;position:fixed;z-index:100002;width:280px;max-width:calc(100vw - 24px);background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.18);padding:12px;backdrop-filter:blur(14px)">
+  <div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Edycja zadania</div>
+  <textarea id="task-editor-input" placeholder="Treść zadania..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();saveTaskEditor();}"
+    style="width:100%;min-height:92px;resize:none;border-radius:12px;border:1px solid var(--border);background:var(--surface2);padding:10px 12px;font:500 13px 'DM Sans',sans-serif;color:var(--text);outline:none"></textarea>
+  <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px">
+    <button class="btn btn-ghost btn-sm" onclick="closeTaskEditor()">Anuluj</button>
+    <button class="btn btn-primary btn-sm" onclick="saveTaskEditor()">Zapisz</button>
+  </div>
+</div>
 <!-- ══════════════════════ APP LAUNCHER — macOS Launchpad ══════════════════════ -->
 <div id="launcher-overlay" onclick="closeLauncherOutside(event)">
   <div id="launcher-inner">
@@ -5546,6 +5555,10 @@ function getSpinTime(){return String(spinH).padStart(2,'0')+':'+String(spinM).pa
 // ═══════════════ TASK DATE PICKER MODAL ═══════════════
 let tdmYear, tdmMonth, tdmSelDate=null, tdmH=9, tdmM=0, tdmHasTime=true;
 let pendingTaskDate=null; // {dateKey, time, calKey}
+let editingTaskDateId=null;
+let activeTaskEditorId=null;
+let activeTaskEditorKey='';
+let activeTaskEditorAnchor=null;
 
 function getTaskLinks(task){
   let schedKey=task?.schedDate||'';
@@ -5559,6 +5572,82 @@ function getTaskLinks(task){
   return {schedKey,calKey};
 }
 
+function formatDateInputValue(y,m,d){
+  return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+
+function getTodayDateInput(){
+  const now=new Date();
+  return formatDateInputValue(now.getFullYear(),now.getMonth(),now.getDate());
+}
+
+function getTaskById(id,key=''){
+  return S.tasks.find(t=>t.id===id) || (key ? (S.calTasks[key]||[]).find(t=>t.id===id) : null);
+}
+
+function closeTaskEditor(){
+  const pop=document.getElementById('task-editor-pop');
+  if(pop) pop.style.display='none';
+  activeTaskEditorId=null;
+  activeTaskEditorKey='';
+  activeTaskEditorAnchor=null;
+  document.removeEventListener('mousedown',handleTaskEditorOutsideClick,true);
+}
+
+function positionTaskEditor(anchor){
+  const pop=document.getElementById('task-editor-pop');
+  if(!pop||!anchor) return;
+  const rect=anchor.getBoundingClientRect();
+  const top=Math.min(window.innerHeight-180, Math.max(16, rect.bottom+10));
+  const left=Math.min(window.innerWidth-320, Math.max(16, rect.left-12));
+  pop.style.top=`${top}px`;
+  pop.style.left=`${left}px`;
+}
+
+function handleTaskEditorOutsideClick(e){
+  const pop=document.getElementById('task-editor-pop');
+  if(!pop||pop.style.display==='none') return;
+  if(pop.contains(e.target) || activeTaskEditorAnchor?.contains?.(e.target)) return;
+  closeTaskEditor();
+}
+
+function openTaskEditor(id,event,key=''){
+  const task=getTaskById(id,key);
+  if(!task) return;
+  activeTaskEditorId=id;
+  activeTaskEditorKey=key||task.calKey||'';
+  activeTaskEditorAnchor=event?.currentTarget||null;
+  const pop=document.getElementById('task-editor-pop');
+  const input=document.getElementById('task-editor-input');
+  if(!pop||!input) return;
+  input.value=task.text||'';
+  pop.style.display='block';
+  positionTaskEditor(activeTaskEditorAnchor||document.body);
+  setTimeout(()=>{ input.focus(); input.select(); },30);
+  document.addEventListener('mousedown',handleTaskEditorOutsideClick,true);
+}
+
+function saveTaskEditor(){
+  const input=document.getElementById('task-editor-input');
+  if(!input || !activeTaskEditorId) return;
+  const trimmed=input.value.trim();
+  if(!trimmed){ toast('Treść zadania nie może być pusta','warning',2200); return; }
+  const task=S.tasks.find(t=>t.id===activeTaskEditorId);
+  if(!task){ closeTaskEditor(); return; }
+  const prevTask={...task};
+  task.text=trimmed;
+  syncTaskLinkedEntries(task,prevTask);
+  saveS();
+  closeTaskEditor();
+  renderTasks();
+  renderCal();
+  if(currentDayKey) renderDayModal();
+  if(schedOpen) renderSchedPanel();
+  updateMenubar();
+  if(S.widgets?.['tasks-today']?.enabled) fillWidget('tasks-today');
+  if(S.widgets?.['mini-cal']?.enabled) fillWidget('mini-cal');
+  toast('Zadanie zaktualizowane','success',2000);
+}
 function formatTaskWhen(task){
   const {schedKey}=getTaskLinks(task);
   if(!schedKey) return '';
@@ -5657,7 +5746,7 @@ function assignTaskToCalendarDay(id,key){
   const task=S.tasks.find(t=>t.id===id);
   if(!task) return;
   const [y,m,d]=key.split('-').map(Number);
-  const nextDate=new Date(y,m,d).toISOString().split('T')[0];
+  const nextDate=formatDateInputValue(y,m,d);
   const prevTask={...task};
   task.schedDate=nextDate;
   task.calKey=key;
@@ -5673,40 +5762,46 @@ function assignTaskToCalendarDay(id,key){
   if(S.widgets?.['mini-cal']?.enabled) fillWidget('mini-cal');
   toast('Zadanie przypisane do dnia','success',2200);
 }
-function editTask(id){
-  const task=S.tasks.find(t=>t.id===id);
-  if(!task) return;
-  const nextText=prompt('Edytuj zadanie:',task.text);
-  if(nextText===null) return;
-  const trimmed=nextText.trim();
-  if(!trimmed){ toast('Treść zadania nie może być pusta','warning',2200); return; }
-  const prevTask={...task};
-  task.text=trimmed;
-  syncTaskLinkedEntries(task,prevTask);
-  saveS();
-  renderTasks();
-  renderCal();
-  if(currentDayKey) renderDayModal();
-  if(schedOpen) renderSchedPanel();
-  updateMenubar();
-  if(S.widgets?.['tasks-today']?.enabled) fillWidget('tasks-today');
-  if(S.widgets?.['mini-cal']?.enabled) fillWidget('mini-cal');
-  toast('Zadanie zaktualizowane','success',2000);
+function editTask(id,event){
+  openTaskEditor(id,event);
 }
 
-function openTaskDateModal(){
+function openTaskDateModal(taskId=null){
+  editingTaskDateId=taskId;
+  const baseTask=taskId?S.tasks.find(t=>t.id===taskId):null;
   const now=new Date();
   tdmYear=now.getFullYear(); tdmMonth=now.getMonth();
   tdmH=9; tdmM=0; tdmSelDate=null; pendingTaskDate=null; tdmHasTime=true;
+  if(baseTask){
+    const {schedKey,calKey}=getTaskLinks(baseTask);
+    const sourceKey=schedKey||calKey;
+    if(sourceKey){
+      const [y,m,d]=sourceKey.split('-').map(Number);
+      tdmYear=y; tdmMonth=m; tdmSelDate={y,m,d};
+    }
+    if(baseTask.schedTime){
+      const [hh,mm]=(baseTask.schedTime||'09:00').split(':').map(Number);
+      tdmH=Number.isFinite(hh)?hh:9;
+      tdmM=Number.isFinite(mm)?mm:0;
+    } else {
+      tdmHasTime=false;
+    }
+  }
   renderTdmCal();
   updateTdmTime();
   const btn=document.getElementById('tdm-no-time-btn');
-  if(btn) btn.textContent='🕒 Z godziną';
+  if(btn) btn.textContent=tdmHasTime?'🕒 Z godziną':'📅 Bez godziny';
   document.getElementById('tdm-selected-info').textContent='';
+  const title=document.querySelector('#task-date-modal .tdm-title');
+  if(title) title.textContent=taskId?'📅 Zmień termin zadania':'📅 Zaplanuj zadanie';
+  const saveBtn=document.querySelector('#task-date-modal .btn.btn-primary');
+  if(saveBtn) saveBtn.textContent=taskId?'✅ Zapisz termin':'✅ Zaplanuj';
+  updateTdmInfo();
   document.getElementById('task-date-modal-overlay').classList.add('open');
 }
 function closeTaskDateModal(){
   document.getElementById('task-date-modal-overlay').classList.remove('open');
+  editingTaskDateId=null;
 }
 function tdmChangeMonth(d){
   tdmMonth+=d;
@@ -5764,24 +5859,40 @@ function renderTdmCal(){
   }
   grid.innerHTML=html;
 }
-function tdmSelectDay(d){
-  tdmSelDate={y:tdmYear,m:tdmMonth,d};
-  renderTdmCal();
-  updateTdmInfo();
-}
 function confirmTaskDate(){
   if(!tdmSelDate){toast('Wybierz dzień najpierw','warning',2000);return;}
   const time=tdmHasTime?String(tdmH).padStart(2,'0')+':'+String(tdmM).padStart(2,'0'):'';
-  // dateKey for schedule = 'Y-M-D' (0-indexed month)
   const schedKey=`${tdmSelDate.y}-${tdmSelDate.m}-${tdmSelDate.d}`;
   const calKey=`${tdmSelDate.y}-${tdmSelDate.m}-${tdmSelDate.d}`;
-  pendingTaskDate={schedKey, calKey, time, label:time?`${tdmSelDate.d} ${MONTHS[tdmSelDate.m].slice(0,3)} o ${time}`:`${tdmSelDate.d} ${MONTHS[tdmSelDate.m].slice(0,3)} bez godziny`};
-  // Show preview in tasks form
+  const nextLabel=time?`${tdmSelDate.d} ${MONTHS[tdmSelDate.m].slice(0,3)} o ${time}`:`${tdmSelDate.d} ${MONTHS[tdmSelDate.m].slice(0,3)} bez godziny`;
+  if(editingTaskDateId){
+    const task=S.tasks.find(t=>t.id===editingTaskDateId);
+    if(!task){ closeTaskDateModal(); return; }
+    const prevTask={...task};
+    task.schedDate=formatDateInputValue(tdmSelDate.y,tdmSelDate.m,tdmSelDate.d);
+    task.schedTime=time;
+    task.calKey=calKey;
+    task.fromCal=true;
+    syncTaskLinkedEntries(task,prevTask);
+    saveS();
+    closeTaskDateModal();
+    renderTasks();
+    renderCal();
+    if(currentDayKey) renderDayModal();
+    if(schedOpen) renderSchedPanel();
+    updateMenubar();
+    if(S.widgets?.['tasks-today']?.enabled) fillWidget('tasks-today');
+    if(S.widgets?.['mini-cal']?.enabled) fillWidget('mini-cal');
+    toast(`📅 Zmieniono termin na ${nextLabel}`,'success',2000);
+    return;
+  }
+  pendingTaskDate={schedKey, calKey, time, label:nextLabel};
   const preview=document.getElementById('task-date-preview');
   if(preview){preview.style.display='block';preview.textContent=`📅 Zaplanowane: ${pendingTaskDate.label}`;}
   closeTaskDateModal();
   toast(`📅 Zaplanowano na ${pendingTaskDate.label}`,'success',2000);
 }
+
 
 function addTask(){
   const text=document.getElementById('task-inp').value.trim();
@@ -5849,7 +5960,6 @@ function deleteTask(id){
   if(currentDayKey) renderDayModal();
   if(S.widgets?.['mini-cal']?.enabled) fillWidget('mini-cal');
 }
-
 function renderTasks(){
   if(isMobile()){ renderTasksMobile(); return; }
   let tasks=S.tasks;
@@ -5866,10 +5976,10 @@ function renderTasks(){
       <div class="task-check ${t.done?'checked':''}" onclick="toggleTask(${t.id})">${t.done?'✓':''}</div>
       <div style="flex:1;min-width:0">
         <div class="task-text">${escHtml(t.text)}</div>
-        ${formatTaskWhen(t)?`<div style="font-size:11px;color:var(--text3);margin-top:3px">📅 ${escHtml(formatTaskWhen(t))}</div>`:''}
+        ${formatTaskWhen(t)?`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--text3);margin-top:3px"><span>📅 ${escHtml(formatTaskWhen(t))}</span><button class="btn btn-ghost btn-xs" style="height:22px;padding:0 8px" onclick="event.stopPropagation();openTaskDateModal(${t.id})">Zmień datę</button></div>`:`<div style="margin-top:4px"><button class="btn btn-ghost btn-xs" style="height:22px;padding:0 8px" onclick="event.stopPropagation();openTaskDateModal(${t.id})">Ustaw datę</button></div>`}
       </div>
       <span class="badge ${t.priority==='high'?'badge-red':t.priority==='low'?'badge-green':'badge-orange'}" style="flex-shrink:0">${prioEmoji[t.priority]} ${prioLabel[t.priority]||t.priority}</span>
-      <button class="del-btn" onclick="editTask(${t.id})" style="opacity:1;background:var(--accent-light);color:var(--accent)">✎</button>
+      <button class="del-btn" onclick="editTask(${t.id},event)" style="opacity:1;background:var(--accent-light);color:var(--accent)">✎</button>
       <button class="del-btn" onclick="deleteTask(${t.id})" style="opacity:1">✕</button>
     </div>`).join('');
 }
@@ -5891,16 +6001,15 @@ function renderTasksMobile(){
       <button onclick="toggleTask(${t.id})" style="width:28px;height:28px;border-radius:50%;border:2.5px solid ${t.done?'var(--green)':prioColor[t.priority]||'var(--border2)'};background:${t.done?'var(--green)':'transparent'};color:${t.done?'white':'transparent'};font-size:14px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:1px">${t.done?'OK':''}</button>
       <div style="flex:1;min-width:0">
         <div style="font-size:16px;font-weight:600;line-height:1.4;${t.done?'text-decoration:line-through;opacity:.5':''}">${escHtml(t.text)}</div>
-        ${formatTaskWhen(t)?`<div style="font-size:12px;color:var(--text3);margin-top:4px">${escHtml(formatTaskWhen(t))}</div>`:''}
+        ${formatTaskWhen(t)?`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--text3);margin-top:4px"><span>${escHtml(formatTaskWhen(t))}</span><button class="btn btn-ghost btn-xs" style="height:22px;padding:0 8px" onclick="openTaskDateModal(${t.id})">Data</button></div>`:`<div style="margin-top:4px"><button class="btn btn-ghost btn-xs" style="height:22px;padding:0 8px" onclick="openTaskDateModal(${t.id})">Data</button></div>`}
         <div style="margin-top:6px;display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;background:${prioColor[t.priority]||'var(--border)'}22;color:${prioColor[t.priority]||'var(--text3)'}">${prioEmoji[t.priority]} ${prioLbl[t.priority]||'-'}</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0">
-        <button onclick="editTask(${t.id})" style="width:32px;height:32px;border-radius:10px;background:var(--accent-light);border:none;color:var(--accent);font-size:14px;cursor:pointer">Ed</button>
+        <button onclick="editTask(${t.id},event)" style="width:32px;height:32px;border-radius:10px;background:var(--accent-light);border:none;color:var(--accent);font-size:14px;cursor:pointer">Ed</button>
         <button onclick="deleteTask(${t.id})" style="width:32px;height:32px;border-radius:10px;background:var(--red-bg);border:none;color:var(--red-text);font-size:14px;cursor:pointer">X</button>
       </div>
     </div>`).join('');
 }
-
 function addPlan(){
   const title=document.getElementById('plan-title-inp').value.trim();
   if(!title)return;
@@ -6932,11 +7041,11 @@ function addDayTask(){
   // Sync → S.tasks
   const [ky,km,kd]=currentDayKey.split('-').map(Number);
   const dateObj=new Date(ky,km,kd);
-  const dateStr=dateObj.toISOString().split('T')[0];
+  const dateStr=formatDateInputValue(ky,km,kd);
   S.tasks.push({id:taskId,text,priority:'med',done:false,schedDate:dateStr,schedTime:time,fromCal:true,calKey:currentDayKey});
   // Sync → S.schedule only when time is set
   const todayKey=todaySchedKey();
-  if(time&&(currentDayKey===todayKey||dateStr===new Date().toISOString().split('T')[0])){
+  if(time&&(currentDayKey===todayKey||dateStr===getTodayDateInput())){
     if(!S.schedule[todayKey])S.schedule[todayKey]=[];
     S.schedule[todayKey].push({id:'c'+taskId,taskId:taskId,time,text,priority:'med',done:false});
     renderSchedPanel();
@@ -6991,29 +7100,8 @@ function updateDayTaskTime(key,id,val){
   renderTasks();
 }
 
-function editDayTask(key,id){
-  const t=(S.calTasks[key]||[]).find(task=>task.id===id);
-  if(!t) return;
-  const nextText=prompt('Edytuj zadanie:',t.text);
-  if(nextText===null) return;
-  const trimmed=nextText.trim();
-  if(!trimmed){ toast('Treść zadania nie może być pusta','warning',2200); return; }
-  const prevText=t.text;
-  t.text=trimmed;
-  const synced=S.tasks.find(st=>st.id===id||(st.calKey===key&&st.text===prevText));
-  if(synced){
-    const prevTask={...synced};
-    synced.text=trimmed;
-    syncTaskLinkedEntries(synced,prevTask);
-  }
-  Object.values(S.schedule).forEach(day=>(day||[]).forEach(si=>{
-    if(si.taskId===id||si.text===prevText) si.text=trimmed;
-  }));
-  saveS();
-  renderDayModal();
-  renderTasks();
-  renderCal();
-  if(schedOpen) renderSchedPanel();
+function editDayTask(key,id,event){
+  openTaskEditor(id,event,key);
 }
 
 function renderDayModal(){
@@ -7027,7 +7115,7 @@ function renderDayModal(){
       <div style="flex:1;display:flex;align-items:center;gap:8px">
         <div class="task-check ${t.done?'checked':''}" onclick="toggleDayTask('${currentDayKey}',${t.id})" style="cursor:pointer">${t.done?'✓':''}</div>
         <span style="font-size:13px;${t.done?'text-decoration:line-through;opacity:.5':''}">${escHtml(t.text)}</span>
-        <button class="del-btn" onclick="editDayTask('${currentDayKey}',${t.id})" style="opacity:1;background:var(--accent-light);color:var(--accent)">✎</button>
+        <button class="del-btn" onclick="editDayTask('${currentDayKey}',${t.id},event)" style="opacity:1;background:var(--accent-light);color:var(--accent)">✎</button>
         <button class="del-btn" onclick="deleteDayTask('${currentDayKey}',${t.id})" style="opacity:1;margin-left:auto">✕</button>
       </div>
     </div>`).join('');
