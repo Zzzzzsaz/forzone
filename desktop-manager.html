@@ -9,9 +9,10 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#2d5be3">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="forzone">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%232d5be3'/%3E%3Cstop offset='100%25' stop-color='%236366f1'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Ctext x='32' y='41' text-anchor='middle' font-family='Arial,sans-serif' font-size='28' font-weight='700' fill='white'%3EFZ%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" sizes="192x192" href="/assets/icons/icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -1611,6 +1612,19 @@ body.dark .toast{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.
 @keyframes toastOut{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(60px)}}
 
 /* ══ KALKULATOR MARŻY ══ */
+#install-app-btn{
+  position:fixed;right:18px;bottom:18px;z-index:99997;
+  display:none;align-items:center;gap:8px;
+  border:none;border-radius:999px;padding:12px 16px;
+  background:linear-gradient(135deg,var(--accent),#6366f1);
+  color:#fff;font:600 13px 'DM Sans',sans-serif;letter-spacing:.01em;
+  box-shadow:0 16px 36px rgba(45,91,227,.28),0 4px 12px rgba(0,0,0,.12);
+  cursor:pointer;transition:transform .16s, box-shadow .16s, opacity .16s;
+}
+#install-app-btn.visible{display:flex;}
+#install-app-btn:hover{transform:translateY(-1px);box-shadow:0 20px 42px rgba(45,91,227,.32),0 6px 16px rgba(0,0,0,.14);}
+#install-app-btn:active{transform:translateY(0);}
+body.dark #install-app-btn{box-shadow:0 18px 40px rgba(0,0,0,.32),0 8px 18px rgba(79,126,248,.22);}
 .margin-calc{display:flex;flex-direction:column;gap:10px}
 .margin-result{
   background:linear-gradient(135deg,var(--accent-light),rgba(139,92,246,.06));
@@ -2934,6 +2948,7 @@ body.dark .order-card{background:var(--surface2)}
 
 <!-- ══════════════════════ CONTEXT MENU ══════════════════════ -->
 <div id="ctx-menu"></div>
+<button id="install-app-btn" type="button" onclick="promptInstallApp()"><span>↓</span><span>Zainstaluj aplikację</span></button>
 
 <!-- ══════════════════════ FILE EDITOR MODAL ══════════════════════ -->
 <div id="file-editor-overlay" onclick="if(event.target===this)closeFileEditor()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);backdrop-filter:blur(4px);z-index:99998;align-items:center;justify-content:center;">
@@ -8829,6 +8844,64 @@ function bootApp(){
 
 
 // ── START ──
+let deferredInstallPrompt = null;
+
+function setInstallButtonVisible(visible){
+  const btn=document.getElementById('install-app-btn');
+  if(!btn) return;
+  btn.classList.toggle('visible',visible);
+}
+
+function registerPwa(){
+  const isStandalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
+  const isIos=/iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load',()=>{
+      navigator.serviceWorker.register('/service-worker.js').catch(err=>{
+        console.warn('Service worker registration failed:',err);
+      });
+    });
+  }
+
+  window.addEventListener('beforeinstallprompt',event=>{
+    event.preventDefault();
+    deferredInstallPrompt=event;
+    setInstallButtonVisible(true);
+  });
+
+  window.addEventListener('appinstalled',()=>{
+    deferredInstallPrompt=null;
+    setInstallButtonVisible(false);
+    toast('Aplikacja została zainstalowana','success',2500);
+  });
+
+  if(isStandalone){
+    setInstallButtonVisible(false);
+    return;
+  }
+
+  if(isIos) setInstallButtonVisible(true);
+}
+
+async function promptInstallApp(){
+  if(deferredInstallPrompt){
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice.catch(()=>null);
+    deferredInstallPrompt=null;
+    setInstallButtonVisible(false);
+    return;
+  }
+
+  if(/iphone|ipad|ipod/i.test(navigator.userAgent)){
+    toast('Na iPhonie: Udostępnij -> Do ekranu początkowego','info',4500);
+    return;
+  }
+
+  toast('Opcja instalacji pojawi się po spełnieniu warunków PWA w przeglądarce','info',3500);
+}
+
+registerPwa();
 bootOnline();
 </script>
 <script>

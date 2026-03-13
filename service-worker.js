@@ -1,75 +1,65 @@
-// Business OS — Service Worker
-// Wersja cache — zmień przy każdej aktualizacji pliku HTML
-const CACHE_NAME = 'bizos-v1';
-
-// Pliki do cache'owania przy instalacji
-const PRECACHE_URLS = [
-  './desktop-manager.html',
-  './manifest.json',
-  'https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap',
-  'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js',
+const CACHE_NAME = "forzone-shell-v2";
+const APP_SHELL = [
+  "/",
+  "/index.html",
+  "/desktop-manager.html",
+  "/manifest.json",
+  "/assets/icons/icon-192.png",
+  "/assets/icons/icon-512.png"
 ];
 
-// Instalacja — zapisz pliki w cache
-self.addEventListener('install', event => {
+self.addEventListener("install", event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(PRECACHE_URLS))
+      .then(cache => cache.addAll(APP_SHELL))
       .then(() => self.skipWaiting())
-      .catch(err => console.warn('SW precache failed:', err))
   );
 });
 
-// Aktywacja — usuń stare cache
-self.addEventListener('activate', event => {
+self.addEventListener("activate", event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))))
+      .then(() => self.clients.claim())
   );
 });
 
-// Fetch — Network First dla API, Cache First dla assetów
-self.addEventListener('fetch', event => {
+self.addEventListener("fetch", event => {
+  if (event.request.method !== "GET") return;
+
   const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin) return;
 
-  // Zawsze sieć dla Supabase API i innych zewnętrznych API
-  if (url.hostname.includes('supabase.co') ||
-      url.hostname.includes('anthropic.com') ||
-      url.hostname.includes('googleapis.com') && url.pathname.includes('/upload')) {
-    return; // przeglądarka obsługuje normalnie
-  }
+  const isDocument = event.request.mode === "navigate" || event.request.destination === "document";
 
-  // Dla głównego pliku HTML — Network First (żeby dostawać aktualizacje)
-  if (url.pathname.endsWith('desktop-manager.html') || url.pathname === '/') {
+  if (isDocument) {
     event.respondWith(
       fetch(event.request)
         .then(response => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
           return response;
         })
-        .catch(() => caches.match(event.request))
+        .catch(async () => (
+          (await caches.match(event.request)) ||
+          (await caches.match("/desktop-manager.html")) ||
+          (await caches.match("/index.html"))
+        ))
     );
     return;
   }
 
-  // Dla assetów (fonts, Chart.js) — Cache First
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
+
       return fetch(event.request).then(response => {
         if (response.ok) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
         }
         return response;
-      }).catch(() => cached);
+      });
     })
   );
-});
-
-// Obsługa wiadomości od strony (np. wymuszenie aktualizacji)
-self.addEventListener('message', event => {
-  if (event.data === 'SKIP_WAITING') self.skipWaiting();
 });
