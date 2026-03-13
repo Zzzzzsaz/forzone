@@ -913,6 +913,7 @@ body.dark .task-item:hover{box-shadow:0 2px 8px rgba(0,0,0,.2)}
 .cal-day.other-month{color:var(--text3);opacity:.5}
 .cal-day.has-tasks::after{content:'';width:4px;height:4px;border-radius:50%;background:var(--orange);position:absolute;bottom:4px}
 .cal-day.weekend{color:var(--orange)}
+.cal-day.drag-target{background:var(--accent-light);border-color:var(--accent);transform:scale(1.03);box-shadow:0 6px 18px rgba(79,126,248,.18)}
 .cal-badge{
   position:absolute;bottom:2px;right:3px;
   background:var(--accent);color:white;
@@ -5603,6 +5604,10 @@ function syncTaskLinkedEntries(task, prevTask=null){
     S.calTasks[prevLinks.calKey]=(S.calTasks[prevLinks.calKey]||[]).filter(item=>item.id!==task.id&&item.text!==prevText);
   }
 
+  if(prevLinks.schedKey&&prevLinks.schedKey!==currentLinks.schedKey){
+    S.schedule[prevLinks.schedKey]=(S.schedule[prevLinks.schedKey]||[]).filter(item=>item.taskId!==task.id&&item.text!==prevText);
+  }
+
   if(currentLinks.schedKey&&task.schedTime){
     if(!S.schedule[currentLinks.schedKey]) S.schedule[currentLinks.schedKey]=[];
     const linkedSched=(S.schedule[currentLinks.schedKey]||[]).find(item=>item.taskId===task.id||item.text===prevText||item.text===task.text);
@@ -5618,6 +5623,56 @@ function syncTaskLinkedEntries(task, prevTask=null){
   }
 }
 
+let draggedTaskId=null;
+function beginTaskDrag(id,e){
+  if(isMobile()) return;
+  draggedTaskId=id;
+  if(e?.dataTransfer){
+    e.dataTransfer.effectAllowed='move';
+    e.dataTransfer.setData('text/plain',String(id));
+  }
+}
+function endTaskDrag(){
+  draggedTaskId=null;
+  document.querySelectorAll('.cal-day.drag-target').forEach(el=>el.classList.remove('drag-target'));
+}
+function allowCalendarTaskDrop(e){
+  e.preventDefault();
+  if(e?.dataTransfer) e.dataTransfer.dropEffect='move';
+  e.currentTarget?.classList.add('drag-target');
+}
+function leaveCalendarTaskDrop(e){
+  e.currentTarget?.classList.remove('drag-target');
+}
+function dropTaskOnCalendar(key,e){
+  e.preventDefault();
+  e.currentTarget?.classList.remove('drag-target');
+  const rawId=e?.dataTransfer?.getData('text/plain')||draggedTaskId;
+  const taskId=Number(rawId);
+  if(!taskId) return;
+  assignTaskToCalendarDay(taskId,key);
+  endTaskDrag();
+}
+function assignTaskToCalendarDay(id,key){
+  const task=S.tasks.find(t=>t.id===id);
+  if(!task) return;
+  const [y,m,d]=key.split('-').map(Number);
+  const nextDate=new Date(y,m,d).toISOString().split('T')[0];
+  const prevTask={...task};
+  task.schedDate=nextDate;
+  task.calKey=key;
+  task.fromCal=true;
+  syncTaskLinkedEntries(task,prevTask);
+  saveS();
+  renderTasks();
+  renderCal();
+  if(currentDayKey) renderDayModal();
+  if(schedOpen) renderSchedPanel();
+  updateMenubar();
+  if(S.widgets?.['tasks-today']?.enabled) fillWidget('tasks-today');
+  if(S.widgets?.['mini-cal']?.enabled) fillWidget('mini-cal');
+  toast('Zadanie przypisane do dnia','success',2200);
+}
 function editTask(id){
   const task=S.tasks.find(t=>t.id===id);
   if(!task) return;
@@ -5807,7 +5862,7 @@ function renderTasks(){
   const prioLabel={high:'Wysoki',med:'Średni',low:'Niski'};
   const prioEmoji={high:'🔴',med:'🟡',low:'🟢'};
   list.innerHTML=tasks.map(t=>`
-    <div class="task-item ${t.done?'done':''}" style="border-left:3px solid ${prioBar[t.priority]||'var(--border2)'}">
+    <div class="task-item ${t.done?'done':''}" style="border-left:3px solid ${prioBar[t.priority]||'var(--border2)'}" draggable="true" ondragstart="beginTaskDrag(${t.id},event)" ondragend="endTaskDrag()">
       <div class="task-check ${t.done?'checked':''}" onclick="toggleTask(${t.id})">${t.done?'✓':''}</div>
       <div style="flex:1;min-width:0">
         <div class="task-text">${escHtml(t.text)}</div>
@@ -6811,7 +6866,7 @@ function renderCal(){
     const d=new Date(wcalYear,wcalMonth,1-dow+i);
     const key=`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
     const cnt=(S.calTasks[key]||[]).length;
-    cells+=`<div class="cal-day other-month" onclick="openDayModal(${d.getFullYear()},${d.getMonth()},${d.getDate()})">${d.getDate()}${cnt?`<span class="cal-badge">${cnt}</span>`:''}</div>`;
+    cells+=`<div class="cal-day other-month" data-cal-key="${key}" onclick="openDayModal(${d.getFullYear()},${d.getMonth()},${d.getDate()})" ondragover="allowCalendarTaskDrop(event)" ondragleave="leaveCalendarTaskDrop(event)" ondrop="dropTaskOnCalendar('${key}',event)">${d.getDate()}${cnt?`<span class="cal-badge">${cnt}</span>`:''}</div>`;
   }
   // Days of current month
   for(let d=1;d<=last.getDate();d++){
@@ -6820,7 +6875,7 @@ function renderCal(){
     const tasks=S.calTasks[key]||[];
     const cnt=tasks.length, done=tasks.filter(t=>t.done).length;
     const isWE=(new Date(wcalYear,wcalMonth,d).getDay()===0||new Date(wcalYear,wcalMonth,d).getDay()===6);
-    cells+=`<div class="cal-day${isT?' today':''}${cnt?' has-tasks':''}${isWE&&!isT?' weekend':''}" onclick="openDayModal(${wcalYear},${wcalMonth},${d})">${d}${cnt?`<span class="cal-badge${isT?' cal-badge-today':''}">${done}/${cnt}</span>`:''}</div>`;
+    cells+=`<div class="cal-day${isT?' today':''}${cnt?' has-tasks':''}${isWE&&!isT?' weekend':''}" data-cal-key="${key}" onclick="openDayModal(${wcalYear},${wcalMonth},${d})" ondragover="allowCalendarTaskDrop(event)" ondragleave="leaveCalendarTaskDrop(event)" ondrop="dropTaskOnCalendar('${key}',event)">${d}${cnt?`<span class="cal-badge${isT?' cal-badge-today':''}">${done}/${cnt}</span>`:''}</div>`;
   }
   grid.innerHTML=cells;
   renderCalUpcoming();
