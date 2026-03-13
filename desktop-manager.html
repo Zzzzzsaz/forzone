@@ -8201,6 +8201,7 @@ function renderSchedPanel(){
 
   // Today's items sorted by time
   const todayItems=(S.schedule[key]||[]).slice().sort((a,b)=>(a.time||'00:00').localeCompare(b.time||'00:00'));
+  const todayUntimedItems=(S.calTasks[key]||[]).filter(item=>!item.time);
 
   // Yesterday's unfinished items
   const yest=new Date(now); yest.setDate(yest.getDate()-1);
@@ -8256,7 +8257,25 @@ function renderSchedPanel(){
         <button class="sched-del" onclick="deleteSchedItem('${item.id}')">✕</button>
       </div>`;
     }).join('');
-  } else if(!todayPayments.length) {
+  }
+
+  if(todayUntimedItems.length){
+    html+=`<div style="margin-top:${todayItems.length?10:0}px">
+      <div style="font-size:9.5px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;padding:4px 0 6px">📝 Dziś bez godziny</div>
+      ${todayUntimedItems.map(item=>`
+        <div class="sched-item${item.done?' done-item':''}">
+          <div class="sched-cb${item.done?' done':''}" onclick="toggleDayTask('${key}',${item.id})">${item.done?'✓':''}</div>
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:4px">
+              <span class="sched-time">bez godziny</span>
+              <span style="font-size:10px">📌</span>
+            </div>
+            <div class="sched-text${item.done?' done':''}">${escHtml(item.text)}</div>
+          </div>
+          <button class="sched-del" onclick="deleteDayTask('${key}',${item.id})">✕</button>
+        </div>`).join('')}
+    </div>`;
+  } else if(!todayItems.length && !todayPayments.length) {
     html+='<div class="sched-empty">Brak zaplanowanych zadań na dziś.<br>Dodaj pierwsze poniżej!</div>';
   }
 
