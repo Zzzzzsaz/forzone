@@ -15,7 +15,8 @@
     manual_net: 'Netto wpisywane recznie'
   };
   const runtime = {
-    boundResize: false
+    boundResize: false,
+    wheelHost: null
   };
 
   function rootState(){
@@ -975,6 +976,126 @@
     renderShops();
   }
 
+  function quickAddCompany(){
+    const data = ensureData();
+    const name = String(document.getElementById('shops-quick-company-name')?.value || '').trim();
+    if(!name){
+      toastMsg('Podaj nazwe firmy', 'error', 2200);
+      return;
+    }
+    const company = normalizeCompany({
+      id: uid('company'),
+      name,
+      is_active: true
+    }, data.companies.length);
+    data.companies.push(company);
+    data.ui.companyId = company.id;
+    data.ui.view = 'company';
+    const input = document.getElementById('shops-quick-company-name');
+    if(input) input.value = '';
+    persist('Dodano firme');
+    renderShops();
+  }
+
+  function quickAddStore(companyId){
+    const data = ensureData();
+    const resolvedCompanyId = String(companyId || data.ui.companyId || '');
+    const name = String(document.getElementById('shops-quick-store-name')?.value || '').trim();
+    if(!resolvedCompanyId || !getCompany(resolvedCompanyId)){
+      toastMsg('Najpierw wybierz firme', 'error', 2200);
+      return;
+    }
+    if(!name){
+      toastMsg('Podaj nazwe sklepu', 'error', 2200);
+      return;
+    }
+    const store = normalizeStore({
+      id: uid('store'),
+      company_id: resolvedCompanyId,
+      name,
+      is_active: true,
+      vat_rate: 23,
+      headcount: 1,
+      profit_share_type: 'headcount',
+      profit_share_value: 0,
+      calculation_mode: 'gross_to_net',
+      color: STORE_COLORS[data.stores.length % STORE_COLORS.length]
+    }, data.stores.length, resolvedCompanyId);
+    data.stores.push(store);
+    data.ui.companyId = resolvedCompanyId;
+    data.ui.storeId = store.id;
+    const input = document.getElementById('shops-quick-store-name');
+    if(input) input.value = '';
+    persist('Dodano sklep');
+    renderShops();
+  }
+
+  function saveInlineStat(storeId, originalDate){
+    const data = ensureData();
+    const store = getStore(storeId);
+    if(!store){
+      toastMsg('Najpierw wybierz sklep', 'error', 2200);
+      return;
+    }
+
+    const date = String(document.getElementById('shops-inline-date')?.value || '').trim();
+    const revenueGross = nonNegative(document.getElementById('shops-inline-gross')?.value);
+    const revenueNet = maybeNumber(document.getElementById('shops-inline-net')?.value);
+    const adCostTiktok = nonNegative(document.getElementById('shops-inline-ads')?.value);
+    const refunds = nonNegative(document.getElementById('shops-inline-refunds')?.value);
+    const extraCosts = nonNegative(document.getElementById('shops-inline-extra')?.value);
+    const notes = String(document.getElementById('shops-inline-notes')?.value || '').trim();
+
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){
+      toastMsg('Wybierz poprawna date', 'error', 2200);
+      return;
+    }
+
+    const current = getStoreStat(store.id, originalDate || date);
+    const duplicate = data.dailyStats.find(stat=>stat.store_id === store.id && stat.date === date && stat.id !== current?.id) || null;
+    const base = duplicate || current;
+
+    if(revenueGross === 0 && revenueNet === null && adCostTiktok === 0 && refunds === 0 && extraCosts === 0 && !notes){
+      if(base){
+        data.dailyStats = data.dailyStats.filter(stat=>stat.id !== base.id);
+        data.ui.selectedDate = date;
+        persist('Usunieto pusty dzien');
+        renderShops();
+        return;
+      }
+      toastMsg('Wpisz przynajmniej jedna wartosc', 'info', 2200);
+      return;
+    }
+
+    const payload = normalizeStat({
+      id: base?.id || uid('stat'),
+      store_id: store.id,
+      date,
+      revenue_gross: revenueGross,
+      revenue_net: revenueNet,
+      ad_cost_tiktok: adCostTiktok,
+      refunds,
+      extra_costs: extraCosts,
+      notes,
+      created_at: base?.created_at || nowIso(),
+      updated_at: nowIso()
+    });
+
+    if(current && current.id !== payload.id){
+      data.dailyStats = data.dailyStats.filter(stat=>stat.id !== current.id);
+    }
+
+    const existingIndex = data.dailyStats.findIndex(stat=>stat.id === payload.id);
+    if(existingIndex >= 0) data.dailyStats[existingIndex] = payload;
+    else data.dailyStats.push(payload);
+
+    data.dailyStats.sort((a, b)=>a.date.localeCompare(b.date));
+    data.ui.selectedDate = payload.date;
+    data.ui.monthKey = payload.date.slice(0, 7);
+    persist(existingIndex >= 0 ? 'Zapisano dzien' : 'Dodano dzien');
+    renderShops();
+  }
+
   function deleteCompanyConfirmed(companyId){
     const data = ensureData();
     const stores = getStoresForCompany(companyId, true).map(store=>store.id);
@@ -1155,65 +1276,55 @@
     `;
   }
 
-  function renderCompanyCard(companySummary){
+  function renderCompanyRow(companySummary){
     const company = companySummary.company;
     const stores = companySummary.stores || [];
     const activeStores = stores.filter(store=>store.is_active).length;
     return `
-      <div class="card shops-v2-entity-card">
-        <div class="shops-v2-entity-head">
-          <div class="shops-v2-entity-brand">
-            <span class="shops-v2-entity-dot" style="background:${companyAccent(companySummary)}"></span>
-            <div>
-              <div class="shops-v2-entity-title">${esc(company.name)}</div>
-              <div class="shops-v2-entity-sub">${stores.length} ${plural(stores.length, 'sklep', 'sklepy', 'sklepów')} • ${activeStores} aktywne</div>
-            </div>
+      <div class="shops-v2-list-row">
+        <button class="shops-v2-name-btn" type="button" onclick="openShopsCompany('${company.id}')">
+          <span class="shops-v2-entity-dot" style="background:${companyAccent(companySummary)}"></span>
+          <span>${esc(company.name)}</span>
+        </button>
+        <div class="shops-v2-row-meta">
+          <div class="shops-v2-row-stats">
+            <span>${stores.length} ${plural(stores.length, 'sklep', 'sklepy', 'sklepów')}</span>
+            <span>${activeStores} aktywne</span>
+            <span>Przychód ${formatCompactPLN(companySummary.gross)}</span>
+            <span>Dochód ${formatCompactPLN(companySummary.income)}</span>
           </div>
-          <span class="badge ${company.is_active ? 'badge-blue' : 'badge-gray'}">${company.is_active ? 'Aktywna' : 'Pauza'}</span>
-        </div>
-        <div class="shops-v2-kpi-grid">
-          <div class="shops-v2-kpi-chip"><span>Przychód</span><strong>${formatPLN(companySummary.gross)}</strong></div>
-          <div class="shops-v2-kpi-chip"><span>Dochód</span><strong>${formatPLN(companySummary.income)}</strong></div>
-          <div class="shops-v2-kpi-chip"><span>Na głowę</span><strong>${formatPLN(companySummary.perHead)}</strong></div>
-          <div class="shops-v2-kpi-chip"><span>Reklamy</span><strong>${formatPLN(companySummary.ads)}</strong></div>
-        </div>
-        <div class="shops-v2-card-actions">
-          <button class="btn btn-primary btn-sm" type="button" onclick="openShopsCompany('${company.id}')">Otwórz</button>
-          <button class="btn btn-ghost btn-sm" type="button" onclick="openCompanyModal('${company.id}')">Edytuj</button>
-          <button class="btn btn-ghost btn-sm" type="button" onclick="toggleCompanyActive('${company.id}')">${company.is_active ? 'Dezaktywuj' : 'Aktywuj'}</button>
-          <button class="btn btn-danger btn-sm" type="button" onclick="confirmDeleteCompany('${company.id}')">Usuń</button>
+          <div class="shops-v2-row-actions">
+            <span class="badge ${company.is_active ? 'badge-blue' : 'badge-gray'}">${company.is_active ? 'Aktywna' : 'Pauza'}</span>
+            <button class="btn btn-ghost btn-sm" type="button" onclick="openCompanyModal('${company.id}')">Edytuj</button>
+            <button class="btn btn-ghost btn-sm" type="button" onclick="toggleCompanyActive('${company.id}')">${company.is_active ? 'Ukryj' : 'Aktywuj'}</button>
+            <button class="btn btn-danger btn-sm" type="button" onclick="confirmDeleteCompany('${company.id}')">Usuń</button>
+          </div>
         </div>
       </div>
     `;
   }
 
-  function renderStoreCard(storeSummary){
+  function renderStoreRow(storeSummary){
     const store = storeSummary.store;
     return `
-      <div class="card shops-v2-entity-card">
-        <div class="shops-v2-entity-head">
-          <div class="shops-v2-entity-brand">
-            <span class="shops-v2-entity-dot" style="background:${store.color}"></span>
-            <div>
-              <div class="shops-v2-entity-title">${esc(store.name)}</div>
-              <div class="shops-v2-entity-sub">
-                VAT ${store.vat_rate}% • ${store.headcount} ${plural(store.headcount, 'osoba', 'osoby', 'osób')} • ${esc(CALCULATION_MODE_LABELS[store.calculation_mode] || '')}
-              </div>
-            </div>
+      <div class="shops-v2-list-row">
+        <button class="shops-v2-name-btn" type="button" onclick="openShopsStore('${store.id}')">
+          <span class="shops-v2-entity-dot" style="background:${store.color}"></span>
+          <span>${esc(store.name)}</span>
+        </button>
+        <div class="shops-v2-row-meta">
+          <div class="shops-v2-row-stats">
+            <span>VAT ${store.vat_rate}%</span>
+            <span>${store.headcount} ${plural(store.headcount, 'osoba', 'osoby', 'osób')}</span>
+            <span>Przychód ${formatCompactPLN(storeSummary.gross)}</span>
+            <span>Dochód ${formatCompactPLN(storeSummary.income)}</span>
           </div>
-          <span class="badge ${store.is_active ? 'badge-blue' : 'badge-gray'}">${store.is_active ? 'Aktywny' : 'Pauza'}</span>
-        </div>
-        <div class="shops-v2-kpi-grid">
-          <div class="shops-v2-kpi-chip"><span>Przychód</span><strong>${formatPLN(storeSummary.gross)}</strong></div>
-          <div class="shops-v2-kpi-chip"><span>Dochód</span><strong>${formatPLN(storeSummary.income)}</strong></div>
-          <div class="shops-v2-kpi-chip"><span>Reklamy</span><strong>${formatPLN(storeSummary.ads)}</strong></div>
-          <div class="shops-v2-kpi-chip"><span>Na głowę</span><strong>${formatPLN(storeSummary.perHead)}</strong></div>
-        </div>
-        <div class="shops-v2-card-actions">
-          <button class="btn btn-primary btn-sm" type="button" onclick="openShopsStore('${store.id}')">Otwórz sklep</button>
-          <button class="btn btn-ghost btn-sm" type="button" onclick="openStoreModal('${store.company_id}','${store.id}')">Edytuj</button>
-          <button class="btn btn-ghost btn-sm" type="button" onclick="toggleStoreActive('${store.id}')">${store.is_active ? 'Dezaktywuj' : 'Aktywuj'}</button>
-          <button class="btn btn-danger btn-sm" type="button" onclick="confirmDeleteStore('${store.id}')">Usuń</button>
+          <div class="shops-v2-row-actions">
+            <span class="badge ${store.is_active ? 'badge-blue' : 'badge-gray'}">${store.is_active ? 'Aktywny' : 'Pauza'}</span>
+            <button class="btn btn-ghost btn-sm" type="button" onclick="openStoreModal('${store.company_id}','${store.id}')">Edytuj</button>
+            <button class="btn btn-ghost btn-sm" type="button" onclick="toggleStoreActive('${store.id}')">${store.is_active ? 'Ukryj' : 'Aktywuj'}</button>
+            <button class="btn btn-danger btn-sm" type="button" onclick="confirmDeleteStore('${store.id}')">Usuń</button>
+          </div>
         </div>
       </div>
     `;
@@ -1287,8 +1398,12 @@
             </div>
             <button class="btn btn-primary" type="button" onclick="openCompanyModal()">+ Dodaj firmę</button>
           </div>
-          <div class="shops-v2-card-grid">
-            ${summary.companies.length ? summary.companies.map(renderCompanyCard).join('') : `
+          <div class="shops-v2-quickbar">
+            <input id="shops-quick-company-name" placeholder="Szybko dodaj firme..." onkeydown="if(event.key==='Enter')quickAddCompany()">
+            <button class="btn btn-primary" type="button" onclick="quickAddCompany()">Dodaj od razu</button>
+          </div>
+          <div class="shops-v2-list">
+            ${summary.companies.length ? summary.companies.map(renderCompanyRow).join('') : `
               <div class="shops-v2-empty-block">
                 <div class="es-icon">🏢</div>
                 <div>Nie masz jeszcze żadnej firmy.</div>
@@ -1331,8 +1446,12 @@
             </div>
             <button class="btn btn-primary" type="button" onclick="openStoreModal('${company.id}')">+ Dodaj sklep</button>
           </div>
-          <div class="shops-v2-card-grid">
-            ${summary.storeSummaries.length ? summary.storeSummaries.map(renderStoreCard).join('') : `
+          <div class="shops-v2-quickbar">
+            <input id="shops-quick-store-name" placeholder="Szybko dodaj sklep..." onkeydown="if(event.key==='Enter')quickAddStore('${company.id}')">
+            <button class="btn btn-primary" type="button" onclick="quickAddStore('${company.id}')">Dodaj od razu</button>
+          </div>
+          <div class="shops-v2-list">
+            ${summary.storeSummaries.length ? summary.storeSummaries.map(renderStoreRow).join('') : `
               <div class="shops-v2-empty-block">
                 <div class="es-icon">🏪</div>
                 <div>Ta firma nie ma jeszcze sklepów.</div>
@@ -1786,6 +1905,43 @@
     clampWindow();
   }
 
+  function bindWheelScroll(host){
+    if(!host) return;
+    if(runtime.wheelHost && runtime.wheelHost !== host && runtime.wheelHandler){
+      runtime.wheelHost.removeEventListener('wheel', runtime.wheelHandler, {capture:true});
+    }
+    if(runtime.wheelHost === host && runtime.wheelHandler) return;
+
+    runtime.wheelHandler = event => {
+      const modal = event.target.closest('.shops-v2-modal-body');
+      if(modal && modal.scrollHeight > modal.clientHeight) return;
+
+      const table = event.target.closest('.shops-v2-table-scroll');
+      if(table){
+        const canScrollX = Math.abs(event.deltaX) > 0 || event.shiftKey;
+        if(canScrollX){
+          table.scrollLeft += event.deltaY || event.deltaX;
+          event.preventDefault();
+          return;
+        }
+        const canScrollY = table.scrollHeight > table.clientHeight;
+        if(canScrollY){
+          table.scrollTop += event.deltaY;
+          event.preventDefault();
+        }
+        return;
+      }
+
+      const scroller = host.querySelector('.shops-v2-store-view, .shops-v2-scroll, .shops-v2-content');
+      if(!scroller || scroller.scrollHeight <= scroller.clientHeight) return;
+      scroller.scrollTop += event.deltaY;
+      event.preventDefault();
+    };
+
+    host.addEventListener('wheel', runtime.wheelHandler, {passive:false, capture:true});
+    runtime.wheelHost = host;
+  }
+
   function injectStyles(){
     if(document.getElementById(STYLE_ID)) return;
     const style = document.createElement('style');
@@ -1851,6 +2007,24 @@
       .shops-v2-stat-orange{border-color:rgba(249,115,22,.22)}
       .shops-v2-stat-purple{border-color:rgba(139,92,246,.22)}
       .shops-v2-overview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+      .shops-v2-list{display:flex;flex-direction:column;gap:10px}
+      .shops-v2-list-row{
+        display:grid;grid-template-columns:minmax(220px,320px) minmax(0,1fr);gap:12px;align-items:center;
+        padding:12px 14px;border:1.5px solid var(--border);border-radius:16px;background:var(--surface);
+      }
+      .shops-v2-name-btn{
+        display:flex;align-items:center;gap:10px;width:100%;min-width:0;text-align:left;
+        border:1.5px solid var(--border);background:var(--surface2);color:var(--text);
+        border-radius:14px;padding:13px 14px;font:700 15px 'DM Sans',sans-serif;cursor:pointer;
+      }
+      .shops-v2-name-btn:hover{border-color:rgba(79,126,248,.28);background:rgba(79,126,248,.08)}
+      .shops-v2-row-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;flex-wrap:wrap}
+      .shops-v2-row-stats{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+      .shops-v2-row-stats span{
+        display:inline-flex;align-items:center;min-height:34px;padding:0 11px;border-radius:999px;
+        background:var(--surface2);border:1px solid var(--border);font-size:12px;font-weight:700;color:var(--text2);
+      }
+      .shops-v2-row-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
       .shops-v2-ranking{display:flex;flex-direction:column;gap:8px}
       .shops-v2-ranking-row{
         display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;width:100%;
@@ -1884,6 +2058,15 @@
       .shops-v2-kpi-chip span{font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
       .shops-v2-kpi-chip strong{font-size:15px;color:var(--text);font-family:'DM Mono',monospace}
       .shops-v2-card-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+      .shops-v2-quickbar{
+        display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+        margin:10px 0 2px;
+      }
+      .shops-v2-quickbar input{flex:1;min-width:220px}
+      .shops-v2-inline-form{padding:14px 16px 0}
+      .shops-v2-note-edit{
+        width:100%;min-height:86px;border:1.5px solid var(--border);background:var(--surface);border-radius:12px;padding:12px;
+      }
       .shops-v2-empty-block,.shops-v2-empty-inline{color:var(--text3);font-size:13px}
       .shops-v2-empty-block{
         border:1.5px dashed var(--border2);border-radius:14px;padding:28px 16px;text-align:center;background:var(--surface2);grid-column:1/-1;
@@ -1964,6 +2147,9 @@
         .shops-v2-header-top,.shops-v2-toolbar,.shops-v2-section-head,.shops-v2-company-head{flex-direction:column;align-items:stretch}
         .shops-v2-actions{width:100%}
         .shops-v2-actions .btn{flex:1}
+        .shops-v2-list-row{grid-template-columns:1fr}
+        .shops-v2-row-actions{justify-content:flex-start}
+        .shops-v2-quickbar{flex-direction:column;align-items:stretch}
         .shops-v2-range-badge{margin-left:0}
       }
       @container (max-width: 720px){
@@ -1996,6 +2182,7 @@
         ${renderModal(data.ui.modal)}
       </div>
     `;
+    bindWheelScroll(host);
 
     const title = document.querySelector('#win-shops .win-title');
     if(title) title.textContent = 'Sklepy';
@@ -2028,6 +2215,9 @@
   window.confirmDeleteStat = confirmDeleteStat;
   window.confirmShopsModalAction = confirmModalAction;
   window.fillShopStats = renderWidget;
+  window.quickAddCompany = quickAddCompany;
+  window.quickAddStore = quickAddStore;
+  window.saveInlineStat = saveInlineStat;
 
   if(!runtime.boundResize){
     runtime.boundResize = true;
