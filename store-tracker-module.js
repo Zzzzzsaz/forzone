@@ -1318,6 +1318,7 @@
           <div class="shops-v2-actions">
             <button class="btn btn-ghost" type="button" onclick="openCompanyModal('${company.id}')">Edytuj firmę</button>
             <button class="btn btn-primary" type="button" onclick="openStoreModal('${company.id}')">+ Dodaj sklep</button>
+            <button class="btn btn-danger" type="button" onclick="confirmDeleteCompany('${company.id}')">Usuń firmę</button>
           </div>
         </div>
         ${renderSummaryGrid(summary, {label: rangeLabel(data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate), filledDays})}
@@ -1519,6 +1520,7 @@
           <div class="shops-v2-actions">
             <button class="btn btn-ghost" type="button" onclick="openShopsCompany('${store.company_id}')">Wróć do firmy</button>
             <button class="btn btn-primary" type="button" onclick="openStoreModal('${store.company_id}','${store.id}')">Ustawienia sklepu</button>
+            <button class="btn btn-danger" type="button" onclick="confirmDeleteStore('${store.id}')">Usuń sklep</button>
           </div>
         </div>
         ${renderSummaryGrid(summary, {label: monthLabel(data.ui.monthKey), filledDays: summary.filledDays})}
@@ -1819,8 +1821,24 @@
       .shops-v2-filters{margin:0}
       .shops-v2-range-badge{margin-left:auto}
       .shops-v2-content,.shops-v2-scroll,.shops-v2-store-view{flex:1;min-height:0}
-      .shops-v2-scroll{overflow:auto;display:flex;flex-direction:column;gap:12px;padding-right:2px}
-      .shops-v2-store-view{display:flex;flex-direction:column;gap:12px;overflow:hidden}
+      .shops-v2-content{
+        overflow:auto;
+        overscroll-behavior:contain;
+        scrollbar-width:thin;
+      }
+      .shops-v2-scroll{
+        overflow:auto;
+        overscroll-behavior:contain;
+        display:flex;flex-direction:column;gap:12px;padding-right:2px;
+        scrollbar-width:thin;
+      }
+      .shops-v2-store-view{
+        display:flex;flex-direction:column;gap:12px;
+        overflow:auto;
+        overscroll-behavior:contain;
+        padding-right:2px;
+        scrollbar-width:thin;
+      }
       .shops-v2-summary-block{display:flex;flex-direction:column;gap:10px}
       .shops-v2-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
       .shops-v2-stat{display:flex;flex-direction:column;gap:10px;text-align:left;padding:12px 13px}
@@ -1897,7 +1915,7 @@
       .shops-v2-table-card{display:flex;flex-direction:column;gap:10px;flex:1;min-height:280px;padding:14px}
       .shops-v2-table-toolbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
       .shops-v2-table-wrap{flex:1;min-height:0;border:1.5px solid var(--border);border-radius:14px;overflow:hidden;background:var(--surface2)}
-      .shops-v2-table-scroll{height:100%;overflow:auto}
+      .shops-v2-table-scroll{height:100%;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}
       .shops-v2-month-table{border-collapse:separate;border-spacing:0;min-width:max-content;width:100%}
       .shops-v2-month-table th,.shops-v2-month-table td{padding:0;border-bottom:1px solid var(--border);border-right:1px solid var(--border);background:var(--surface)}
       .shops-v2-month-table thead th{position:sticky;top:0;z-index:2;background:var(--surface2)}
