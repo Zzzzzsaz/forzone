@@ -1,4 +1,4 @@
-const CACHE_NAME = "forzone-shell-v2";
+const CACHE_NAME = "forzone-shell-v3";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -31,6 +31,7 @@ self.addEventListener("fetch", event => {
   if (url.origin !== self.location.origin) return;
 
   const isDocument = event.request.mode === "navigate" || event.request.destination === "document";
+  const isRuntimeAsset = ["script", "style", "worker", "manifest"].includes(event.request.destination);
 
   if (isDocument) {
     event.respondWith(
@@ -38,6 +39,25 @@ self.addEventListener("fetch", event => {
         .then(response => {
           const copy = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+          return response;
+        })
+        .catch(async () => (
+          (await caches.match(event.request)) ||
+          (await caches.match("/desktop-manager.html")) ||
+          (await caches.match("/index.html"))
+        ))
+    );
+    return;
+  }
+
+  if (isRuntimeAsset) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+          }
           return response;
         })
         .catch(async () => (
