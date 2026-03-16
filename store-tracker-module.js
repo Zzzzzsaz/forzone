@@ -1932,7 +1932,7 @@
         return;
       }
 
-      const scroller = host.querySelector('.shops-v2-store-view, .shops-v2-scroll, .shops-v2-content');
+      const scroller = host.querySelector('.shops-v2-content');
       if(!scroller || scroller.scrollHeight <= scroller.clientHeight) return;
       scroller.scrollTop += event.deltaY;
       event.preventDefault();
@@ -1949,11 +1949,11 @@
     style.textContent = `
       #win-shops{min-width:720px;min-height:520px}
       #shops-body.shops-v2-host{
-        display:flex;flex-direction:column;height:100%;min-height:0;overflow:hidden;padding:0!important;
+        display:flex;flex:1;flex-direction:column;height:100%;min-height:0;overflow:hidden;padding:0!important;
         background:var(--surface);
       }
       .shops-v2-shell{
-        position:relative;display:flex;flex-direction:column;gap:12px;flex:1;min-height:0;
+        position:relative;display:flex;flex-direction:column;gap:12px;flex:1;min-height:0;height:100%;overflow:hidden;
         padding:12px;background:var(--surface);container-type:inline-size;
       }
       .shops-v2-shell .card{margin-bottom:0}
@@ -1978,22 +1978,22 @@
       .shops-v2-range-badge{margin-left:auto}
       .shops-v2-content,.shops-v2-scroll,.shops-v2-store-view{flex:1;min-height:0}
       .shops-v2-content{
-        overflow:auto;
+        overflow-y:auto;
+        overflow-x:hidden;
         overscroll-behavior:contain;
         scrollbar-width:thin;
+        -webkit-overflow-scrolling:touch;
       }
       .shops-v2-scroll{
-        overflow:auto;
-        overscroll-behavior:contain;
+        overflow:visible;
         display:flex;flex-direction:column;gap:12px;padding-right:2px;
-        scrollbar-width:thin;
+        min-height:auto;
       }
       .shops-v2-store-view{
         display:flex;flex-direction:column;gap:12px;
-        overflow:auto;
-        overscroll-behavior:contain;
+        overflow:visible;
         padding-right:2px;
-        scrollbar-width:thin;
+        min-height:auto;
       }
       .shops-v2-summary-block{display:flex;flex-direction:column;gap:10px}
       .shops-v2-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
@@ -2174,6 +2174,8 @@
     host.style.overflow = 'hidden';
     host.style.display = 'flex';
     host.style.flexDirection = 'column';
+    host.style.flex = '1';
+    host.style.minHeight = '0';
     host.style.height = '100%';
     host.innerHTML = `
       <div class="shops-v2-shell">
