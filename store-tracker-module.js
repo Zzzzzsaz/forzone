@@ -14,6 +14,7 @@
     gross_to_net: 'Netto liczone z brutto',
     manual_net: 'Netto wpisywane recznie'
   };
+  const DEFAULT_SHOPIFY_API_VERSION = '2025-10';
   const runtime = {
     boundResize: false,
     wheelHost: null
@@ -208,6 +209,11 @@
       profit_share_type: ['headcount', 'percentage', 'fixed'].includes(store?.profit_share_type) ? store.profit_share_type : 'headcount',
       profit_share_value: numberValue(store?.profit_share_value || 0),
       calculation_mode: ['gross_to_net', 'manual_net'].includes(store?.calculation_mode) ? store.calculation_mode : 'gross_to_net',
+      shopify_enabled: !!store?.shopify_enabled,
+      shopify_domain: String(store?.shopify_domain || '').trim(),
+      shopify_admin_token: String(store?.shopify_admin_token || '').trim(),
+      shopify_api_version: String(store?.shopify_api_version || DEFAULT_SHOPIFY_API_VERSION).trim() || DEFAULT_SHOPIFY_API_VERSION,
+      shopify_last_sync_at: store?.shopify_last_sync_at || null,
       created_at: store?.created_at || now,
       updated_at: store?.updated_at || now
     };
@@ -867,6 +873,10 @@
     const profitShareValue = numberValue(document.getElementById('shops-store-share-value')?.value);
     const calculationMode = String(document.getElementById('shops-store-calc-mode')?.value || 'gross_to_net');
     const color = String(document.getElementById('shops-store-color')?.value || cssVar('--accent', '#4f7ef8')).trim() || cssVar('--accent', '#4f7ef8');
+    const shopifyEnabled = !!document.getElementById('shops-store-shopify-enabled')?.checked;
+    const shopifyDomain = String(document.getElementById('shops-store-shopify-domain')?.value || '').trim();
+    const shopifyAdminToken = String(document.getElementById('shops-store-shopify-token')?.value || '').trim();
+    const shopifyApiVersion = String(document.getElementById('shops-store-shopify-version')?.value || DEFAULT_SHOPIFY_API_VERSION).trim() || DEFAULT_SHOPIFY_API_VERSION;
 
     if(!companyId || !getCompany(companyId)){
       toastMsg('Wybierz firmę', 'error', 2200);
@@ -874,6 +884,11 @@
     }
     if(!name){
       toastMsg('Podaj nazwę sklepu', 'error', 2200);
+      return;
+    }
+
+    if(shopifyEnabled && (!shopifyDomain || !shopifyAdminToken)){
+      toastMsg('Aby wlaczyc Shopify, podaj domene i Admin API token', 'error', 2600);
       return;
     }
 
@@ -888,6 +903,10 @@
       store.profit_share_value = profitShareValue;
       store.calculation_mode = ['gross_to_net', 'manual_net'].includes(calculationMode) ? calculationMode : 'gross_to_net';
       store.color = color;
+      store.shopify_enabled = shopifyEnabled;
+      store.shopify_domain = shopifyDomain;
+      store.shopify_admin_token = shopifyAdminToken;
+      store.shopify_api_version = shopifyApiVersion;
       touchUpdated(store);
     }else{
       store = normalizeStore({
@@ -900,7 +919,11 @@
         profit_share_type: profitShareType,
         profit_share_value: profitShareValue,
         calculation_mode: calculationMode,
-        color
+        color,
+        shopify_enabled: shopifyEnabled,
+        shopify_domain: shopifyDomain,
+        shopify_admin_token: shopifyAdminToken,
+        shopify_api_version: shopifyApiVersion
       }, data.stores.length, companyId);
       data.stores.push(store);
     }
@@ -974,6 +997,68 @@
     data.ui.modal = null;
     persist(existingIndex >= 0 ? 'Zapisano dzień' : 'Dodano dzień');
     renderShops();
+  }
+
+  async function syncShopifyRevenue(storeId, date){
+    const data = ensureData();
+    const store = getStore(storeId || data.ui.storeId);
+    const targetDate = String(date || data.ui.selectedDate || localDate(new Date())).slice(0, 10);
+    if(!store){
+      toastMsg('Najpierw wybierz sklep', 'error', 2200);
+      return;
+    }
+    if(!store.shopify_enabled || !store.shopify_domain || !store.shopify_admin_token){
+      toastMsg('Najpierw uzupelnij ustawienia Shopify w sklepie', 'error', 2600);
+      openStoreModal(store.company_id, store.id);
+      return;
+    }
+
+    try{
+      toastMsg('Pobieram obrot z Shopify...', 'info', 1800);
+      const response = await fetch('/api/shopify-revenue', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          shopDomain: store.shopify_domain,
+          accessToken: store.shopify_admin_token,
+          apiVersion: store.shopify_api_version || DEFAULT_SHOPIFY_API_VERSION,
+          date: targetDate
+        })
+      });
+      const payload = await response.json().catch(()=>({error:'Nie udalo sie odczytac odpowiedzi Shopify'}));
+      if(!response.ok) throw new Error(payload?.error || 'Nie udalo sie pobrac danych z Shopify');
+
+      const current = getStoreStat(store.id, targetDate);
+      const syncNote = `Shopify: ${payload.orderCount || 0} zam. • sync ${new Date().toLocaleString('pl-PL')}`;
+      const nextStat = normalizeStat({
+        id: current?.id || uid('stat'),
+        store_id: store.id,
+        date: targetDate,
+        revenue_gross: numberValue(payload.revenueGross),
+        revenue_net: current?.revenue_net ?? null,
+        ad_cost_tiktok: current?.ad_cost_tiktok ?? 0,
+        refunds: current?.refunds ?? 0,
+        extra_costs: current?.extra_costs ?? 0,
+        notes: [current?.notes || '', syncNote].filter(Boolean).join('\n'),
+        created_at: current?.created_at || nowIso(),
+        updated_at: nowIso()
+      });
+
+      data.dailyStats = data.dailyStats.filter(stat=>!(stat.store_id === store.id && stat.date === targetDate));
+      data.dailyStats.push(nextStat);
+      data.dailyStats.sort((a, b)=>a.date.localeCompare(b.date));
+      data.ui.selectedDate = targetDate;
+      data.ui.monthKey = targetDate.slice(0, 7);
+      data.ui.storeId = store.id;
+      data.ui.companyId = store.company_id;
+      data.ui.view = 'store';
+      store.shopify_last_sync_at = nowIso();
+      touchUpdated(store);
+      persist(`Pobrano obrot z Shopify dla ${shortDateLabel(targetDate)}`);
+      renderShops();
+    }catch(error){
+      toastMsg(error?.message || 'Nie udalo sie pobrac danych z Shopify', 'error', 3200);
+    }
   }
 
   function quickAddCompany(){
@@ -1638,6 +1723,7 @@
           </div>
           <div class="shops-v2-actions">
             <button class="btn btn-ghost" type="button" onclick="openShopsCompany('${store.company_id}')">Wróć do firmy</button>
+            ${store.shopify_enabled ? `<button class="btn btn-ghost" type="button" onclick="syncShopifyRevenue('${store.id}','${data.ui.selectedDate}')">Pobierz obrot</button>` : ''}
             <button class="btn btn-primary" type="button" onclick="openStoreModal('${store.company_id}','${store.id}')">Ustawienia sklepu</button>
             <button class="btn btn-danger" type="button" onclick="confirmDeleteStore('${store.id}')">Usuń sklep</button>
           </div>
@@ -1748,6 +1834,30 @@
                   <option value="gross_to_net" ${store?.calculation_mode === 'gross_to_net' || !store ? 'selected' : ''}>Automatycznie z brutto</option>
                   <option value="manual_net" ${store?.calculation_mode === 'manual_net' ? 'selected' : ''}>Wpisywane ręcznie</option>
                 </select>
+              </div>
+            </div>
+            <div class="shops-v2-integration-box">
+              <div class="sec-title">Shopify API</div>
+              <div class="shops-v2-muted">Po zapisaniu mozesz pobierac obrot dla wybranego dnia prosto do sklepu.</div>
+              <label class="toggle-row" style="margin-top:10px">
+                <input id="shops-store-shopify-enabled" type="checkbox" ${store?.shopify_enabled ? 'checked' : ''} style="width:auto">
+                <span>Wlacz integracje Shopify</span>
+              </label>
+              <div class="form-row" style="margin-top:10px">
+                <div class="form-group">
+                  <label class="lbl">Domena sklepu</label>
+                  <input id="shops-store-shopify-domain" type="text" value="${esc(store?.shopify_domain || '')}" placeholder="twoj-sklep.myshopify.com">
+                </div>
+                <div class="form-group">
+                  <label class="lbl">Admin API token</label>
+                  <input id="shops-store-shopify-token" type="password" value="${esc(store?.shopify_admin_token || '')}" placeholder="shpat_...">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="lbl">Wersja API</label>
+                  <input id="shops-store-shopify-version" type="text" value="${esc(store?.shopify_api_version || DEFAULT_SHOPIFY_API_VERSION)}" placeholder="${DEFAULT_SHOPIFY_API_VERSION}">
+                </div>
               </div>
             </div>
             <label class="toggle-row" style="margin-top:10px">
@@ -2067,6 +2177,10 @@
       .shops-v2-note-edit{
         width:100%;min-height:86px;border:1.5px solid var(--border);background:var(--surface);border-radius:12px;padding:12px;
       }
+      .shops-v2-integration-box{
+        margin-top:12px;padding:14px;border:1.5px solid var(--border);border-radius:14px;background:var(--surface2);
+        display:flex;flex-direction:column;gap:8px;
+      }
       .shops-v2-empty-block,.shops-v2-empty-inline{color:var(--text3);font-size:13px}
       .shops-v2-empty-block{
         border:1.5px dashed var(--border2);border-radius:14px;padding:28px 16px;text-align:center;background:var(--surface2);grid-column:1/-1;
@@ -2220,6 +2334,7 @@
   window.quickAddCompany = quickAddCompany;
   window.quickAddStore = quickAddStore;
   window.saveInlineStat = saveInlineStat;
+  window.syncShopifyRevenue = syncShopifyRevenue;
 
   if(!runtime.boundResize){
     runtime.boundResize = true;

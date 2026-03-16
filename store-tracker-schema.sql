@@ -34,6 +34,11 @@ create table if not exists stores (
   headcount integer not null default 1 check (headcount >= 1),
   calculation_mode text not null default 'gross_to_net'
     check (calculation_mode in ('gross_to_net', 'manual_net')),
+  shopify_enabled boolean not null default false,
+  shopify_domain text not null default '',
+  shopify_admin_token text not null default '',
+  shopify_api_version text not null default '2025-10',
+  shopify_last_sync_at timestamptz,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
