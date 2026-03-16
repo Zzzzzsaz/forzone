@@ -2558,6 +2558,732 @@
     document.head.appendChild(style);
   }
 
+  function renderHeader(data){
+    const ui = data.ui;
+    let actions = '';
+    if(ui.view === 'overview'){
+      actions = `<button class="btn btn-primary" type="button" onclick="openCompanyModal()">+ Firma</button>`;
+    }else if(ui.view === 'company'){
+      actions = [
+        `<button class="btn btn-ghost" type="button" onclick="openShopsOverview()">Wszystko</button>`,
+        `<button class="btn btn-primary" type="button" onclick="openStoreModal('${ui.companyId}')">+ Sklep</button>`
+      ].join('');
+    }else{
+      actions = [
+        `<button class="btn btn-ghost" type="button" onclick="openShopsCompany('${ui.companyId}')">Firma</button>`,
+        `<button class="btn btn-ghost" type="button" onclick="openStatModal('${ui.storeId}','${ui.selectedDate}')">Dzien</button>`,
+        `<button class="btn btn-primary" type="button" onclick="openStoreModal('${ui.companyId}','${ui.storeId}')">Ustawienia</button>`
+      ].join('');
+    }
+
+    return `
+      <div class="card shops-min-head">
+        <div class="shops-min-head-top">
+          <div class="shops-min-head-copy">
+            <div class="shops-min-head-title">${esc(viewTitle(ui))}</div>
+            <div class="shops-min-head-sub">${esc(rangeLabel(ui.monthKey, ui.summaryMode, ui.selectedDate))}</div>
+          </div>
+          <div class="shops-min-head-actions">${actions}</div>
+        </div>
+        <div class="shops-min-toolbar">
+          <input class="shops-min-date" type="date" value="${esc(ui.selectedDate)}" onchange="jumpToShopsDate(this.value)" aria-label="Data">
+          <div class="todo-filters shops-min-filters">
+            <button class="filter-btn${ui.summaryMode === 'today' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('today')">Dzis</button>
+            <button class="filter-btn${ui.summaryMode === 'yesterday' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('yesterday')">Wczoraj</button>
+            <button class="filter-btn${ui.summaryMode === 'week' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('week')">Tydzien</button>
+            <button class="filter-btn${ui.summaryMode === 'month' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('month')">Miesiac</button>
+            <button class="filter-btn${ui.summaryMode === 'year' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('year')">Rok</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderMinimalHero(summary, title, accent){
+    return `
+      <div class="card shops-min-hero" style="--shops-min-accent:${accent || cssVar('--accent', '#4f7ef8')}">
+        <div class="shops-min-kicker">${esc(title)}</div>
+        <div class="shops-min-amount">${formatPLN(summary.income)}</div>
+        <div class="shops-min-hero-row">
+          <div class="shops-min-chip"><span>Przychód</span><strong>${formatPLN(summary.gross)}</strong></div>
+          <div class="shops-min-chip"><span>Reklamy</span><strong>${formatPLN(summary.ads)}</strong></div>
+          <div class="shops-min-chip"><span>Zwroty</span><strong>${formatPLN(summary.refunds)}</strong></div>
+          <div class="shops-min-chip"><span>Na głowę</span><strong>${formatPLN(summary.perHead)}</strong></div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderMiniCompanyButton(companySummary){
+    const company = companySummary.company;
+    const color = companyAccent(companySummary);
+    return `<button class="shops-min-menu-btn" type="button" style="--shops-min-accent:${color}" onclick="openShopsCompany('${company.id}')">${esc(company.name)}</button>`;
+  }
+
+  function renderMiniStoreButton(storeSummary){
+    const store = storeSummary.store;
+    return `<button class="shops-min-menu-btn" type="button" style="--shops-min-accent:${store.color}" onclick="openShopsStore('${store.id}')">${esc(store.name)}</button>`;
+  }
+
+  function renderMiniStoreRow(storeSummary){
+    const store = storeSummary.store;
+    return `
+      <button class="shops-min-row" type="button" onclick="openShopsStore('${store.id}')">
+        <div class="shops-min-row-main">
+          <span class="shops-v2-entity-dot" style="background:${store.color}"></span>
+          <span>${esc(store.name)}</span>
+        </div>
+        <div class="shops-min-row-meta">
+          <strong>${formatCompactPLN(storeSummary.income)}</strong>
+          <span>${formatCompactPLN(storeSummary.gross)}</span>
+        </div>
+      </button>
+    `;
+  }
+
+  function renderMiniStats(summary){
+    return `
+      <details class="card shops-min-details">
+        <summary>Staty</summary>
+        <div class="shops-min-stats">
+          <div class="shops-min-stat"><span>Przychód</span><strong>${formatPLN(summary.gross)}</strong></div>
+          <div class="shops-min-stat"><span>Dochód</span><strong>${formatPLN(summary.income)}</strong></div>
+          <div class="shops-min-stat"><span>Reklamy</span><strong>${formatPLN(summary.ads)}</strong></div>
+          <div class="shops-min-stat"><span>Zwroty</span><strong>${formatPLN(summary.refunds)}</strong></div>
+        </div>
+      </details>
+    `;
+  }
+
+  function renderSelectedDayPanel(store, selectedDate){
+    const rawStat = getStoreStat(store.id, selectedDate);
+    const stat = rawStat ? computeStat(store, rawStat) : null;
+    return `
+      <div class="card shops-min-card">
+        <div class="shops-min-card-title">${esc(fullDateLabel(selectedDate))}</div>
+        <div class="shops-min-stats shops-min-stats-2">
+          <div class="shops-min-stat"><span>Brutto</span><strong>${stat ? formatPLN(stat.revenue_gross) : '—'}</strong></div>
+          <div class="shops-min-stat"><span>Dochód</span><strong>${stat ? formatPLN(stat.income) : '—'}</strong></div>
+          <div class="shops-min-stat"><span>Ads</span><strong>${stat ? formatPLN(stat.ad_cost_tiktok) : '—'}</strong></div>
+          <div class="shops-min-stat"><span>Zwroty</span><strong>${stat ? formatPLN(stat.refunds) : '—'}</strong></div>
+        </div>
+        <div class="shops-min-inline-actions">
+          <button class="btn btn-primary" type="button" onclick="openStatModal('${store.id}','${selectedDate}')">${stat ? 'Edytuj' : 'Dodaj'}</button>
+          ${stat ? `<button class="btn btn-danger" type="button" onclick="confirmDeleteStat('${store.id}','${selectedDate}')">Usuń</button>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderStoreCalendar(store, key, selectedDate){
+    const statsMap = statMapForStore(store.id, key);
+    const today = localDate(new Date());
+    const cells = buildCalendarCells(key);
+    return `
+      <div class="card shops-min-card">
+        <div class="shops-min-card-head">
+          <div class="shops-min-card-title">${esc(monthLabel(key))}</div>
+          <div class="shops-min-inline-actions">
+            <button class="btn btn-ghost btn-sm" type="button" onclick="shiftShopsMonth(-1)">‹</button>
+            <button class="btn btn-ghost btn-sm" type="button" onclick="shiftShopsMonth(1)">›</button>
+          </div>
+        </div>
+        <div class="shops-min-cal-head">
+          <span>Pon</span><span>Wt</span><span>Śr</span><span>Czw</span><span>Pt</span><span>Sob</span><span>Nd</span>
+        </div>
+        <div class="shops-min-cal-grid">
+          ${cells.map(cell=>{
+            const stat = statsMap.get(cell.date);
+            const cls = [
+              'shops-min-cal-day',
+              cell.otherMonth ? 'is-other' : '',
+              cell.date === selectedDate ? 'is-active' : '',
+              cell.date === today ? 'is-today' : '',
+              stat ? 'has-data' : ''
+            ].filter(Boolean).join(' ');
+            return `<button class="${cls}" type="button" onclick="jumpToShopsDate('${cell.date}')">${cell.day}</button>`;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderStoreTable(store, summary, key, selectedDate){
+    const dates = monthDays(key);
+    const stats = statMapForStore(store.id, key);
+    const rows = [
+      {key:'revenue_gross', label:'Brutto', total:summary.gross, formatter:formatPLN},
+      {key:'revenue_net_resolved', label:'Netto', total:summary.net, formatter:formatPLN},
+      {key:'ad_cost_tiktok', label:'Ads', total:summary.ads, formatter:formatPLN},
+      {key:'refunds', label:'Zwroty', total:summary.refunds, formatter:formatPLN},
+      {key:'income', label:'Dochód', total:summary.income, formatter:formatPLN}
+    ];
+    return `
+      <div class="card shops-min-card shops-min-table-card">
+        <div class="shops-min-card-head">
+          <div class="shops-min-card-title">Tabela</div>
+          <button class="btn btn-ghost btn-sm" type="button" onclick="openStatModal('${store.id}','${selectedDate}')">Edytuj dzień</button>
+        </div>
+        <div class="shops-min-table-wrap">
+          <table class="shops-min-table">
+            <thead>
+              <tr>
+                <th>Metryka</th>
+                <th>Suma</th>
+                ${dates.map(date=>`<th><button class="shops-min-day-btn${date === selectedDate ? ' is-active' : ''}" type="button" onclick="jumpToShopsDate('${date}')">${Number(date.slice(8, 10))}</button></th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map(row=>`
+                <tr>
+                  <th>${row.label}</th>
+                  <td>${row.formatter(row.total)}</td>
+                  ${dates.map(date=>{
+                    const stat = stats.get(date);
+                    return `<td><button class="shops-min-cell${date === selectedDate ? ' is-active' : ''}" type="button" onclick="openStatModal('${store.id}','${date}')">${stat ? row.formatter(stat[row.key]) : '—'}</button></td>`;
+                  }).join('')}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderStoreView(data){
+    const store = getStore(data.ui.storeId);
+    if(!store) return renderCompanyCentral(data);
+    const company = getCompany(store.company_id);
+    const summary = summarizeStore(store, data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate);
+    return `
+      <div class="shops-v2-scroll shops-min-page">
+        ${renderMinimalHero(summary, `${store.name}${company ? ` • ${company.name}` : ''}`, store.color)}
+        <div class="shops-min-store-grid">
+          ${renderSelectedDayPanel(store, data.ui.selectedDate)}
+          ${renderStoreCalendar(store, data.ui.monthKey, data.ui.selectedDate)}
+        </div>
+        ${renderStoreTable(store, summary, data.ui.monthKey, data.ui.selectedDate)}
+      </div>
+    `;
+  }
+
+  function renderOverviewCentral(data){
+    const summary = summarizeGlobal(data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate);
+    return `
+      <div class="shops-v2-scroll shops-min-page">
+        ${renderMinimalHero(summary, 'Zarobek łącznie', cssVar('--accent', '#4f7ef8'))}
+        ${renderMiniStats(summary)}
+        <div class="card shops-min-card">
+          <div class="shops-min-card-title">Firmy</div>
+          <div class="shops-min-menu">
+            ${summary.companies.length ? summary.companies.map(renderMiniCompanyButton).join('') : '<div class="shops-min-empty">Dodaj pierwszą firmę</div>'}
+          </div>
+        </div>
+        <div class="card shops-min-card">
+          <div class="shops-min-card-title">Sklepy</div>
+          <div class="shops-min-list">
+            ${summary.stores.length ? summary.stores.map(renderMiniStoreRow).join('') : '<div class="shops-min-empty">Brak sklepów</div>'}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderCompanyCentral(data){
+    const company = getCompany(data.ui.companyId);
+    if(!company) return renderOverviewCentral(data);
+    const summary = summarizeCompany(company, data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate);
+    return `
+      <div class="shops-v2-scroll shops-min-page">
+        ${renderMinimalHero(summary, company.name, companyAccent(summary))}
+        ${renderMiniStats(summary)}
+        <div class="card shops-min-card">
+          <div class="shops-min-card-head">
+            <div class="shops-min-card-title">Sklepy</div>
+            <button class="btn btn-primary btn-sm" type="button" onclick="openStoreModal('${company.id}')">+ Sklep</button>
+          </div>
+          <div class="shops-min-menu">
+            ${summary.storeSummaries.length ? summary.storeSummaries.map(renderMiniStoreButton).join('') : '<div class="shops-min-empty">Dodaj pierwszy sklep</div>'}
+          </div>
+        </div>
+        <div class="card shops-min-card">
+          <div class="shops-min-card-title">Wyniki sklepów</div>
+          <div class="shops-min-list">
+            ${summary.storeSummaries.length ? summary.storeSummaries.map(renderMiniStoreRow).join('') : '<div class="shops-min-empty">Brak danych</div>'}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderContent(data){
+    if(data.ui.view === 'company') return renderCompanyCentral(data);
+    if(data.ui.view === 'store') return renderStoreView(data);
+    return renderOverviewCentral(data);
+  }
+
+  function injectStyles(){
+    let style = document.getElementById(STYLE_ID);
+    if(!style){
+      style = document.createElement('style');
+      style.id = STYLE_ID;
+      document.head.appendChild(style);
+    }
+    style.textContent = `
+      #win-shops{min-width:720px;min-height:520px}
+      #shops-body.shops-v2-host{display:flex;flex:1;flex-direction:column;height:100%;min-height:0;overflow:hidden;padding:0!important;background:var(--surface)}
+      .shops-v2-shell{position:relative;display:flex;flex-direction:column;gap:12px;flex:1;min-height:0;height:100%;overflow:hidden;padding:14px;background:var(--surface);container-type:inline-size}
+      .shops-v2-content{flex:1;min-height:0;overflow:auto;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+      .shops-v2-scroll,.shops-v2-store-view{display:flex;flex-direction:column;gap:14px}
+      .shops-min-page{max-width:980px;width:100%;margin:0 auto}
+      .shops-min-head{padding:16px 18px}
+      .shops-min-head-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+      .shops-min-head-copy{display:flex;flex-direction:column;gap:4px}
+      .shops-min-head-title{font-size:28px;font-weight:900;color:var(--text);line-height:1}
+      .shops-min-head-sub{font-size:13px;color:var(--text2)}
+      .shops-min-head-actions{display:flex;gap:8px;flex-wrap:wrap}
+      .shops-min-toolbar{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px}
+      .shops-min-date{min-width:170px}
+      .shops-min-filters{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+      .shops-min-hero{padding:26px 22px;text-align:center;border:1.5px solid color-mix(in srgb, var(--shops-min-accent) 28%, var(--border));background:linear-gradient(180deg, color-mix(in srgb, var(--shops-min-accent) 10%, var(--surface)) 0%, var(--surface) 100%)}
+      .shops-min-kicker{font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.12em}
+      .shops-min-amount{margin-top:10px;font-size:clamp(34px,5vw,58px);font-weight:900;font-family:'DM Mono',monospace;color:var(--text);line-height:1}
+      .shops-min-hero-row{margin-top:18px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+      .shops-min-chip{padding:12px;border:1px solid var(--border);border-radius:16px;background:rgba(255,255,255,.55);display:flex;flex-direction:column;gap:4px}
+      .shops-min-chip span{font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+      .shops-min-chip strong{font-size:15px;font-weight:800;color:var(--text);font-family:'DM Mono',monospace}
+      .shops-min-details{padding:0;overflow:hidden}
+      .shops-min-details summary{cursor:pointer;list-style:none;padding:14px 16px;font-size:14px;font-weight:800;background:var(--surface2)}
+      .shops-min-details summary::-webkit-details-marker{display:none}
+      .shops-min-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:14px}
+      .shops-min-stats-2{grid-template-columns:repeat(2,minmax(0,1fr));padding:0}
+      .shops-min-stat{padding:12px;border:1px solid var(--border);border-radius:16px;background:var(--surface2);display:flex;flex-direction:column;gap:4px}
+      .shops-min-stat span{font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+      .shops-min-stat strong{font-size:15px;font-weight:800;color:var(--text);font-family:'DM Mono',monospace}
+      .shops-min-card{padding:16px}
+      .shops-min-card-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+      .shops-min-card-title{font-size:17px;font-weight:800;color:var(--text)}
+      .shops-min-menu{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:14px}
+      .shops-min-menu-btn{min-width:220px;min-height:58px;padding:0 18px;border:none;border-radius:18px;background:var(--shops-min-accent);color:#fff;font:800 15px 'DM Sans',sans-serif;cursor:pointer}
+      .shops-min-list{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+      .shops-min-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--border);border-radius:16px;background:var(--surface2);text-align:left;color:var(--text);cursor:pointer}
+      .shops-min-row-main{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700}
+      .shops-min-row-meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+      .shops-min-row-meta strong{font-size:15px;font-family:'DM Mono',monospace}
+      .shops-min-row-meta span{font-size:12px;color:var(--text2);font-family:'DM Mono',monospace}
+      .shops-min-empty{padding:18px;color:var(--text3);text-align:center}
+      .shops-min-store-grid{display:grid;grid-template-columns:minmax(280px,360px) minmax(0,1fr);gap:14px}
+      .shops-min-inline-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+      .shops-min-cal-head,.shops-min-cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+      .shops-min-cal-head{margin-top:14px;font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;text-align:center}
+      .shops-min-cal-grid{margin-top:10px}
+      .shops-min-cal-day{height:42px;border:1px solid var(--border);border-radius:12px;background:var(--surface2);cursor:pointer;color:var(--text);font:700 13px 'DM Sans',sans-serif}
+      .shops-min-cal-day.is-other{opacity:.45}
+      .shops-min-cal-day.is-active{background:var(--accent);border-color:var(--accent);color:#fff}
+      .shops-min-cal-day.is-today{box-shadow:inset 0 0 0 1px var(--accent)}
+      .shops-min-cal-day.has-data::after{content:'';display:block;width:6px;height:6px;border-radius:50%;background:currentColor;margin:3px auto 0;opacity:.75}
+      .shops-min-table-card{padding:0;overflow:hidden}
+      .shops-min-table-wrap{overflow:auto;border-top:1px solid var(--border)}
+      .shops-min-table{border-collapse:separate;border-spacing:0;min-width:max-content;width:100%}
+      .shops-min-table th,.shops-min-table td{padding:0;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface)}
+      .shops-min-table thead th{position:sticky;top:0;background:var(--surface2);z-index:1}
+      .shops-min-table th:first-child,.shops-min-table td:first-child{position:sticky;left:0;z-index:2;background:var(--surface2);min-width:132px;padding:12px 14px;text-align:left}
+      .shops-min-day-btn,.shops-min-cell{min-width:62px;padding:12px 8px;border:none;background:transparent;cursor:pointer;font:700 12px 'DM Mono',monospace;color:var(--text)}
+      .shops-min-day-btn.is-active,.shops-min-cell.is-active{background:var(--accent-light);color:var(--accent)}
+      .shops-min-cell{color:var(--text2)}
+      .shops-min-cell:hover,.shops-min-day-btn:hover{background:var(--surface2)}
+      .shops-v2-modal-overlay{position:absolute;inset:0;background:rgba(0,0,0,.42);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:18px;z-index:40}
+      .shops-v2-modal{width:min(520px,100%);max-height:100%;overflow:hidden;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:22px;box-shadow:0 32px 80px rgba(0,0,0,.35)}
+      .shops-v2-modal-wide{width:min(760px,100%)}
+      .shops-v2-modal-head{padding:18px 20px 14px;border-bottom:1px solid var(--border);background:var(--surface2);display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+      .shops-v2-modal-head h3{margin:0;font-size:18px;color:var(--text)}
+      .shops-v2-modal-head p{margin:4px 0 0;font-size:12px;color:var(--text2);line-height:1.4}
+      .shops-v2-modal-body{padding:18px 20px;overflow:auto}
+      .shops-v2-modal-foot{padding:12px 20px;border-top:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+      .shops-v2-integration-box{margin-top:12px;padding:14px;border:1.5px solid var(--border);border-radius:14px;background:var(--surface2);display:flex;flex-direction:column;gap:8px}
+      @container (max-width: 980px){
+        .shops-min-hero-row,.shops-min-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+        .shops-min-store-grid{grid-template-columns:1fr}
+      }
+      @container (max-width: 720px){
+        .shops-v2-shell{padding:10px}
+        .shops-min-head-top,.shops-min-toolbar{flex-direction:column;align-items:stretch}
+        .shops-min-head-actions,.shops-min-inline-actions{width:100%}
+        .shops-min-head-actions .btn,.shops-min-inline-actions .btn{flex:1}
+        .shops-min-hero-row,.shops-min-stats,.shops-min-stats-2{grid-template-columns:1fr}
+        .shops-min-menu-btn{width:100%}
+      }
+    `;
+  }
+
+  function rangeLabel(key, mode, selectedDate){
+    const bounds = getRangePresetBounds(mode, selectedDate);
+    if(bounds.preset === 'today') return `Dzisiaj / ${fullDateLabel(bounds.start)}`;
+    if(bounds.preset === 'yesterday') return `Wczoraj / ${fullDateLabel(bounds.start)}`;
+    if(bounds.preset === 'week') return `${shortDateLabel(bounds.start)} - ${shortDateLabel(bounds.end)}`;
+    if(bounds.preset === 'month') return monthLabel(bounds.start.slice(0, 7));
+    return String(dateAtNoon(bounds.start).getFullYear());
+  }
+
+  function renderHeader(data){
+    const ui = data.ui;
+    let actions = '';
+    if(ui.view === 'overview'){
+      actions = `<button class="btn btn-primary" type="button" onclick="openCompanyModal()">+ Firma</button>`;
+    }else if(ui.view === 'company'){
+      actions = [
+        `<button class="btn btn-ghost" type="button" onclick="openShopsOverview()">Wszystko</button>`,
+        `<button class="btn btn-ghost" type="button" onclick="openCompanyModal('${ui.companyId}')">Edytuj</button>`,
+        `<button class="btn btn-danger" type="button" onclick="confirmDeleteCompany('${ui.companyId}')">Usun</button>`,
+        `<button class="btn btn-primary" type="button" onclick="openStoreModal('${ui.companyId}')">+ Sklep</button>`
+      ].join('');
+    }else{
+      actions = [
+        `<button class="btn btn-ghost" type="button" onclick="openShopsCompany('${ui.companyId}')">Firma</button>`,
+        `<button class="btn btn-ghost" type="button" onclick="openStatModal('${ui.storeId}','${ui.selectedDate}')">Dzien</button>`,
+        `<button class="btn btn-ghost" type="button" onclick="openStoreModal('${ui.companyId}','${ui.storeId}')">Edytuj</button>`,
+        `<button class="btn btn-danger" type="button" onclick="confirmDeleteStore('${ui.storeId}')">Usun</button>`
+      ].join('');
+    }
+
+    return `
+      <div class="card shops-min-head">
+        <div class="shops-min-head-top">
+          <div class="shops-min-head-copy">
+            <div class="shops-min-head-title">${esc(viewTitle(ui))}</div>
+            <div class="shops-min-head-sub">${esc(rangeLabel(ui.monthKey, ui.summaryMode, ui.selectedDate))}</div>
+          </div>
+          <div class="shops-min-head-actions">${actions}</div>
+        </div>
+        <div class="shops-min-toolbar">
+          <input class="shops-min-date" type="date" value="${esc(ui.selectedDate)}" onchange="jumpToShopsDate(this.value)" aria-label="Data">
+          <div class="todo-filters shops-min-filters">
+            <button class="filter-btn${ui.summaryMode === 'today' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('today')">Dzis</button>
+            <button class="filter-btn${ui.summaryMode === 'yesterday' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('yesterday')">Wczoraj</button>
+            <button class="filter-btn${ui.summaryMode === 'week' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('week')">Tydzien</button>
+            <button class="filter-btn${ui.summaryMode === 'month' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('month')">Miesiac</button>
+            <button class="filter-btn${ui.summaryMode === 'year' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('year')">Rok</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderMinimalHero(summary, title, accent){
+    return `
+      <div class="card shops-min-hero" style="--shops-min-accent:${accent || cssVar('--accent', '#4f7ef8')}">
+        <div class="shops-min-kicker">${esc(title)}</div>
+        <div class="shops-min-amount">${formatPLN(summary.income)}</div>
+        <div class="shops-min-hero-row">
+          <div class="shops-min-chip"><span>Przychod</span><strong>${formatPLN(summary.gross)}</strong></div>
+          <div class="shops-min-chip"><span>Reklamy</span><strong>${formatPLN(summary.ads)}</strong></div>
+          <div class="shops-min-chip"><span>Zwroty</span><strong>${formatPLN(summary.refunds)}</strong></div>
+          <div class="shops-min-chip"><span>Na glowe</span><strong>${formatPLN(summary.perHead)}</strong></div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderMiniStats(summary){
+    return `
+      <details class="card shops-min-details">
+        <summary>Staty</summary>
+        <div class="shops-min-stats">
+          <div class="shops-min-stat"><span>Przychod</span><strong>${formatPLN(summary.gross)}</strong></div>
+          <div class="shops-min-stat"><span>Dochod</span><strong>${formatPLN(summary.income)}</strong></div>
+          <div class="shops-min-stat"><span>Reklamy</span><strong>${formatPLN(summary.ads)}</strong></div>
+          <div class="shops-min-stat"><span>Zwroty</span><strong>${formatPLN(summary.refunds)}</strong></div>
+        </div>
+      </details>
+    `;
+  }
+
+  function renderSelectedDayPanel(store, selectedDate){
+    const rawStat = getStoreStat(store.id, selectedDate);
+    const stat = rawStat ? computeStat(store, rawStat) : null;
+    return `
+      <div class="card shops-min-card">
+        <div class="shops-min-card-title">${esc(fullDateLabel(selectedDate))}</div>
+        <div class="shops-min-stats shops-min-stats-2">
+          <div class="shops-min-stat"><span>Brutto</span><strong>${stat ? formatPLN(stat.revenue_gross) : '-'}</strong></div>
+          <div class="shops-min-stat"><span>Dochod</span><strong>${stat ? formatPLN(stat.income) : '-'}</strong></div>
+          <div class="shops-min-stat"><span>Ads</span><strong>${stat ? formatPLN(stat.ad_cost_tiktok) : '-'}</strong></div>
+          <div class="shops-min-stat"><span>Zwroty</span><strong>${stat ? formatPLN(stat.refunds) : '-'}</strong></div>
+        </div>
+        <div class="shops-min-inline-actions">
+          <button class="btn btn-primary" type="button" onclick="openStatModal('${store.id}','${selectedDate}')">${stat ? 'Edytuj' : 'Dodaj'}</button>
+          ${stat ? `<button class="btn btn-danger" type="button" onclick="confirmDeleteStat('${store.id}','${selectedDate}')">Usun</button>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderStoreCalendar(store, key, selectedDate){
+    const statsMap = statMapForStore(store.id, key);
+    const today = localDate(new Date());
+    const cells = buildCalendarCells(key);
+    return `
+      <div class="card shops-min-card">
+        <div class="shops-min-card-head">
+          <div class="shops-min-card-title">${esc(monthLabel(key))}</div>
+          <div class="shops-min-inline-actions">
+            <button class="btn btn-ghost btn-sm" type="button" onclick="shiftShopsMonth(-1)">&lt;</button>
+            <button class="btn btn-ghost btn-sm" type="button" onclick="shiftShopsMonth(1)">&gt;</button>
+          </div>
+        </div>
+        <div class="shops-min-cal-head">
+          <span>Pon</span><span>Wt</span><span>Sr</span><span>Czw</span><span>Pt</span><span>Sob</span><span>Nd</span>
+        </div>
+        <div class="shops-min-cal-grid">
+          ${cells.map(cell=>{
+            const stat = statsMap.get(cell.date);
+            const cls = [
+              'shops-min-cal-day',
+              cell.otherMonth ? 'is-other' : '',
+              cell.date === selectedDate ? 'is-active' : '',
+              cell.date === today ? 'is-today' : '',
+              stat ? 'has-data' : ''
+            ].filter(Boolean).join(' ');
+            return `<button class="${cls}" type="button" onclick="jumpToShopsDate('${cell.date}')">${cell.day}</button>`;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderStoreTable(store, summary, key, selectedDate){
+    const dates = monthDays(key);
+    const stats = statMapForStore(store.id, key);
+    const rows = [
+      {key:'revenue_gross', label:'Brutto', total:summary.gross, formatter:formatPLN},
+      {key:'revenue_net_resolved', label:'Netto', total:summary.net, formatter:formatPLN},
+      {key:'ad_cost_tiktok', label:'Ads', total:summary.ads, formatter:formatPLN},
+      {key:'refunds', label:'Zwroty', total:summary.refunds, formatter:formatPLN},
+      {key:'income', label:'Dochod', total:summary.income, formatter:formatPLN}
+    ];
+    return `
+      <div class="card shops-min-card shops-min-table-card">
+        <div class="shops-min-card-head">
+          <div class="shops-min-card-title">Tabela</div>
+          <button class="btn btn-ghost btn-sm" type="button" onclick="openStatModal('${store.id}','${selectedDate}')">Edytuj dzien</button>
+        </div>
+        <div class="shops-min-table-wrap">
+          <table class="shops-min-table">
+            <thead>
+              <tr>
+                <th>Metryka</th>
+                <th>Suma</th>
+                ${dates.map(date=>`<th><button class="shops-min-day-btn${date === selectedDate ? ' is-active' : ''}" type="button" onclick="jumpToShopsDate('${date}')">${Number(date.slice(8, 10))}</button></th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map(row=>`
+                <tr>
+                  <th>${row.label}</th>
+                  <td>${row.formatter(row.total)}</td>
+                  ${dates.map(date=>{
+                    const stat = stats.get(date);
+                    return `<td><button class="shops-min-cell${date === selectedDate ? ' is-active' : ''}" type="button" onclick="openStatModal('${store.id}','${date}')">${stat ? row.formatter(stat[row.key]) : '-'}</button></td>`;
+                  }).join('')}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderStoreView(data){
+    const store = getStore(data.ui.storeId);
+    if(!store) return renderCompanyCentral(data);
+    const company = getCompany(store.company_id);
+    const summary = summarizeStore(store, data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate);
+    return `
+      <div class="shops-v2-scroll shops-min-page">
+        ${renderMinimalHero(summary, `${store.name}${company ? ` / ${company.name}` : ''}`, store.color)}
+        <div class="shops-min-store-grid">
+          ${renderSelectedDayPanel(store, data.ui.selectedDate)}
+          ${renderStoreCalendar(store, data.ui.monthKey, data.ui.selectedDate)}
+        </div>
+        ${renderStoreTable(store, summary, data.ui.monthKey, data.ui.selectedDate)}
+      </div>
+    `;
+  }
+
+  function renderOverviewCentral(data){
+    const summary = summarizeGlobal(data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate);
+    return `
+      <div class="shops-v2-scroll shops-min-page">
+        ${renderMinimalHero(summary, 'Zarobek lacznie', cssVar('--accent', '#4f7ef8'))}
+        ${renderMiniStats(summary)}
+        <div class="card shops-min-card">
+          <div class="shops-min-card-head">
+            <div class="shops-min-card-title">Firmy</div>
+            <button class="btn btn-primary btn-sm" type="button" onclick="openCompanyModal()">+ Firma</button>
+          </div>
+          <div class="shops-min-menu">
+            ${summary.companies.length ? summary.companies.map(renderMiniCompanyButton).join('') : '<div class="shops-min-empty">Dodaj pierwsza firme</div>'}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderCompanyCentral(data){
+    const company = getCompany(data.ui.companyId);
+    if(!company) return renderOverviewCentral(data);
+    const summary = summarizeCompany(company, data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate);
+    return `
+      <div class="shops-v2-scroll shops-min-page">
+        ${renderMinimalHero(summary, company.name, companyAccent(summary))}
+        ${renderMiniStats(summary)}
+        <div class="card shops-min-card">
+          <div class="shops-min-card-head">
+            <div class="shops-min-card-title">Sklepy</div>
+            <div class="shops-min-inline-actions">
+              <button class="btn btn-ghost btn-sm" type="button" onclick="openCompanyModal('${company.id}')">Edytuj</button>
+              <button class="btn btn-danger btn-sm" type="button" onclick="confirmDeleteCompany('${company.id}')">Usun</button>
+              <button class="btn btn-primary btn-sm" type="button" onclick="openStoreModal('${company.id}')">+ Sklep</button>
+            </div>
+          </div>
+          <div class="shops-min-menu">
+            ${summary.storeSummaries.length ? summary.storeSummaries.map(renderMiniStoreButton).join('') : '<div class="shops-min-empty">Dodaj pierwszy sklep</div>'}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderContent(data){
+    if(data.ui.view === 'company') return renderCompanyCentral(data);
+    if(data.ui.view === 'store') return renderStoreView(data);
+    return renderOverviewCentral(data);
+  }
+
+  function bindWheelScroll(host){
+    if(!host) return;
+    if(runtime.wheelHost && runtime.wheelHost !== host && runtime.wheelHandler){
+      runtime.wheelHost.removeEventListener('wheel', runtime.wheelHandler, {capture:true});
+    }
+    if(runtime.wheelHost === host && runtime.wheelHandler) return;
+
+    runtime.wheelHandler = event => {
+      const modal = event.target.closest('.shops-v2-modal-body');
+      if(modal && modal.scrollHeight > modal.clientHeight) return;
+
+      const table = event.target.closest('.shops-v2-table-scroll, .shops-min-table-wrap');
+      if(table){
+        const shouldScrollHorizontally = Math.abs(event.deltaX) > 0 || event.shiftKey;
+        if(shouldScrollHorizontally){
+          table.scrollLeft += event.deltaY || event.deltaX;
+          event.preventDefault();
+          return;
+        }
+        if(table.scrollHeight > table.clientHeight){
+          table.scrollTop += event.deltaY;
+          event.preventDefault();
+        }
+        return;
+      }
+
+      const scroller = host.querySelector('.shops-v2-content');
+      if(!scroller || scroller.scrollHeight <= scroller.clientHeight) return;
+      scroller.scrollTop += event.deltaY;
+      event.preventDefault();
+    };
+
+    host.addEventListener('wheel', runtime.wheelHandler, {passive:false, capture:true});
+    runtime.wheelHost = host;
+  }
+
+  function injectStyles(){
+    let style = document.getElementById(STYLE_ID);
+    if(!style){
+      style = document.createElement('style');
+      style.id = STYLE_ID;
+      document.head.appendChild(style);
+    }
+    style.textContent = `
+      #win-shops{min-width:720px;min-height:520px}
+      #shops-body.shops-v2-host{display:flex;flex:1;flex-direction:column;height:100%;min-height:0;overflow:hidden;padding:0!important;background:var(--surface)}
+      .shops-v2-shell{position:relative;display:flex;flex-direction:column;gap:12px;flex:1;min-height:0;height:100%;overflow:hidden;padding:14px;background:var(--surface);container-type:inline-size}
+      .shops-v2-content{flex:1;min-height:0;overflow:auto;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+      .shops-v2-scroll,.shops-v2-store-view{display:flex;flex-direction:column;gap:14px}
+      .shops-min-page{max-width:980px;width:100%;margin:0 auto}
+      .shops-min-head{padding:16px 18px}
+      .shops-min-head-top{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:12px;text-align:center}
+      .shops-min-head-copy{display:flex;flex-direction:column;gap:4px;align-items:center}
+      .shops-min-head-title{font-size:28px;font-weight:900;color:var(--text);line-height:1}
+      .shops-min-head-sub{font-size:13px;color:var(--text2)}
+      .shops-min-head-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+      .shops-min-toolbar{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px}
+      .shops-min-date{min-width:170px}
+      .shops-min-filters{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+      .shops-min-hero{padding:26px 22px;text-align:center;border:1.5px solid color-mix(in srgb, var(--shops-min-accent) 28%, var(--border));background:linear-gradient(180deg, color-mix(in srgb, var(--shops-min-accent) 10%, var(--surface)) 0%, var(--surface) 100%)}
+      .shops-min-kicker{font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.12em}
+      .shops-min-amount{margin-top:10px;font-size:clamp(34px,5vw,58px);font-weight:900;font-family:'DM Mono',monospace;color:var(--text);line-height:1}
+      .shops-min-hero-row{margin:18px auto 0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;max-width:760px}
+      .shops-min-chip{padding:12px;border:1px solid var(--border);border-radius:16px;background:rgba(255,255,255,.55);display:flex;flex-direction:column;gap:4px}
+      .shops-min-chip span{font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+      .shops-min-chip strong{font-size:15px;font-weight:800;color:var(--text);font-family:'DM Mono',monospace}
+      .shops-min-details{padding:0;overflow:hidden}
+      .shops-min-details summary{cursor:pointer;list-style:none;padding:14px 16px;font-size:14px;font-weight:800;background:var(--surface2);text-align:center}
+      .shops-min-details summary::-webkit-details-marker{display:none}
+      .shops-min-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:14px}
+      .shops-min-stats-2{grid-template-columns:repeat(2,minmax(0,1fr));padding:0}
+      .shops-min-stat{padding:12px;border:1px solid var(--border);border-radius:16px;background:var(--surface2);display:flex;flex-direction:column;gap:4px}
+      .shops-min-stat span{font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+      .shops-min-stat strong{font-size:15px;font-weight:800;color:var(--text);font-family:'DM Mono',monospace}
+      .shops-min-card{padding:16px}
+      .shops-min-card-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+      .shops-min-card-title{font-size:17px;font-weight:800;color:var(--text)}
+      .shops-min-menu{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:14px}
+      .shops-min-menu-btn{min-width:220px;min-height:58px;padding:0 18px;border:none;border-radius:18px;background:var(--shops-min-accent);color:#fff;font:800 15px 'DM Sans',sans-serif;cursor:pointer}
+      .shops-min-inline-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+      .shops-min-store-grid{display:grid;grid-template-columns:minmax(280px,360px) minmax(0,1fr);gap:14px}
+      .shops-min-cal-head,.shops-min-cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+      .shops-min-cal-head{margin-top:14px;font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;text-align:center}
+      .shops-min-cal-grid{margin-top:10px}
+      .shops-min-cal-day{height:42px;border:1px solid var(--border);border-radius:12px;background:var(--surface2);cursor:pointer;color:var(--text);font:700 13px 'DM Sans',sans-serif}
+      .shops-min-cal-day.is-other{opacity:.45}
+      .shops-min-cal-day.is-active{background:var(--accent);border-color:var(--accent);color:#fff}
+      .shops-min-cal-day.is-today{box-shadow:inset 0 0 0 1px var(--accent)}
+      .shops-min-cal-day.has-data::after{content:'';display:block;width:6px;height:6px;border-radius:50%;background:currentColor;margin:3px auto 0;opacity:.75}
+      .shops-min-table-card{padding:0;overflow:hidden}
+      .shops-min-table-wrap{overflow:auto;border-top:1px solid var(--border)}
+      .shops-min-table{border-collapse:separate;border-spacing:0;min-width:max-content;width:100%}
+      .shops-min-table th,.shops-min-table td{padding:0;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface)}
+      .shops-min-table thead th{position:sticky;top:0;background:var(--surface2);z-index:1}
+      .shops-min-table th:first-child,.shops-min-table td:first-child{position:sticky;left:0;z-index:2;background:var(--surface2);min-width:132px;padding:12px 14px;text-align:left}
+      .shops-min-day-btn,.shops-min-cell{min-width:62px;padding:12px 8px;border:none;background:transparent;cursor:pointer;font:700 12px 'DM Mono',monospace;color:var(--text)}
+      .shops-min-day-btn.is-active,.shops-min-cell.is-active{background:var(--accent-light);color:var(--accent)}
+      .shops-min-cell{color:var(--text2)}
+      .shops-min-cell:hover,.shops-min-day-btn:hover{background:var(--surface2)}
+      .shops-v2-modal-overlay{position:absolute;inset:0;background:rgba(0,0,0,.42);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:18px;z-index:40}
+      .shops-v2-modal{width:min(520px,100%);max-height:100%;overflow:hidden;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:22px;box-shadow:0 32px 80px rgba(0,0,0,.35)}
+      .shops-v2-modal-wide{width:min(760px,100%)}
+      .shops-v2-modal-head{padding:18px 20px 14px;border-bottom:1px solid var(--border);background:var(--surface2);display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+      .shops-v2-modal-head h3{margin:0;font-size:18px;color:var(--text)}
+      .shops-v2-modal-head p{margin:4px 0 0;font-size:12px;color:var(--text2);line-height:1.4}
+      .shops-v2-modal-body{padding:18px 20px;overflow:auto}
+      .shops-v2-modal-foot{padding:12px 20px;border-top:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+      .shops-v2-integration-box{margin-top:12px;padding:14px;border:1.5px solid var(--border);border-radius:14px;background:var(--surface2);display:flex;flex-direction:column;gap:8px}
+      @container (max-width: 980px){
+        .shops-min-hero-row,.shops-min-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+        .shops-min-store-grid{grid-template-columns:1fr}
+      }
+      @container (max-width: 720px){
+        .shops-v2-shell{padding:10px}
+        .shops-min-head-actions,.shops-min-inline-actions{width:100%}
+        .shops-min-head-actions .btn,.shops-min-inline-actions .btn{flex:1}
+        .shops-min-hero-row,.shops-min-stats,.shops-min-stats-2{grid-template-columns:1fr}
+        .shops-min-menu-btn{width:100%}
+      }
+    `;
+  }
+
   function renderShops(){
     injectStyles();
     const data = ensureData();
