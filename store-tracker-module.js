@@ -1,4 +1,4 @@
-(function(){
+﻿(function(){
   if(window.__storeTrackerModuleLoaded) return;
   window.__storeTrackerModuleLoaded = true;
 
@@ -132,7 +132,7 @@
   }
 
   function trackerFmtPct(value){
-    if(value === null || value === undefined || Number.isNaN(Number(value))) return '—';
+    if(value === null || value === undefined || Number.isNaN(Number(value))) return 'â€”';
     return `${trackerNum(value).toLocaleString('pl-PL', {maximumFractionDigits:1})}%`;
   }
 
@@ -267,7 +267,7 @@
           ad_cost_tiktok: tiktokAds || allAds,
           refunds: 0,
           extra_costs: 0,
-          notes: notes.join(' • '),
+          notes: notes.join(' â€˘ '),
           created_at: trackerNowIso(),
           updated_at: trackerNowIso()
         });
@@ -828,9 +828,9 @@
           <p>Nowy modul do dziennych wynikow sklepow, liczenia dochodu i miesiecznej kontroli wyniku bez wracania do Excela.</p>
         </div>
         <div class="tracker-hero-actions">
-          <button class="tracker-btn tracker-btn-ghost" type="button" onclick="trackerShiftMonth(-1)">← Poprzedni miesiac</button>
+          <button class="tracker-btn tracker-btn-ghost" type="button" onclick="trackerShiftMonth(-1)">â† Poprzedni miesiac</button>
           <div class="tracker-month-pill">${trackerMonthLabel(data.ui.monthKey)}</div>
-          <button class="tracker-btn tracker-btn-ghost" type="button" onclick="trackerShiftMonth(1)">Nastepny →</button>
+          <button class="tracker-btn tracker-btn-ghost" type="button" onclick="trackerShiftMonth(1)">Nastepny â†’</button>
         </div>
       </section>
       <section class="tracker-toolbar">
@@ -946,12 +946,12 @@
           <div class="tracker-highlight-stack">
             <article class="tracker-highlight tracker-highlight-good">
               <span>Najlepszy sklep</span>
-              <strong>${summary.bestStore ? escHtml(summary.bestStore.store.name) : '—'}</strong>
+              <strong>${summary.bestStore ? escHtml(summary.bestStore.store.name) : 'â€”'}</strong>
               <small>${summary.bestStore ? `${trackerFmtPLN(summary.bestStore.income)} dochodu` : 'Brak danych'}</small>
             </article>
             <article class="tracker-highlight tracker-highlight-bad">
               <span>Najslabszy sklep</span>
-              <strong>${summary.worstStore ? escHtml(summary.worstStore.store.name) : '—'}</strong>
+              <strong>${summary.worstStore ? escHtml(summary.worstStore.store.name) : 'â€”'}</strong>
               <small>${summary.worstStore ? `${trackerFmtPLN(summary.worstStore.income)} dochodu` : 'Brak danych'}</small>
             </article>
           </div>
@@ -997,7 +997,7 @@
         total: trackerFmtPLN(summary.gross),
         render(date){
           const stat = statsMap.get(date);
-          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.revenue_gross) : '＋', 'tone-blue', '', trackerFullDateLabel(date), !!stat);
+          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.revenue_gross) : 'ďĽ‹', 'tone-blue', '', trackerFullDateLabel(date), !!stat);
         }
       },
       {
@@ -1005,7 +1005,7 @@
         total: trackerFmtPLN(summary.net),
         render(date){
           const stat = statsMap.get(date);
-          if(!stat) return trackerCellButton(store.id, date, '＋', 'tone-neutral', '', trackerFullDateLabel(date), false);
+          if(!stat) return trackerCellButton(store.id, date, 'ďĽ‹', 'tone-neutral', '', trackerFullDateLabel(date), false);
           const badge = stat.has_manual_net ? '<span class="tracker-mini-badge">R</span>' : '<span class="tracker-mini-badge auto">A</span>';
           return trackerCellButton(store.id, date, `${badge}${trackerFmtPLN(stat.revenue_net_resolved)}`, 'tone-neutral', 'tracker-cell-has-badge', trackerFullDateLabel(date), true);
         }
@@ -1015,7 +1015,7 @@
         total: trackerFmtPLN(summary.ads),
         render(date){
           const stat = statsMap.get(date);
-          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.ad_cost_tiktok) : '＋', 'tone-orange', '', trackerFullDateLabel(date), !!stat);
+          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.ad_cost_tiktok) : 'ďĽ‹', 'tone-orange', '', trackerFullDateLabel(date), !!stat);
         }
       },
       {
@@ -1024,7 +1024,7 @@
         render(date){
           const stat = statsMap.get(date);
           const tone = stat ? (stat.income >= 0 ? 'tone-green' : 'tone-red') : 'tone-neutral';
-          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.income) : '＋', tone, '', trackerFullDateLabel(date), !!stat);
+          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.income) : 'ďĽ‹', tone, '', trackerFullDateLabel(date), !!stat);
         }
       },
       {
@@ -1033,7 +1033,7 @@
         render(date){
           const stat = statsMap.get(date);
           const tone = stat ? (stat.per_head >= 0 ? 'tone-violet' : 'tone-red') : 'tone-neutral';
-          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.per_head) : '＋', tone, '', trackerFullDateLabel(date), !!stat);
+          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.per_head) : 'ďĽ‹', tone, '', trackerFullDateLabel(date), !!stat);
         }
       },
       {
@@ -1041,7 +1041,7 @@
         total: trackerFmtPct(summary.adPct),
         render(date){
           const stat = statsMap.get(date);
-          return trackerCellButton(store.id, date, stat ? trackerFmtPct(stat.ad_pct) : '＋', 'tone-neutral', '', trackerFullDateLabel(date), !!stat);
+          return trackerCellButton(store.id, date, stat ? trackerFmtPct(stat.ad_pct) : 'ďĽ‹', 'tone-neutral', '', trackerFullDateLabel(date), !!stat);
         }
       },
       {
@@ -1049,7 +1049,7 @@
         total: trackerFmtPLN(summary.refunds),
         render(date){
           const stat = statsMap.get(date);
-          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.refunds) : '＋', 'tone-rose', '', trackerFullDateLabel(date), !!stat);
+          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.refunds) : 'ďĽ‹', 'tone-rose', '', trackerFullDateLabel(date), !!stat);
         }
       },
       {
@@ -1057,7 +1057,7 @@
         total: trackerFmtPLN(summary.extra),
         render(date){
           const stat = statsMap.get(date);
-          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.extra_costs) : '＋', 'tone-amber', '', trackerFullDateLabel(date), !!stat);
+          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.extra_costs) : 'ďĽ‹', 'tone-amber', '', trackerFullDateLabel(date), !!stat);
         }
       }
     ];
@@ -1071,7 +1071,7 @@
               <h3>${escHtml(store.name)}</h3>
               <span class="tracker-store-chip">${store.is_active ? 'aktywny' : 'nieaktywny'}</span>
             </div>
-            <div class="tracker-store-meta">VAT ${store.vat_rate}% • ${SHARE_TYPE_LABELS[store.profit_share_type]} • ${CALCULATION_MODE_LABELS[store.calculation_mode]}</div>
+            <div class="tracker-store-meta">VAT ${store.vat_rate}% â€˘ ${SHARE_TYPE_LABELS[store.profit_share_type]} â€˘ ${CALCULATION_MODE_LABELS[store.calculation_mode]}</div>
           </div>
           <div class="tracker-store-block-actions">
             <div class="tracker-store-summary-metric">${trackerFmtCompactPLN(summary.gross)} przychodu</div>
@@ -1115,9 +1115,9 @@
               <h2>Uklad inspirowany Excelem, ale czytelny i szybszy</h2>
             </div>
             <div class="tracker-card-actions">
-              <button class="tracker-chip-btn" type="button" onclick="trackerShiftMonth(-1)">←</button>
+              <button class="tracker-chip-btn" type="button" onclick="trackerShiftMonth(-1)">â†</button>
               <div class="tracker-inline-month">${trackerMonthLabel(data.ui.monthKey)}</div>
-              <button class="tracker-chip-btn" type="button" onclick="trackerShiftMonth(1)">→</button>
+              <button class="tracker-chip-btn" type="button" onclick="trackerShiftMonth(1)">â†’</button>
             </div>
           </div>
           <div class="tracker-muted">Kliknij dowolna komorke, aby dodac albo zedytowac wynik dnia dla sklepu.</div>
@@ -1306,7 +1306,7 @@
               <span class="tracker-modal-kicker">Sklep</span>
               <h3>${store ? 'Edytuj sklep' : 'Dodaj nowy sklep'}</h3>
             </div>
-            <button class="tracker-modal-close" type="button" onclick="trackerCloseModal()">✕</button>
+            <button class="tracker-modal-close" type="button" onclick="trackerCloseModal()">âś•</button>
           </div>
           <div class="tracker-modal-body">
             <input type="hidden" id="tracker-store-id" value="${escHtml(store?.id || '')}">
@@ -1343,7 +1343,7 @@
               <span class="tracker-modal-kicker">Dane dzienne</span>
               <h3>${stat ? 'Edytuj wynik dnia' : 'Dodaj wynik dnia'}</h3>
             </div>
-            <button class="tracker-modal-close" type="button" onclick="trackerCloseModal()">✕</button>
+            <button class="tracker-modal-close" type="button" onclick="trackerCloseModal()">âś•</button>
           </div>
           <div class="tracker-modal-body">
             <div class="tracker-form-grid two">
@@ -1378,7 +1378,7 @@
               <span class="tracker-modal-kicker">Potwierdzenie</span>
               <h3>${title}</h3>
             </div>
-            <button class="tracker-modal-close" type="button" onclick="trackerCloseModal()">✕</button>
+            <button class="tracker-modal-close" type="button" onclick="trackerCloseModal()">âś•</button>
           </div>
           <div class="tracker-modal-body"><p class="tracker-confirm-copy">${body}</p></div>
           <div class="tracker-modal-footer">
@@ -1505,146 +1505,123 @@
   }
 
   function trackerInjectStyles(){
-    if(document.getElementById(TRACKER_STYLE_ID)) return;
-    const style = document.createElement('style');
-    style.id = TRACKER_STYLE_ID;
+    let style = document.getElementById(TRACKER_STYLE_ID);
+    if(!style){
+      style = document.createElement('style');
+      style.id = TRACKER_STYLE_ID;
+      document.head.appendChild(style);
+    }
     style.textContent = `
-      #win-shops .shops-layout,#shops-body{height:100%;padding:0 !important;}
-      .tracker-app{height:100%;display:flex;flex-direction:column;color:#eef3ff;background:radial-gradient(circle at top right, rgba(91,140,255,.18), transparent 32%),radial-gradient(circle at bottom left, rgba(20,184,166,.16), transparent 28%),linear-gradient(180deg, #0a1120 0%, #0b1325 38%, #09101f 100%);}
-      .tracker-hero{display:flex;justify-content:space-between;gap:18px;padding:24px 26px 18px;border-bottom:1px solid rgba(123,147,190,.16);background:linear-gradient(180deg, rgba(18,28,50,.92), rgba(11,19,37,.72));}
-      .tracker-eyebrow,.tracker-card-eyebrow,.tracker-modal-kicker{display:inline-flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#8fa5cf;font-weight:700;}
-      .tracker-hero h1,.tracker-card h2,.tracker-modal h3{margin:6px 0 0;font-size:28px;line-height:1.1;color:#f8fbff;}
-      .tracker-card h2{font-size:20px;}.tracker-hero p{margin:12px 0 0;max-width:740px;font-size:14px;line-height:1.6;color:#98abd1;}.tracker-hero-actions{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
-      .tracker-month-pill,.tracker-inline-month{padding:11px 16px;border-radius:14px;border:1px solid rgba(123,147,190,.18);background:rgba(17,27,47,.76);color:#f8fbff;font-weight:700;}
-      .tracker-toolbar,.tracker-nav{display:flex;justify-content:space-between;gap:16px;padding:16px 26px 0;flex-wrap:wrap;}.tracker-nav{padding-bottom:16px;}.tracker-toolbar-group{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;}.tracker-toolbar-actions{justify-content:flex-end;}
-      .tracker-control{display:flex;flex-direction:column;gap:7px;min-width:220px;font-size:12px;color:#8fa5cf;font-weight:600;}
-      .tracker-control input,.tracker-control select,.tracker-field input,.tracker-field select,.tracker-field textarea{width:100%;border:none;outline:none;border-radius:14px;background:#111b32;color:#f8fbff;padding:12px 14px;font:500 14px 'DM Sans', sans-serif;box-shadow:inset 0 0 0 1px rgba(123,147,190,.16);}
-      .tracker-field input[type="color"]{min-height:48px;padding:6px;}.tracker-field textarea{resize:vertical;min-height:120px;}
-      .tracker-btn,.tracker-chip-btn,.tracker-nav-btn{border:none;outline:none;cursor:pointer;font:600 13px 'DM Sans', sans-serif;transition:transform .16s ease, opacity .16s ease, background .16s ease;}
-      .tracker-btn:hover,.tracker-chip-btn:hover,.tracker-nav-btn:hover{transform:translateY(-1px);}.tracker-btn{padding:12px 16px;border-radius:14px;}
-      .tracker-btn-primary{background:linear-gradient(135deg, #5b8cff, #7a8dff);color:white;box-shadow:0 18px 36px rgba(91,140,255,.25);}
-      .tracker-btn-ghost{background:rgba(255,255,255,.06);color:#eaf0ff;box-shadow:inset 0 0 0 1px rgba(123,147,190,.16);}
-      .tracker-btn-subtle{background:#111b32;color:#c6d3ef;box-shadow:inset 0 0 0 1px rgba(123,147,190,.16);}
-      .tracker-btn-danger{background:rgba(239,68,68,.14);color:#ffd7d7;box-shadow:inset 0 0 0 1px rgba(239,68,68,.25);}
-      .tracker-nav-btn{padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.04);color:#8fa5cf;box-shadow:inset 0 0 0 1px rgba(123,147,190,.14);}
-      .tracker-nav-btn.active{background:rgba(91,140,255,.18);color:#f8fbff;box-shadow:inset 0 0 0 1px rgba(91,140,255,.22);}
-      .tracker-content{flex:1;overflow:auto;padding:8px 26px 26px;}.tracker-dashboard-grid,.tracker-store-view-grid{display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:18px;}
-      .tracker-manage-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:16px;}
-      .tracker-card,.tracker-store-block,.tracker-store-card{border-radius:24px;border:1px solid rgba(123,147,190,.14);background:linear-gradient(180deg, rgba(14,22,39,.92), rgba(9,15,28,.86));box-shadow:0 18px 40px rgba(0,0,0,.26);}
-      .tracker-card,.tracker-store-card{padding:18px;}.tracker-card-span-2{grid-column:span 2;}.tracker-card-span-3{grid-column:span 3;}
-      .tracker-card-header,.tracker-modal-header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;}.tracker-card-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-      .tracker-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));gap:12px;margin-top:18px;}
-      .tracker-kpi{padding:18px;border-radius:20px;background:rgba(255,255,255,.03);box-shadow:inset 0 0 0 1px rgba(123,147,190,.14);}
-      .tracker-kpi-label{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:#8fa5cf;font-weight:700;}
-      .tracker-kpi-value{display:block;margin-top:10px;font-size:28px;line-height:1.1;color:#f8fbff;}.tracker-kpi-sub{display:block;margin-top:8px;font-size:12px;color:#8fa5cf;}
-      .tracker-tone-blue .tracker-kpi-value{color:#8bb2ff;}.tracker-tone-green .tracker-kpi-value{color:#72e8a0;}.tracker-tone-violet .tracker-kpi-value{color:#baa8ff;}.tracker-tone-orange .tracker-kpi-value{color:#ffb77d;}.tracker-tone-rose .tracker-kpi-value{color:#ff9ba8;}.tracker-tone-red .tracker-kpi-value{color:#ff8c8c;}
-      .tracker-chart-wrap{position:relative;min-height:290px;margin-top:18px;}
-      .tracker-ranking-list,.tracker-highlight-stack,.tracker-day-feed,.tracker-setting-list{margin-top:18px;display:flex;flex-direction:column;gap:10px;}
-      .tracker-ranking-item,.tracker-day-card{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border:none;border-radius:18px;cursor:pointer;color:#edf3ff;background:#111b32;box-shadow:inset 0 0 0 1px rgba(123,147,190,.14);}
-      .tracker-ranking-index{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.05);font-weight:700;}
-      .tracker-ranking-color,.tracker-store-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;background:var(--tracker-store-color, #5b8cff);}
-      .tracker-ranking-body{display:flex;flex-direction:column;gap:2px;text-align:left;}.tracker-ranking-body small,.tracker-muted,.tracker-store-meta,.tracker-store-card-meta{color:#8fa5cf;font-size:12px;}
-      .tracker-ranking-value,.is-positive{color:#72e8a0;}.is-negative{color:#ff9ba8;}
-      .tracker-highlight{padding:18px;border-radius:20px;display:flex;flex-direction:column;gap:6px;box-shadow:inset 0 0 0 1px rgba(123,147,190,.14);}
-      .tracker-highlight-good{background:linear-gradient(180deg, rgba(34,197,94,.14), rgba(12,22,20,.86));}.tracker-highlight-bad{background:linear-gradient(180deg, rgba(239,68,68,.14), rgba(24,14,18,.86));}
-      .tracker-day-feed{flex-direction:row;overflow:auto;padding-bottom:4px;}.tracker-day-card{min-width:200px;flex-direction:column;align-items:flex-start;}
-      .tracker-day-card-top{font-size:12px;color:#8fa5cf;}.tracker-day-card-main{font-size:24px;font-weight:700;color:#f8fbff;}.tracker-day-card-sub{font-size:13px;}
-      .tracker-month-layout{display:flex;flex-direction:column;gap:16px;}.tracker-store-block{overflow:hidden;}
-      .tracker-store-block-header{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;padding:18px 18px 14px;border-bottom:1px solid rgba(123,147,190,.14);background:linear-gradient(180deg, rgba(255,255,255,.03), transparent);}
-      .tracker-store-name-line{display:flex;align-items:center;gap:10px;}.tracker-store-name-line h3{margin:0;font-size:22px;}
-      .tracker-store-chip{display:inline-flex;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.06);color:#d4def4;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;}.tracker-store-chip.muted{color:#9aa7c4;}
-      .tracker-store-block-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;}.tracker-store-summary-metric{padding:9px 12px;border-radius:14px;background:rgba(255,255,255,.04);color:#eef3ff;font-size:12px;font-weight:700;}
-      .tracker-table-wrap,.tracker-history-wrap{overflow:auto;}.tracker-month-table,.tracker-history-table{width:max-content;min-width:100%;border-collapse:separate;border-spacing:0;}
-      .tracker-month-table th,.tracker-month-table td,.tracker-history-table th,.tracker-history-table td{padding:10px;border-bottom:1px solid rgba(123,147,190,.12);text-align:center;}
-      .tracker-month-table thead th{position:sticky;top:0;z-index:3;background:#10192e;color:#9eb1d5;font-size:11px;letter-spacing:.08em;text-transform:uppercase;}
-      .tracker-month-table thead th strong{display:block;margin-top:4px;font-size:15px;color:#f3f7ff;letter-spacing:normal;}
-      .tracker-month-table .sticky-col{position:sticky;left:0;z-index:2;background:#10192e;text-align:left;min-width:170px;color:#eef3ff;}.tracker-month-table .sticky-col-head{z-index:4;}
-      .tracker-month-table .summary-col{min-width:140px;font-weight:700;color:#eef3ff;background:#0e172b;}
-      .tracker-cell-btn{width:100%;min-height:44px;padding:8px 10px;border:none;border-radius:14px;background:#111b32;color:#eef3ff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:inset 0 0 0 1px rgba(123,147,190,.14);}
-      .tracker-cell-btn.is-empty{color:#6f82a8;background:rgba(255,255,255,.02);}.tracker-cell-btn.tone-blue{color:#8bb2ff;}.tracker-cell-btn.tone-green{color:#72e8a0;}.tracker-cell-btn.tone-red{color:#ff9ba8;}.tracker-cell-btn.tone-violet{color:#baa8ff;}.tracker-cell-btn.tone-orange{color:#ffb77d;}.tracker-cell-btn.tone-rose{color:#ff9ba8;}.tracker-cell-btn.tone-amber{color:#ffd28a;}
-      .tracker-mini-badge{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:rgba(255,255,255,.08);color:#f3f7ff;font-size:10px;font-weight:800;}.tracker-mini-badge.auto{color:#8bb2ff;}
-      .tracker-store-hero-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:12px;margin-top:18px;}
-      .tracker-setting-list div,.tracker-store-card-metrics div{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid rgba(123,147,190,.12);}.tracker-store-card-metrics{margin-top:16px;}
-      .tracker-store-card-top,.tracker-store-card-title{display:flex;justify-content:space-between;gap:10px;align-items:center;}.tracker-store-card-title{justify-content:flex-start;}
-      .tracker-store-card-meta{display:flex;flex-wrap:wrap;gap:8px 12px;margin-top:14px;}
-      .tracker-store-card-actions,.tracker-history-actions,.tracker-modal-footer,.tracker-modal-footer-left,.tracker-modal-footer-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}.tracker-store-card-actions{margin-top:18px;}
-      .tracker-chip-btn{padding:9px 12px;border-radius:12px;background:#111b32;color:#d7e2f8;box-shadow:inset 0 0 0 1px rgba(123,147,190,.16);}.tracker-chip-btn.danger{color:#ffd7d7;box-shadow:inset 0 0 0 1px rgba(239,68,68,.22);}
-      .tracker-history-table{width:100%;}.tracker-history-table thead th{text-align:left;color:#8fa5cf;font-size:11px;letter-spacing:.08em;text-transform:uppercase;}.tracker-history-table tbody td{text-align:left;}
-      .tracker-history-date{display:flex;flex-direction:column;gap:3px;}.tracker-empty-row{text-align:center !important;color:#8fa5cf;}
-      .tracker-empty-state{position:relative;min-height:420px;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:28px;border:1px solid rgba(123,147,190,.12);background:linear-gradient(180deg, rgba(15,23,42,.96), rgba(9,15,28,.92));}
-      .tracker-empty-orb{position:absolute;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle, rgba(91,140,255,.28) 0%, rgba(91,140,255,0) 70%);filter:blur(20px);}
-      .tracker-empty-content{position:relative;z-index:1;max-width:560px;text-align:center;padding:24px;}.tracker-empty-kicker{display:inline-flex;margin-bottom:12px;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.06);color:#c8d4ec;text-transform:uppercase;letter-spacing:.12em;font-size:11px;font-weight:700;}
-      .tracker-empty-content h2{margin:0;font-size:36px;}.tracker-empty-content p{margin:14px 0 0;color:#96a9cf;line-height:1.7;}.tracker-empty-actions{display:flex;justify-content:center;gap:10px;margin-top:22px;flex-wrap:wrap;}
-      .tracker-modal-backdrop{position:fixed;inset:0;z-index:99998;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(5,8,15,.56);backdrop-filter:blur(10px);}
-      .tracker-modal{width:min(620px, 100%);border-radius:26px;border:1px solid rgba(123,147,190,.14);background:linear-gradient(180deg, #0f172a 0%, #0b1222 100%);box-shadow:0 30px 80px rgba(0,0,0,.45);color:#eef3ff;}
-      .tracker-modal-wide{width:min(880px, 100%);}.tracker-modal-confirm{width:min(520px, 100%);}
-      .tracker-modal-header,.tracker-modal-footer{padding:22px 22px 0;}.tracker-modal-body{padding:18px 22px 10px;}
-      .tracker-modal-footer{justify-content:space-between;padding-bottom:22px;}.tracker-modal-close{border:none;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.06);color:#eef3ff;cursor:pointer;}
-      .tracker-form-grid{display:grid;grid-template-columns:1fr;gap:14px;}.tracker-form-grid.two{grid-template-columns:repeat(2, minmax(0, 1fr));}
-      .tracker-field{display:flex;flex-direction:column;gap:7px;color:#8fa5cf;font-size:12px;font-weight:600;}.tracker-field-full{grid-column:1 / -1;}.tracker-checkbox{justify-content:flex-end;}.tracker-checkbox input{width:20px;height:20px;padding:0;}
-      .tracker-preview-box{margin-top:16px;display:grid;grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));gap:10px;}
-      .tracker-preview-chip{padding:14px;border-radius:18px;background:#111b32;box-shadow:inset 0 0 0 1px rgba(123,147,190,.14);}
-      .tracker-preview-label{display:block;margin-bottom:8px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8fa5cf;}.tracker-confirm-copy{margin:0;color:#a6b6d6;line-height:1.7;}
-      .tracker-app{color:#243041;background:#f6f7fb;}
-      .tracker-hero{padding:14px 16px 12px;border-bottom:1px solid #e5e7eb;background:#fff;}
-      .tracker-eyebrow,.tracker-card-eyebrow,.tracker-modal-kicker{color:#7b8496;letter-spacing:.08em;}
-      .tracker-hero h1,.tracker-card h2,.tracker-modal h3{color:#18212f;}
-      .tracker-hero h1{font-size:20px;}
-      .tracker-card h2{font-size:16px;}
-      .tracker-hero p{margin-top:8px;font-size:12px;line-height:1.45;color:#6b7280;max-width:620px;}
-      .tracker-month-pill,.tracker-inline-month{padding:9px 12px;border-radius:12px;border:1px solid #d9e0ea;background:#fff;color:#18212f;}
-      .tracker-toolbar,.tracker-nav{padding:10px 16px 0;}
-      .tracker-control{min-width:180px;color:#6b7280;}
-      .tracker-control input,.tracker-control select,.tracker-field input,.tracker-field select,.tracker-field textarea{background:#fff;color:#18212f;box-shadow:inset 0 0 0 1px #d9e0ea;padding:10px 12px;}
-      .tracker-btn,.tracker-chip-btn,.tracker-nav-btn{font-size:12px;}
-      .tracker-btn{padding:10px 14px;}
-      .tracker-btn-primary{box-shadow:none;}
-      .tracker-btn-ghost,.tracker-btn-subtle,.tracker-chip-btn,.tracker-nav-btn{background:#fff;color:#243041;box-shadow:inset 0 0 0 1px #d9e0ea;}
-      .tracker-nav-btn.active{background:#eef4ff;color:#2251c7;box-shadow:inset 0 0 0 1px #cddafe;}
-      .tracker-content{padding:10px 14px 14px;}
-      .tracker-dashboard-grid,.tracker-store-view-grid{grid-template-columns:repeat(2, minmax(0, 1fr));gap:12px;}
-      .tracker-manage-grid{gap:12px;}
-      .tracker-card,.tracker-store-block,.tracker-store-card{border-radius:16px;border:1px solid #e5e7eb;background:#fff;box-shadow:0 2px 10px rgba(15,23,42,.04);}
-      .tracker-card,.tracker-store-card{padding:14px;}
-      .tracker-card-span-2,.tracker-card-span-3{grid-column:1 / -1;}
-      .tracker-kpi-grid{grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:10px;margin-top:12px;}
-      .tracker-kpi{padding:14px;border-radius:14px;background:#f8fafc;box-shadow:inset 0 0 0 1px #e7edf4;}
-      .tracker-kpi-value{margin-top:6px;font-size:22px;color:#18212f;}
-      .tracker-kpi-sub,.tracker-ranking-body small,.tracker-muted,.tracker-store-meta,.tracker-store-card-meta,.tracker-day-card-top,.tracker-preview-label{color:#6b7280;}
-      .tracker-chart-wrap{min-height:220px;margin-top:12px;}
-      .tracker-ranking-list,.tracker-highlight-stack,.tracker-day-feed,.tracker-setting-list{margin-top:12px;gap:8px;}
-      .tracker-ranking-item,.tracker-day-card{padding:10px 12px;border-radius:14px;color:#243041;background:#f8fafc;box-shadow:inset 0 0 0 1px #e7edf4;}
-      .tracker-day-card{min-width:160px;}
-      .tracker-day-card-main{font-size:19px;color:#18212f;}
-      .tracker-highlight{padding:14px;border-radius:14px;box-shadow:inset 0 0 0 1px #e7edf4;}
-      .tracker-highlight-good{background:#f4fbf6;}
-      .tracker-highlight-bad{background:#fff5f5;}
-      .tracker-store-block-header{padding:14px 14px 12px;border-bottom:1px solid #e7edf4;background:#fff;}
-      .tracker-store-name-line h3{font-size:18px;color:#18212f;}
-      .tracker-store-chip{background:#f3f4f6;color:#4b5563;}
-      .tracker-store-summary-metric{padding:7px 10px;border-radius:12px;background:#f8fafc;color:#243041;}
-      .tracker-month-table thead th,.tracker-month-table .sticky-col{background:#f8fafc;color:#526076;}
-      .tracker-month-table thead th strong{font-size:13px;color:#18212f;}
-      .tracker-month-table .sticky-col{min-width:140px;}
-      .tracker-month-table .summary-col{min-width:120px;background:#f8fafc;color:#18212f;}
-      .tracker-month-table th,.tracker-month-table td,.tracker-history-table th,.tracker-history-table td{padding:8px;}
-      .tracker-cell-btn{min-height:36px;padding:6px 8px;border-radius:10px;background:#fff;color:#243041;box-shadow:inset 0 0 0 1px #d9e0ea;}
-      .tracker-cell-btn.is-empty{color:#9aa3b2;background:#f8fafc;}
-      .tracker-mini-badge{width:16px;height:16px;background:#eef2ff;color:#445;}
-      .tracker-setting-list div,.tracker-store-card-metrics div{padding:8px 0;}
-      .tracker-modal-backdrop{background:rgba(15,23,42,.18);backdrop-filter:blur(4px);}
-      .tracker-modal{border-radius:18px;border:1px solid #e5e7eb;background:#fff;color:#243041;box-shadow:0 16px 40px rgba(15,23,42,.12);}
-      .tracker-modal-close{background:#f3f4f6;color:#243041;}
-      .tracker-preview-chip{padding:12px;border-radius:12px;background:#f8fafc;box-shadow:inset 0 0 0 1px #e7edf4;color:#243041;}
-      .tracker-confirm-copy{color:#4b5563;}
-      .tracker-empty-state{min-height:280px;border-radius:16px;border:1px solid #e5e7eb;background:#fff;}
-      .tracker-empty-orb{display:none;}
-      .tracker-empty-content h2{font-size:28px;color:#18212f;}
-      .tracker-empty-content p{color:#6b7280;}
-      @media (max-width: 1180px){.tracker-dashboard-grid,.tracker-store-view-grid{grid-template-columns:1fr;}.tracker-card-span-2,.tracker-card-span-3{grid-column:auto;}}
-      @media (max-width: 860px){.tracker-hero,.tracker-toolbar,.tracker-nav,.tracker-content{padding-left:12px;padding-right:12px;}.tracker-hero{padding-top:12px;}.tracker-hero h1{font-size:18px;}.tracker-form-grid.two{grid-template-columns:1fr;}.tracker-month-table .sticky-col,.tracker-month-table .summary-col{min-width:120px;}.tracker-store-block-actions,.tracker-card-actions{justify-content:flex-start;}}
+      #shops-body{display:block;height:100%;width:100%;min-width:0;padding:0 !important;overflow:hidden;background:#f3f4f6;}
+      #shops-body .tracker-app{height:100%;width:100%;min-width:0;display:flex;flex-direction:column;color:#243041;background:#f3f4f6;}
+      #shops-body .tracker-hero{display:flex;justify-content:space-between;gap:12px;padding:12px 14px 10px;border-bottom:1px solid #e5e7eb;background:#fff;}
+      #shops-body .tracker-eyebrow,#shops-body .tracker-card-eyebrow,#shops-body .tracker-modal-kicker{display:inline-flex;align-items:center;gap:6px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#7b8496;font-weight:700;}
+      #shops-body .tracker-hero h1,#shops-body .tracker-card h2,#shops-body .tracker-modal h3{margin:4px 0 0;color:#18212f;line-height:1.15;}
+      #shops-body .tracker-hero h1{font-size:18px;}
+      #shops-body .tracker-card h2{font-size:15px;}
+      #shops-body .tracker-hero p{margin:6px 0 0;max-width:560px;font-size:12px;line-height:1.45;color:#6b7280;}
+      #shops-body .tracker-hero-actions,#shops-body .tracker-toolbar,#shops-body .tracker-nav,#shops-body .tracker-toolbar-group,#shops-body .tracker-card-actions,#shops-body .tracker-store-block-actions,#shops-body .tracker-store-card-actions,#shops-body .tracker-history-actions,#shops-body .tracker-modal-footer,#shops-body .tracker-modal-footer-left,#shops-body .tracker-modal-footer-right{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+      #shops-body .tracker-toolbar,#shops-body .tracker-nav{justify-content:space-between;padding:10px 14px 0;}
+      #shops-body .tracker-control{display:flex;flex-direction:column;gap:6px;min-width:160px;font-size:12px;color:#6b7280;font-weight:600;}
+      #shops-body .tracker-control input,#shops-body .tracker-control select,#shops-body .tracker-field input,#shops-body .tracker-field select,#shops-body .tracker-field textarea{width:100%;border:none;outline:none;border-radius:12px;background:#fff;color:#18212f;padding:9px 11px;font:500 13px 'DM Sans', sans-serif;box-shadow:inset 0 0 0 1px #d9e0ea;}
+      #shops-body .tracker-field input[type="color"]{min-height:42px;padding:4px;}
+      #shops-body .tracker-field textarea{resize:vertical;min-height:110px;}
+      #shops-body .tracker-btn,#shops-body .tracker-chip-btn,#shops-body .tracker-nav-btn{border:none;outline:none;cursor:pointer;font:600 12px 'DM Sans', sans-serif;border-radius:12px;transition:background .14s ease,color .14s ease,transform .14s ease;}
+      #shops-body .tracker-btn:hover,#shops-body .tracker-chip-btn:hover,#shops-body .tracker-nav-btn:hover{transform:translateY(-1px);}
+      #shops-body .tracker-btn{padding:9px 12px;}
+      #shops-body .tracker-btn-primary{background:#5b7cfa;color:#fff;}
+      #shops-body .tracker-btn-ghost,#shops-body .tracker-btn-subtle,#shops-body .tracker-chip-btn,#shops-body .tracker-nav-btn{background:#fff;color:#243041;box-shadow:inset 0 0 0 1px #d9e0ea;}
+      #shops-body .tracker-btn-danger,#shops-body .tracker-chip-btn.danger{background:#fff5f5;color:#c24141;box-shadow:inset 0 0 0 1px #fecaca;}
+      #shops-body .tracker-nav-btn.active{background:#eef4ff;color:#2251c7;box-shadow:inset 0 0 0 1px #cddafe;}
+      #shops-body .tracker-month-pill,#shops-body .tracker-inline-month{padding:8px 11px;border-radius:12px;border:1px solid #d9e0ea;background:#fff;color:#18212f;font-weight:700;}
+      #shops-body .tracker-content{flex:1;min-width:0;overflow:auto;padding:10px 14px 14px;}
+      #shops-body .tracker-content > *{min-width:0;}
+      #shops-body .tracker-dashboard-grid,#shops-body .tracker-store-view-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;min-width:0;}
+      #shops-body .tracker-manage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;}
+      #shops-body .tracker-card,#shops-body .tracker-store-block,#shops-body .tracker-store-card{min-width:0;border-radius:16px;border:1px solid #e5e7eb;background:#fff;box-shadow:0 2px 10px rgba(15,23,42,.04);}
+      #shops-body .tracker-card,#shops-body .tracker-store-card{padding:14px;}
+      #shops-body .tracker-card-span-2,#shops-body .tracker-card-span-3{grid-column:1 / -1;}
+      #shops-body .tracker-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:10px;margin-top:12px;}
+      #shops-body .tracker-kpi{padding:12px;border-radius:14px;background:#f8fafc;box-shadow:inset 0 0 0 1px #e7edf4;}
+      #shops-body .tracker-kpi-label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;font-weight:700;}
+      #shops-body .tracker-kpi-value{display:block;margin-top:6px;font-size:20px;line-height:1.1;color:#18212f;}
+      #shops-body .tracker-kpi-sub,#shops-body .tracker-ranking-body small,#shops-body .tracker-muted,#shops-body .tracker-store-meta,#shops-body .tracker-store-card-meta,#shops-body .tracker-day-card-top,#shops-body .tracker-preview-label{color:#6b7280;font-size:12px;}
+      #shops-body .tracker-tone-blue .tracker-kpi-value{color:#335fda;}
+      #shops-body .tracker-tone-green .tracker-kpi-value{color:#0f9f57;}
+      #shops-body .tracker-tone-violet .tracker-kpi-value{color:#6d52d9;}
+      #shops-body .tracker-tone-orange .tracker-kpi-value{color:#d97706;}
+      #shops-body .tracker-tone-rose .tracker-kpi-value{color:#dc4c64;}
+      #shops-body .tracker-tone-red .tracker-kpi-value{color:#c24141;}
+      #shops-body .tracker-chart-wrap{position:relative;min-height:200px;margin-top:12px;}
+      #shops-body .tracker-ranking-list,#shops-body .tracker-highlight-stack,#shops-body .tracker-day-feed,#shops-body .tracker-setting-list{margin-top:12px;display:flex;flex-direction:column;gap:8px;}
+      #shops-body .tracker-ranking-item,#shops-body .tracker-day-card{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:none;border-radius:14px;cursor:pointer;color:#243041;background:#f8fafc;box-shadow:inset 0 0 0 1px #e7edf4;}
+      #shops-body .tracker-day-feed{flex-direction:row;overflow:auto;padding-bottom:4px;}
+      #shops-body .tracker-day-card{min-width:160px;flex-direction:column;align-items:flex-start;}
+      #shops-body .tracker-day-card-main{font-size:18px;font-weight:700;color:#18212f;}
+      #shops-body .tracker-ranking-index{width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:#eef2f7;font-weight:700;}
+      #shops-body .tracker-ranking-color,#shops-body .tracker-store-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;background:var(--tracker-store-color,#5b8cff);}
+      #shops-body .tracker-ranking-body{min-width:0;display:flex;flex-direction:column;gap:2px;text-align:left;}
+      #shops-body .tracker-highlight{padding:14px;border-radius:14px;box-shadow:inset 0 0 0 1px #e7edf4;}
+      #shops-body .tracker-highlight-good{background:#f4fbf6;}
+      #shops-body .tracker-highlight-bad{background:#fff5f5;}
+      #shops-body .tracker-month-layout{display:flex;flex-direction:column;gap:12px;}
+      #shops-body .tracker-store-block{overflow:hidden;}
+      #shops-body .tracker-store-block-header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:14px 14px 12px;border-bottom:1px solid #e7edf4;background:#fff;}
+      #shops-body .tracker-store-name-line{display:flex;align-items:center;gap:8px;}
+      #shops-body .tracker-store-name-line h3{margin:0;font-size:17px;color:#18212f;}
+      #shops-body .tracker-store-chip{display:inline-flex;padding:5px 9px;border-radius:999px;background:#f3f4f6;color:#4b5563;font-size:11px;font-weight:700;}
+      #shops-body .tracker-store-chip.muted{color:#7b8496;}
+      #shops-body .tracker-store-summary-metric{padding:7px 10px;border-radius:12px;background:#f8fafc;color:#243041;font-size:12px;font-weight:700;}
+      #shops-body .tracker-table-wrap,#shops-body .tracker-history-wrap{overflow:auto;max-width:100%;}
+      #shops-body .tracker-month-table,#shops-body .tracker-history-table{width:max-content;min-width:100%;border-collapse:separate;border-spacing:0;}
+      #shops-body .tracker-month-table th,#shops-body .tracker-month-table td,#shops-body .tracker-history-table th,#shops-body .tracker-history-table td{padding:8px;border-bottom:1px solid #e7edf4;text-align:center;}
+      #shops-body .tracker-month-table thead th{position:sticky;top:0;z-index:3;background:#f8fafc;color:#526076;font-size:11px;text-transform:uppercase;}
+      #shops-body .tracker-month-table thead th strong{display:block;margin-top:3px;font-size:12px;color:#18212f;}
+      #shops-body .tracker-month-table .sticky-col{position:sticky;left:0;z-index:2;background:#f8fafc;text-align:left;min-width:132px;color:#18212f;}
+      #shops-body .tracker-month-table .sticky-col-head{z-index:4;}
+      #shops-body .tracker-month-table .summary-col{min-width:112px;font-weight:700;background:#f8fafc;color:#18212f;}
+      #shops-body .tracker-cell-btn{width:100%;min-height:34px;padding:6px 8px;border:none;border-radius:10px;background:#fff;color:#243041;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:inset 0 0 0 1px #d9e0ea;}
+      #shops-body .tracker-cell-btn.is-empty{color:#9aa3b2;background:#f8fafc;}
+      #shops-body .tracker-mini-badge{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:999px;background:#eef2ff;color:#445;font-size:10px;font-weight:800;}
+      #shops-body .tracker-mini-badge.auto{color:#335fda;}
+      #shops-body .tracker-store-hero-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px;}
+      #shops-body .tracker-setting-list div,#shops-body .tracker-store-card-metrics div{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #e7edf4;}
+      #shops-body .tracker-store-card-metrics{margin-top:12px;}
+      #shops-body .tracker-store-card-top,#shops-body .tracker-store-card-title{display:flex;align-items:center;gap:8px;justify-content:space-between;}
+      #shops-body .tracker-store-card-title{justify-content:flex-start;}
+      #shops-body .tracker-store-card-meta{display:flex;flex-wrap:wrap;gap:8px 12px;margin-top:12px;}
+      #shops-body .tracker-history-table{width:100%;}
+      #shops-body .tracker-history-table thead th{text-align:left;color:#6b7280;font-size:11px;text-transform:uppercase;}
+      #shops-body .tracker-history-table tbody td{text-align:left;}
+      #shops-body .tracker-history-date{display:flex;flex-direction:column;gap:3px;}
+      #shops-body .tracker-empty-row{text-align:center !important;color:#8fa5cf;}
+      #shops-body .tracker-empty-state{min-height:260px;border-radius:16px;border:1px solid #e5e7eb;background:#fff;display:flex;align-items:center;justify-content:center;}
+      #shops-body .tracker-empty-orb{display:none;}
+      #shops-body .tracker-empty-content{max-width:560px;text-align:center;padding:24px;}
+      #shops-body .tracker-empty-kicker{display:inline-flex;margin-bottom:10px;padding:7px 10px;border-radius:999px;background:#f3f4f6;color:#6b7280;font-size:11px;font-weight:700;}
+      #shops-body .tracker-empty-content h2{margin:0;font-size:26px;color:#18212f;}
+      #shops-body .tracker-empty-content p{margin:12px 0 0;color:#6b7280;}
+      #shops-body .tracker-empty-actions{display:flex;justify-content:center;gap:10px;margin-top:18px;flex-wrap:wrap;}
+      #shops-body .tracker-modal-backdrop{position:fixed;inset:0;z-index:99998;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(15,23,42,.18);backdrop-filter:blur(4px);}
+      #shops-body .tracker-modal{width:min(620px,100%);border-radius:18px;border:1px solid #e5e7eb;background:#fff;color:#243041;box-shadow:0 16px 40px rgba(15,23,42,.12);}
+      #shops-body .tracker-modal-wide{width:min(820px,100%);}
+      #shops-body .tracker-modal-confirm{width:min(520px,100%);}
+      #shops-body .tracker-modal-header,#shops-body .tracker-modal-footer{padding:18px 18px 0;}
+      #shops-body .tracker-modal-body{padding:14px 18px 10px;}
+      #shops-body .tracker-modal-footer{justify-content:space-between;padding-bottom:18px;}
+      #shops-body .tracker-modal-close{border:none;width:34px;height:34px;border-radius:50%;background:#f3f4f6;color:#243041;cursor:pointer;}
+      #shops-body .tracker-form-grid{display:grid;grid-template-columns:1fr;gap:12px;}
+      #shops-body .tracker-form-grid.two{grid-template-columns:repeat(2,minmax(0,1fr));}
+      #shops-body .tracker-field{display:flex;flex-direction:column;gap:6px;color:#6b7280;font-size:12px;font-weight:600;}
+      #shops-body .tracker-field-full{grid-column:1 / -1;}
+      #shops-body .tracker-checkbox{justify-content:flex-end;}
+      #shops-body .tracker-checkbox input{width:20px;height:20px;padding:0;}
+      #shops-body .tracker-preview-box{margin-top:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;}
+      #shops-body .tracker-preview-chip{padding:12px;border-radius:12px;background:#f8fafc;box-shadow:inset 0 0 0 1px #e7edf4;color:#243041;}
+      #shops-body .tracker-confirm-copy{margin:0;color:#4b5563;line-height:1.7;}
+      @media (max-width:1180px){#shops-body .tracker-dashboard-grid,#shops-body .tracker-store-view-grid{grid-template-columns:1fr;}#shops-body .tracker-card-span-2,#shops-body .tracker-card-span-3{grid-column:auto;}}
+      @media (max-width:860px){#shops-body .tracker-hero,#shops-body .tracker-toolbar,#shops-body .tracker-nav,#shops-body .tracker-content{padding-left:12px;padding-right:12px;}#shops-body .tracker-form-grid.two{grid-template-columns:1fr;}#shops-body .tracker-month-table .sticky-col,#shops-body .tracker-month-table .summary-col{min-width:118px;}}
     `;
-    document.head.appendChild(style);
   }
 
   function trackerRenderShops(){
@@ -1652,6 +1629,11 @@
     if(!root) return;
     const data = trackerData();
     trackerEnsureWindow();
+    root.className = '';
+    root.style.padding = '0';
+    root.style.overflow = 'hidden';
+    root.style.display = 'block';
+    root.style.background = '#f3f4f6';
     if(Array.isArray(window.ALL_APPS)){
       const shopsApp = window.ALL_APPS.find(app=>app.id === 'shops');
       if(shopsApp){
@@ -1715,3 +1697,4 @@
   saveS();
   trackerRenderShops();
 })();
+
