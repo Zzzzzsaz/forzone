@@ -585,6 +585,43 @@ body.dark .window{
 #notes-editor td,#notes-editor th{border:1.5px solid var(--border);padding:7px 10px;font-size:13px;min-width:60px}
 #notes-editor th{background:var(--surface2);font-weight:700}
 #notes-editor blockquote{border-left:3px solid var(--accent);margin:8px 0;padding:4px 12px;color:var(--text2);font-style:italic}
+.note-item-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.note-item-meta{display:flex;align-items:center;gap:6px;min-width:0}
+.note-item-kind{
+  font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  padding:4px 6px;border-radius:999px;background:var(--surface2);color:var(--text3);flex-shrink:0
+}
+#notes-check-toolbar{
+  display:none;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--border);
+  background:var(--surface2);flex-shrink:0;flex-wrap:wrap
+}
+#notes-checklist{
+  display:none;flex:1;overflow-y:auto;padding:14px;-webkit-overflow-scrolling:touch
+}
+.notes-check-wrap{display:flex;flex-direction:column;gap:10px}
+.notes-check-row{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid var(--border);
+  border-radius:12px;background:var(--surface2)
+}
+.notes-check-input{
+  flex:1;min-width:0;border:none;background:transparent;color:var(--text);
+  font:500 14px 'DM Sans',sans-serif;outline:none
+}
+.notes-check-toggle{
+  min-width:58px;height:34px;border:1.5px solid var(--border);border-radius:999px;
+  background:var(--surface);color:var(--text2);font:800 11px 'DM Sans',sans-serif;cursor:pointer
+}
+.notes-check-toggle.is-yes{background:var(--green-bg);border-color:rgba(34,197,94,.25);color:var(--green-text)}
+.notes-check-toggle.is-no{background:var(--red-bg);border-color:rgba(239,68,68,.2);color:var(--red-text)}
+.notes-check-del{
+  width:30px;height:30px;border:none;border-radius:9px;background:transparent;color:var(--text3);
+  cursor:pointer;font-size:14px;flex-shrink:0
+}
+.notes-check-del:hover{background:var(--surface3);color:var(--red-text)}
+.notes-check-empty{
+  min-height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;
+  gap:10px;color:var(--text3);text-align:center
+}
 
 #win-shops .win-body,#win-shops .shops-layout{padding:0;overflow:hidden;}
 
@@ -2594,8 +2631,9 @@ body.dark .order-card{background:var(--surface2)}
     <div style="display:flex;height:100%;overflow:hidden;" id="notes-layout">
       <!-- LEFT: note list -->
       <div id="notes-sidebar" style="width:200px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;">
-        <div style="padding:8px 10px;border-bottom:1px solid var(--border);display:flex;gap:6px;background:var(--surface2);flex-shrink:0">
+        <div style="padding:8px 10px;border-bottom:1px solid var(--border);display:flex;gap:6px;background:var(--surface2);flex-shrink:0;flex-wrap:wrap">
           <button class="btn btn-primary btn-sm" style="flex:1" onclick="notesNew()">+ Nowa</button>
+          <button class="btn btn-ghost btn-sm" style="flex:1" onclick="notesNewChecklist()">+ Tak / nie</button>
         </div>
         <div id="notes-list" style="flex:1;overflow-y:auto;padding:6px;scrollbar-width:thin;scrollbar-color:var(--border2) transparent"></div>
       </div>
@@ -2632,6 +2670,14 @@ body.dark .order-card{background:var(--surface2)}
           <div style="flex:1"></div>
           <span id="notes-saved" style="font-size:10px;color:var(--text3)"></span>
         </div>
+        <div id="notes-check-toolbar">
+          <button class="btn btn-primary btn-sm" onclick="notesCheckAddRow()">+ Linia</button>
+          <button class="btn btn-ghost btn-sm" onclick="notesChecklistMarkAll(true)">Wszystko tak</button>
+          <button class="btn btn-ghost btn-sm" onclick="notesChecklistMarkAll(false)">Wszystko nie</button>
+          <div style="flex:1"></div>
+          <span id="notes-check-summary" style="font-size:11px;color:var(--text2);font-weight:700"></span>
+          <span id="notes-check-saved" style="font-size:10px;color:var(--text3)"></span>
+        </div>
         <!-- Title -->
         <input id="notes-title-inp" placeholder="Tytuł notatki..." 
           style="border:none;border-bottom:1px solid var(--border);padding:10px 14px;font-size:16px;font-weight:700;background:var(--surface);color:var(--text);outline:none;flex-shrink:0;border-radius:0"
@@ -2642,11 +2688,15 @@ body.dark .order-card{background:var(--surface2)}
           oninput="notesAutoSave()"
           onkeydown="notesKeydown(event)"
           data-placeholder="Zacznij pisać..."></div>
+        <div id="notes-checklist"></div>
         <!-- Empty state -->
         <div id="notes-empty-state" style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;color:var(--text3)">
           <div style="font-size:40px">📝</div>
           <div style="font-size:14px;font-weight:600">Wybierz notatkę lub utwórz nową</div>
-          <button class="btn btn-primary" onclick="notesNew()">+ Nowa notatka</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+            <button class="btn btn-primary" onclick="notesNew()">+ Nowa notatka</button>
+            <button class="btn btn-ghost" onclick="notesNewChecklist()">+ Notatka tak / nie</button>
+          </div>
         </div>
       </div>
     </div>
@@ -6117,8 +6167,113 @@ function renderIdeasMobile(list){
 let activeNoteId = null;
 let notesAutoSaveTimer = null;
 
+function notesEnsureShape(note){
+  if(!note) return null;
+  if(!note.type) note.type = 'rich';
+  if(note.type === 'checklist'){
+    if(!Array.isArray(note.items)) note.items = [];
+  } else if(typeof note.content !== 'string'){
+    note.content = '';
+  }
+  return note;
+}
+
+function notesActive(){
+  return notesEnsureShape((S.appNotes||[]).find(n=>n.id===activeNoteId));
+}
+
+function notesListPreview(note){
+  note = notesEnsureShape(note);
+  if(!note) return '';
+  if(note.type === 'checklist'){
+    const items = (note.items||[]).filter(item=>String(item.text||'').trim());
+    const done = items.filter(item=>item.done).length;
+    if(!items.length) return 'Lista tak / nie';
+    return `${done}/${items.length} tak • ${items[0].text}`;
+  }
+  return String(note.content||'').replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim().slice(0,60);
+}
+
+function notesUpdateChecklistSummary(note){
+  const summary = document.getElementById('notes-check-summary');
+  if(!summary) return;
+  note = notesEnsureShape(note);
+  if(!note || note.type !== 'checklist'){
+    summary.textContent = '';
+    return;
+  }
+  const items = (note.items||[]).filter(item=>String(item.text||'').trim());
+  const done = items.filter(item=>item.done).length;
+  summary.textContent = items.length ? `${done}/${items.length} tak` : 'Pusta lista';
+}
+
+function notesFlashSaved(){
+  ['notes-saved','notes-check-saved'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.textContent = 'Zapisano ✓';
+    clearTimeout(el._t);
+    el._t = setTimeout(()=>{ el.textContent = ''; }, 1400);
+  });
+}
+
+function notesScheduleSave(delay){
+  clearTimeout(notesAutoSaveTimer);
+  notesAutoSaveTimer = setTimeout(notesSaveNow, delay || 600);
+}
+
+function notesRenderChecklist(note){
+  const wrap = document.getElementById('notes-checklist');
+  if(!wrap) return;
+  note = notesEnsureShape(note);
+  if(!note || note.type !== 'checklist'){
+    wrap.innerHTML = '';
+    notesUpdateChecklistSummary(null);
+    return;
+  }
+  const items = note.items || [];
+  if(!items.length){
+    wrap.innerHTML = `
+      <div class="notes-check-empty">
+        <div style="font-size:36px">☑</div>
+        <div style="font-size:14px;font-weight:700">Dodaj pierwsza linie</div>
+        <button class="btn btn-primary" type="button" onclick="notesCheckAddRow()">+ Dodaj linie</button>
+      </div>
+    `;
+    notesUpdateChecklistSummary(note);
+    return;
+  }
+  wrap.innerHTML = `
+    <div class="notes-check-wrap">
+      ${items.map(item=>`
+        <div class="notes-check-row">
+          <input
+            class="notes-check-input"
+            id="notes-check-input-${item.id}"
+            value="${escHtml(item.text||'')}"
+            placeholder="Wpisz punkt..."
+            oninput="notesCheckEdit('${item.id}', this.value)"
+            onkeydown="notesChecklistKeydown(event, '${item.id}')">
+          <button class="notes-check-toggle ${item.done ? 'is-yes' : 'is-no'}" type="button" onclick="notesCheckToggle('${item.id}')">${item.done ? 'TAK' : 'NIE'}</button>
+          <button class="notes-check-del" type="button" onclick="notesCheckDelete('${item.id}')" title="Usun">✕</button>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  notesUpdateChecklistSummary(note);
+}
+
 function notesInit(){
   if(!S.appNotes) S.appNotes = [];
+  let changed = false;
+  (S.appNotes||[]).forEach(note=>{
+    const beforeType = note.type;
+    const beforeItems = note.items;
+    const beforeContent = note.content;
+    notesEnsureShape(note);
+    if(note.type !== beforeType || note.items !== beforeItems || note.content !== beforeContent) changed = true;
+  });
+  if(changed) saveS();
   renderNotesList();
   // Show empty state by default
   notesShowEmpty();
@@ -6134,11 +6289,15 @@ function renderNotesList(){
   // Sort by updatedAt desc
   const sorted = [...notes].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
   list.innerHTML = sorted.map(n=>{
-    const preview = (n.content||'').replace(/<[^>]+>/g,'').slice(0,60);
+    notesEnsureShape(n);
+    const preview = notesListPreview(n);
     const date = n.updatedAt ? new Date(n.updatedAt).toLocaleDateString('pl-PL',{day:'numeric',month:'short'}) : '';
     return `<div class="note-item${n.id===activeNoteId?' active':''}" onclick="notesOpen(${n.id})">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px">
-        <div class="note-item-title">${escHtml(n.title||'Bez tytułu')}</div>
+      <div class="note-item-head">
+        <div class="note-item-meta">
+          <div class="note-item-title">${escHtml(n.title||'Bez tytułu')}</div>
+          ${n.type==='checklist' ? '<span class="note-item-kind">TAK/NIE</span>' : ''}
+        </div>
         <button onclick="event.stopPropagation();notesDelete(${n.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0;flex-shrink:0;line-height:1">✕</button>
       </div>
       <div class="note-item-preview">${escHtml(preview)||'(pusta)'}</div>
@@ -6149,51 +6308,76 @@ function renderNotesList(){
 
 function notesShowEmpty(){
   const editor = document.getElementById('notes-editor');
+  const checklist = document.getElementById('notes-checklist');
   const titleInp = document.getElementById('notes-title-inp');
   const toolbar = document.getElementById('notes-toolbar');
+  const checkToolbar = document.getElementById('notes-check-toolbar');
   const emptyState = document.getElementById('notes-empty-state');
   if(editor) { editor.style.display='none'; editor.innerHTML=''; }
+  if(checklist) { checklist.style.display='none'; checklist.innerHTML=''; }
   if(titleInp) { titleInp.style.display='none'; titleInp.value=''; }
-  if(toolbar) toolbar.style.opacity='0.4';
+  if(toolbar) toolbar.style.display='none';
+  if(checkToolbar) checkToolbar.style.display='none';
   if(emptyState) emptyState.style.display='flex';
   activeNoteId = null;
 }
 
-function notesShowEditor(){
+function notesShowEditor(note){
   const editor = document.getElementById('notes-editor');
+  const checklist = document.getElementById('notes-checklist');
   const titleInp = document.getElementById('notes-title-inp');
   const toolbar = document.getElementById('notes-toolbar');
+  const checkToolbar = document.getElementById('notes-check-toolbar');
   const emptyState = document.getElementById('notes-empty-state');
-  if(editor) editor.style.display='block';
+  const isChecklist = note?.type === 'checklist';
+  if(editor) editor.style.display = isChecklist ? 'none' : 'block';
+  if(checklist) checklist.style.display = isChecklist ? 'block' : 'none';
   if(titleInp) titleInp.style.display='block';
-  if(toolbar) toolbar.style.opacity='1';
+  if(toolbar) toolbar.style.display = isChecklist ? 'none' : 'flex';
+  if(checkToolbar) checkToolbar.style.display = isChecklist ? 'flex' : 'none';
   if(emptyState) emptyState.style.display='none';
 }
 
-function notesNew(){
+function notesCreate(type){
   if(!S.appNotes) S.appNotes = [];
-  const note = {id:Date.now(), title:'', content:'', updatedAt:Date.now()};
+  const now = Date.now();
+  const note = type === 'checklist'
+    ? {id:now, type:'checklist', title:'', items:[{id:`c${now}`, text:'', done:false}], updatedAt:now}
+    : {id:now, type:'rich', title:'', content:'', updatedAt:now};
   S.appNotes.unshift(note);
   saveS();
   renderNotesList();
   notesOpen(note.id);
-  // Focus title
   setTimeout(()=>{
     const t = document.getElementById('notes-title-inp');
-    if(t){ t.focus(); }
+    if(t) t.focus();
   }, 50);
+}
+
+function notesNew(){
+  notesCreate('rich');
+}
+
+function notesNewChecklist(){
+  notesCreate('checklist');
 }
 
 function notesOpen(id){
   // Save current before switching
   notesSaveNow();
-  const note = (S.appNotes||[]).find(n=>n.id===id); if(!note) return;
+  const note = notesEnsureShape((S.appNotes||[]).find(n=>n.id===id)); if(!note) return;
   activeNoteId = id;
-  notesShowEditor();
+  notesShowEditor(note);
   const titleInp = document.getElementById('notes-title-inp');
   const editor = document.getElementById('notes-editor');
   if(titleInp) titleInp.value = note.title||'';
-  if(editor) editor.innerHTML = note.content||'';
+  if(note.type === 'checklist'){
+    if(editor) editor.innerHTML = '';
+    notesRenderChecklist(note);
+  } else {
+    if(editor) editor.innerHTML = note.content||'';
+    notesRenderChecklist(null);
+  }
   renderNotesList(); // refresh active state
   // On mobile: collapse sidebar after opening
   if(isMobile()){
@@ -6213,27 +6397,28 @@ function notesDelete(id){
 }
 
 function notesSaveTitle(){
-  const note = (S.appNotes||[]).find(n=>n.id===activeNoteId); if(!note) return;
+  const note = notesActive(); if(!note) return;
   note.title = document.getElementById('notes-title-inp')?.value||'';
   note.updatedAt = Date.now();
   saveS();
   renderNotesList();
+  notesFlashSaved();
 }
 
 function notesAutoSave(){
-  clearTimeout(notesAutoSaveTimer);
-  notesAutoSaveTimer = setTimeout(notesSaveNow, 600);
+  notesScheduleSave(600);
 }
 
 function notesSaveNow(){
   if(!activeNoteId) return;
-  const note = (S.appNotes||[]).find(n=>n.id===activeNoteId); if(!note) return;
+  const note = notesActive(); if(!note) return;
   const editor = document.getElementById('notes-editor');
-  if(editor) note.content = editor.innerHTML;
+  if(note.type !== 'checklist' && editor) note.content = editor.innerHTML;
   note.updatedAt = Date.now();
   saveS();
-  const saved = document.getElementById('notes-saved');
-  if(saved){ saved.textContent='Zapisano ✓'; clearTimeout(saved._t); saved._t=setTimeout(()=>saved.textContent='',1400); }
+  renderNotesList();
+  notesUpdateChecklistSummary(note);
+  notesFlashSaved();
 }
 
 function notesFmt(cmd, val){
@@ -6269,6 +6454,69 @@ function notesKeydown(e){
   if((e.ctrlKey||e.metaKey)&&e.key==='i'){e.preventDefault();notesFmt('italic');}
   if((e.ctrlKey||e.metaKey)&&e.key==='u'){e.preventDefault();notesFmt('underline');}
   if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();notesSaveNow();}
+}
+
+function notesCheckAddRow(afterId){
+  const note = notesActive();
+  if(!note || note.type !== 'checklist') return;
+  if(!Array.isArray(note.items)) note.items = [];
+  const item = {id:`c${Date.now()}${Math.floor(Math.random()*1000)}`, text:'', done:false};
+  if(afterId){
+    const idx = note.items.findIndex(row=>String(row.id)===String(afterId));
+    if(idx>=0) note.items.splice(idx+1, 0, item);
+    else note.items.push(item);
+  } else {
+    note.items.push(item);
+  }
+  notesRenderChecklist(note);
+  notesSaveNow();
+  setTimeout(()=>{
+    document.getElementById(`notes-check-input-${item.id}`)?.focus();
+  }, 30);
+}
+
+function notesCheckEdit(itemId, value){
+  const note = notesActive();
+  if(!note || note.type !== 'checklist') return;
+  const item = (note.items||[]).find(row=>String(row.id)===String(itemId));
+  if(!item) return;
+  item.text = value;
+  note.updatedAt = Date.now();
+  notesUpdateChecklistSummary(note);
+  notesScheduleSave(350);
+}
+
+function notesCheckToggle(itemId){
+  const note = notesActive();
+  if(!note || note.type !== 'checklist') return;
+  const item = (note.items||[]).find(row=>String(row.id)===String(itemId));
+  if(!item) return;
+  item.done = !item.done;
+  notesRenderChecklist(note);
+  notesSaveNow();
+}
+
+function notesCheckDelete(itemId){
+  const note = notesActive();
+  if(!note || note.type !== 'checklist') return;
+  note.items = (note.items||[]).filter(row=>String(row.id)!==String(itemId));
+  notesRenderChecklist(note);
+  notesSaveNow();
+}
+
+function notesChecklistMarkAll(value){
+  const note = notesActive();
+  if(!note || note.type !== 'checklist') return;
+  (note.items||[]).forEach(item=>{ item.done = !!value; });
+  notesRenderChecklist(note);
+  notesSaveNow();
+}
+
+function notesChecklistKeydown(e, itemId){
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    notesCheckAddRow(itemId);
+  }
 }
 
 // Mobile back button for notes
