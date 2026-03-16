@@ -177,7 +177,7 @@
       view: 'overview',
       monthKey: monthKey(new Date()),
       selectedDate: localDate(new Date()),
-      summaryMode: 'month',
+      summaryMode: 'today',
       companyId: null,
       storeId: null,
       modal: null
@@ -353,6 +353,9 @@
     Object.keys(defaults).forEach(key=>{
       if(data.ui[key] === undefined || data.ui[key] === null || data.ui[key] === '') data.ui[key] = defaults[key];
     });
+    if(!['today', 'yesterday', 'week', 'month', 'year'].includes(String(data.ui.summaryMode || ''))){
+      data.ui.summaryMode = defaults.summaryMode;
+    }
 
     migrateLegacyData(data);
     seedDemoData(data);
@@ -493,6 +496,54 @@
     };
   }
 
+  function dateAtNoon(value){
+    return new Date(`${String(value).slice(0, 10)}T12:00:00`);
+  }
+
+  function addDays(date, days){
+    const next = new Date(date.getTime());
+    next.setDate(next.getDate() + Number(days || 0));
+    return next;
+  }
+
+  function getRangePresetBounds(mode, selectedDate){
+    const preset = ['today', 'yesterday', 'week', 'month', 'year'].includes(String(mode || '')) ? String(mode) : 'today';
+    const base = dateAtNoon(selectedDate || localDate(new Date()));
+    const year = base.getFullYear();
+    const month = base.getMonth();
+
+    if(preset === 'yesterday'){
+      const day = addDays(base, -1);
+      return {preset, start: localDate(day), end: localDate(day)};
+    }
+    if(preset === 'week'){
+      const weekday = base.getDay() === 0 ? 6 : base.getDay() - 1;
+      const start = addDays(base, -weekday);
+      const end = addDays(start, 6);
+      return {preset, start: localDate(start), end: localDate(end)};
+    }
+    if(preset === 'month'){
+      return {
+        preset,
+        start: localDate(new Date(year, month, 1, 12)),
+        end: localDate(new Date(year, month + 1, 0, 12))
+      };
+    }
+    if(preset === 'year'){
+      return {
+        preset,
+        start: localDate(new Date(year, 0, 1, 12)),
+        end: localDate(new Date(year, 11, 31, 12))
+      };
+    }
+    return {preset, start: localDate(base), end: localDate(base)};
+  }
+
+  function isDateInRange(date, bounds){
+    const value = String(date || '').slice(0, 10);
+    return value >= bounds.start && value <= bounds.end;
+  }
+
   function statsForStoreInMonth(storeId, key){
     const store = getStore(storeId);
     if(!store) return [];
@@ -509,8 +560,18 @@
     return [computeStat(store, stat)];
   }
 
+  function statsForStoreInRange(storeId, mode, selectedDate){
+    const store = getStore(storeId);
+    if(!store) return [];
+    const bounds = getRangePresetBounds(mode, selectedDate);
+    return getStatsForStore(storeId)
+      .filter(stat=>isDateInRange(stat.date, bounds))
+      .map(stat=>computeStat(store, stat))
+      .sort((a, b)=>a.date.localeCompare(b.date));
+  }
+
   function summarizeStore(store, key, mode, selectedDate){
-    const stats = mode === 'day' ? statsForStoreInDay(store.id, selectedDate) : statsForStoreInMonth(store.id, key);
+    const stats = statsForStoreInRange(store.id, mode, selectedDate);
     const gross = sumAmounts(stats, 'revenue_gross');
     const net = sumAmounts(stats, 'revenue_net_resolved');
     const ads = sumAmounts(stats, 'ad_cost_tiktok');
@@ -609,7 +670,7 @@
 
   function setSummaryMode(mode){
     const data = ensureData();
-    data.ui.summaryMode = mode === 'day' ? 'day' : 'month';
+    data.ui.summaryMode = ['today', 'yesterday', 'week', 'month', 'year'].includes(String(mode || '')) ? String(mode) : 'today';
     renderShops();
   }
 
@@ -617,6 +678,7 @@
     if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date || ''))) return;
     const data = ensureData();
     data.ui.selectedDate = date;
+    data.ui.monthKey = String(date).slice(0, 7);
     renderShops();
   }
 
@@ -657,7 +719,12 @@
   }
 
   function rangeLabel(key, mode, selectedDate){
-    return mode === 'day' ? fullDateLabel(selectedDate) : monthLabel(key);
+    const bounds = getRangePresetBounds(mode, selectedDate);
+    if(bounds.preset === 'today') return `Dzisiaj • ${fullDateLabel(bounds.start)}`;
+    if(bounds.preset === 'yesterday') return `Wczoraj • ${fullDateLabel(bounds.start)}`;
+    if(bounds.preset === 'week') return `${shortDateLabel(bounds.start)} - ${shortDateLabel(bounds.end)}`;
+    if(bounds.preset === 'month') return monthLabel(bounds.start.slice(0, 7));
+    return String(dateAtNoon(bounds.start).getFullYear());
   }
 
   function companyAccent(companySummary){
@@ -1316,13 +1383,20 @@
           <div class="shops-v2-actions">${actions}</div>
         </div>
         <div class="shops-v2-toolbar">
-          <div class="shops-v2-month-nav">
+          <div class="shops-v2-date-pick">
+            <label class="shops-v2-date-label">Data odniesienia</label>
+            <input type="date" class="shops-v2-date-input" value="${esc(ui.selectedDate)}" onchange="jumpToShopsDate(this.value)" aria-label="Wybor dnia">
             <button class="cal-nav-btn" type="button" onclick="shiftShopsMonth(-1)">‹</button>
             <input type="month" value="${esc(ui.monthKey)}" onchange="setShopsMonth(this.value)" aria-label="Wybór miesiąca">
             <button class="cal-nav-btn" type="button" onclick="shiftShopsMonth(1)">›</button>
             <button class="btn btn-ghost btn-sm" type="button" onclick="setShopsMonth('${monthKey(new Date())}')">Dziś</button>
           </div>
           <div class="todo-filters shops-v2-filters">
+            <button class="filter-btn${ui.summaryMode === 'today' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('today')">Dzis</button>
+            <button class="filter-btn${ui.summaryMode === 'yesterday' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('yesterday')">Wczoraj</button>
+            <button class="filter-btn${ui.summaryMode === 'week' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('week')">Tydzien</button>
+            <button class="filter-btn${ui.summaryMode === 'month' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('month')">Miesiac</button>
+            <button class="filter-btn${ui.summaryMode === 'year' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('year')">Rok</button>
             <button class="filter-btn${ui.summaryMode === 'month' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('month')">Miesiąc</button>
             <button class="filter-btn${ui.summaryMode === 'day' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('day')">Dzień</button>
             <button class="filter-btn${ui.view === 'overview' ? ' active' : ''}" type="button" onclick="openShopsOverview()">Wszystko</button>
@@ -1359,6 +1433,47 @@
         <div class="sec-title">Najważniejsze liczby</div>
         <div class="shops-v2-summary-grid">${cards.join('')}</div>
       </div>
+    `;
+  }
+
+  function renderCentralHero(summary, options){
+    const accent = options?.accent || cssVar('--accent', '#4f7ef8');
+    const title = esc(options?.title || 'Zarobek');
+    const sub = esc(options?.subtitle || '');
+    return `
+      <div class="card shops-v2-hero-card" style="--shops-hero:${accent}">
+        <div class="shops-v2-hero-top">
+          <div>
+            <div class="shops-v2-section-kicker">${title}</div>
+            <div class="shops-v2-hero-value">${formatPLN(summary.income)}</div>
+            <div class="shops-v2-hero-sub">${sub}</div>
+          </div>
+          <div class="shops-v2-hero-meta">
+            <div><span>Przychód</span><strong>${formatPLN(summary.gross)}</strong></div>
+            <div><span>Reklamy</span><strong>${formatPLN(summary.ads)}</strong></div>
+            <div><span>Zwroty</span><strong>${formatPLN(summary.refunds)}</strong></div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderCompanyMenuButton(companySummary){
+    const company = companySummary.company;
+    const color = companyAccent(companySummary);
+    return `
+      <button class="shops-v2-menu-btn" type="button" style="--shops-menu:${color}" onclick="openShopsCompany('${company.id}')">
+        <span>${esc(company.name)}</span>
+      </button>
+    `;
+  }
+
+  function renderStoreMenuButton(storeSummary){
+    const store = storeSummary.store;
+    return `
+      <button class="shops-v2-menu-btn shops-v2-store-menu-btn" type="button" style="--shops-menu:${store.color}" onclick="openShopsStore('${store.id}')">
+        <span>${esc(store.name)}</span>
+      </button>
     `;
   }
 
@@ -1718,7 +1833,7 @@
     const store = getStore(data.ui.storeId);
     if(!store) return renderCompanyView(data);
     const company = getCompany(store.company_id);
-    const summary = summarizeStore(store, data.ui.monthKey, 'month', data.ui.selectedDate);
+    const summary = summarizeStore(store, data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate);
     return `
       <div class="shops-v2-store-view">
         <div class="card shops-v2-company-head">
@@ -1736,7 +1851,12 @@
             <button class="btn btn-danger" type="button" onclick="confirmDeleteStore('${store.id}')">Usuń sklep</button>
           </div>
         </div>
-        ${renderSummaryGrid(summary, {label: monthLabel(data.ui.monthKey), filledDays: summary.filledDays})}
+        ${renderCentralHero(summary, {
+          title: 'Zarobek sklepu',
+          subtitle: `${store.name} • ${rangeLabel(data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate)}`,
+          accent: store.color
+        })}
+        ${renderSummaryGrid(summary, {label: rangeLabel(data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate), filledDays: summary.filledDays})}
         <div class="shops-v2-store-top">
           ${renderSelectedDayPanel(store, data.ui.selectedDate)}
           ${renderStoreCalendar(store, data.ui.monthKey, data.ui.selectedDate)}
@@ -1746,10 +1866,119 @@
     `;
   }
 
+  function renderOverviewCentral(data){
+    const summary = summarizeGlobal(data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate);
+    const filledDays = summary.stores.reduce((total, item)=>total + item.filledDays, 0);
+    return `
+      <div class="shops-v2-scroll">
+        ${renderCentralHero(summary, {
+          title: 'Ile zarobilem',
+          subtitle: rangeLabel(data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate),
+          accent: cssVar('--accent', '#4f7ef8')
+        })}
+        <details class="card shops-v2-expand-card" open>
+          <summary class="shops-v2-expand-summary">Rozwin statystyki ogolne</summary>
+          <div class="shops-v2-expand-body">
+            ${renderSummaryGrid(summary, {label: rangeLabel(data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate), filledDays})}
+            ${renderInsightsCard(summary, false)}
+          </div>
+        </details>
+        <div class="card shops-v2-section-card shops-v2-menu-section">
+          <div class="shops-v2-section-head">
+            <div>
+              <div class="shops-v2-section-kicker">Firmy</div>
+              <div class="sec-title">Wybierz firme</div>
+            </div>
+            <button class="btn btn-primary" type="button" onclick="openCompanyModal()">+ Dodaj firme</button>
+          </div>
+          <div class="shops-v2-centered-menu">
+            ${summary.companies.length ? summary.companies.map(renderCompanyMenuButton).join('') : `
+              <div class="shops-v2-empty-block">
+                <div>Nie masz jeszcze zadnej firmy.</div>
+              </div>
+            `}
+          </div>
+        </div>
+        <div class="card shops-v2-section-card">
+          <div class="shops-v2-section-head">
+            <div>
+              <div class="shops-v2-section-kicker">Sklepy</div>
+              <div class="sec-title">Wszystkie sklepy w wybranym zakresie</div>
+            </div>
+          </div>
+          <div class="shops-v2-list">
+            ${summary.stores.length ? summary.stores.map(renderStoreRow).join('') : `
+              <div class="shops-v2-empty-block">
+                <div>Brak wynikow sklepów dla tego zakresu.</div>
+              </div>
+            `}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderCompanyCentral(data){
+    const company = getCompany(data.ui.companyId);
+    if(!company) return renderOverviewCentral(data);
+    const summary = summarizeCompany(company, data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate);
+    const filledDays = summary.storeSummaries.reduce((total, item)=>total + item.filledDays, 0);
+    return `
+      <div class="shops-v2-scroll">
+        ${renderCentralHero(summary, {
+          title: 'Wynik firmy',
+          subtitle: `${company.name} • ${rangeLabel(data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate)}`,
+          accent: companyAccent(summary)
+        })}
+        <details class="card shops-v2-expand-card" open>
+          <summary class="shops-v2-expand-summary">Rozwin statystyki firmy</summary>
+          <div class="shops-v2-expand-body">
+            ${renderSummaryGrid(summary, {label: rangeLabel(data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate), filledDays})}
+            ${renderInsightsCard(summary, true)}
+          </div>
+        </details>
+        <div class="card shops-v2-section-card shops-v2-menu-section">
+          <div class="shops-v2-section-head">
+            <div>
+              <div class="shops-v2-section-kicker">Sklepy</div>
+              <div class="sec-title">Wybierz sklep</div>
+            </div>
+            <div class="shops-v2-actions">
+              <button class="btn btn-ghost" type="button" onclick="openCompanyModal('${company.id}')">Edytuj firme</button>
+              <button class="btn btn-primary" type="button" onclick="openStoreModal('${company.id}')">+ Dodaj sklep</button>
+            </div>
+          </div>
+          <div class="shops-v2-centered-menu">
+            ${summary.storeSummaries.length ? summary.storeSummaries.map(renderStoreMenuButton).join('') : `
+              <div class="shops-v2-empty-block">
+                <div>Ta firma nie ma jeszcze sklepow.</div>
+              </div>
+            `}
+          </div>
+        </div>
+        <div class="card shops-v2-section-card">
+          <div class="shops-v2-section-head">
+            <div>
+              <div class="shops-v2-section-kicker">Wyniki</div>
+              <div class="sec-title">Sklepy firmy w wybranym zakresie</div>
+            </div>
+          </div>
+          <div class="shops-v2-list">
+            ${summary.storeSummaries.length ? summary.storeSummaries.map(renderStoreRow).join('') : `
+              <div class="shops-v2-empty-block">
+                <div>Brak danych dla tego zakresu.</div>
+              </div>
+            `}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   function renderContent(data){
-    if(data.ui.view === 'company') return renderCompanyView(data);
+    if(data.ui.view === 'company') return renderCompanyCentral(data);
     if(data.ui.view === 'store') return renderStoreView(data);
-    return renderOverview(data);
+    return renderOverviewCentral(data);
   }
 
   function renderCompanyModal(modal){
@@ -2115,6 +2344,24 @@
       }
       .shops-v2-summary-block{display:flex;flex-direction:column;gap:10px}
       .shops-v2-section-kicker{font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+      .shops-v2-hero-card{
+        border:1.5px solid color-mix(in srgb, var(--shops-hero) 22%, var(--border));
+        background:
+          linear-gradient(135deg, color-mix(in srgb, var(--shops-hero) 12%, var(--surface)) 0%, var(--surface) 55%),
+          var(--surface);
+        padding:18px;
+      }
+      .shops-v2-hero-top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+      .shops-v2-hero-value{font-size:clamp(30px,4vw,46px);font-weight:900;line-height:1;font-family:'DM Mono',monospace;color:var(--text)}
+      .shops-v2-hero-sub{margin-top:8px;font-size:13px;color:var(--text2)}
+      .shops-v2-hero-meta{display:grid;grid-template-columns:repeat(3,minmax(110px,1fr));gap:10px;min-width:min(420px,100%)}
+      .shops-v2-hero-meta div{border:1px solid var(--border);background:rgba(255,255,255,.55);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+      .shops-v2-hero-meta span{font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+      .shops-v2-hero-meta strong{font-size:15px;font-weight:800;color:var(--text);font-family:'DM Mono',monospace}
+      .shops-v2-expand-card{padding:0;overflow:hidden}
+      .shops-v2-expand-summary{list-style:none;cursor:pointer;padding:16px 18px;font-size:14px;font-weight:800;color:var(--text);background:var(--surface2)}
+      .shops-v2-expand-summary::-webkit-details-marker{display:none}
+      .shops-v2-expand-body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:14px}
       .shops-v2-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
       .shops-v2-stat{display:flex;flex-direction:column;gap:8px;text-align:left;padding:14px 15px;min-height:120px}
       .shops-v2-stat-label{font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
@@ -2127,6 +2374,15 @@
       .shops-v2-stat-purple{border-color:rgba(139,92,246,.22)}
       .shops-v2-overview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
       .shops-v2-list{display:flex;flex-direction:column;gap:10px}
+      .shops-v2-menu-section{padding:16px}
+      .shops-v2-centered-menu{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+      .shops-v2-menu-btn{
+        min-width:220px;min-height:62px;padding:0 18px;border:none;border-radius:18px;
+        background:linear-gradient(135deg, color-mix(in srgb, var(--shops-menu) 80%, #ffffff) 0%, var(--shops-menu) 100%);
+        color:#fff;font:800 16px 'DM Sans',sans-serif;cursor:pointer;box-shadow:0 10px 26px rgba(0,0,0,.12);
+      }
+      .shops-v2-menu-btn:hover{transform:translateY(-1px);box-shadow:0 14px 30px rgba(0,0,0,.14)}
+      .shops-v2-store-menu-btn{min-width:210px}
       .shops-v2-list-row{
         display:grid;grid-template-columns:minmax(240px,320px) minmax(0,1fr);gap:14px;align-items:center;
         padding:14px;border:1.5px solid var(--border);border-radius:18px;background:var(--surface);
@@ -2186,6 +2442,13 @@
         margin:10px 0 2px;
       }
       .shops-v2-quickbar input{flex:1;min-width:220px}
+      .shops-v2-date-pick{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+      .shops-v2-date-label{font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+      .shops-v2-date-input{min-width:170px}
+      .shops-v2-date-pick > .cal-nav-btn,
+      .shops-v2-date-pick > input[type="month"],
+      .shops-v2-date-pick > .btn{display:none}
+      .shops-v2-filters > .filter-btn:nth-child(n+6){display:none}
       .shops-v2-inline-form{padding:14px 16px 0}
       .shops-v2-note-edit{
         width:100%;min-height:86px;border:1.5px solid var(--border);background:var(--surface);border-radius:12px;padding:12px;
@@ -2276,6 +2539,9 @@
         .shops-v2-header-top,.shops-v2-toolbar,.shops-v2-section-head,.shops-v2-company-head{flex-direction:column;align-items:stretch}
         .shops-v2-actions{width:100%}
         .shops-v2-actions .btn{flex:1}
+        .shops-v2-hero-meta{grid-template-columns:1fr;min-width:0;width:100%}
+        .shops-v2-centered-menu{justify-content:stretch}
+        .shops-v2-menu-btn{width:100%}
         .shops-v2-list-row{grid-template-columns:1fr}
         .shops-v2-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr));min-width:0;width:100%}
         .shops-v2-row-actions{justify-content:flex-start}
