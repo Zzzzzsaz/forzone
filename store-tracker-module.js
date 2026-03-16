@@ -132,12 +132,17 @@
   }
 
   function trackerFmtPct(value){
-    if(value === null || value === undefined || Number.isNaN(Number(value))) return 'â€”';
+    if(value === null || value === undefined || Number.isNaN(Number(value))) return '-';
     return `${trackerNum(value).toLocaleString('pl-PL', {maximumFractionDigits:1})}%`;
   }
 
   function trackerColor(index){
     return STORE_COLORS[index % STORE_COLORS.length];
+  }
+
+  function trackerReadCssVar(name, fallback){
+    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return value || fallback;
   }
 
   function trackerDefaultUi(){
@@ -267,7 +272,7 @@
           ad_cost_tiktok: tiktokAds || allAds,
           refunds: 0,
           extra_costs: 0,
-          notes: notes.join(' â€˘ '),
+          notes: notes.join(' | '),
           created_at: trackerNowIso(),
           updated_at: trackerNowIso()
         });
@@ -822,15 +827,14 @@
     const stores = trackerGetAllStores();
     return `
       <section class="tracker-hero">
-        <div>
-          <div class="tracker-eyebrow">Profit tracker ecommerce</div>
+        <div class="tracker-hero-title">
           <h1>Sklepy / Wyniki</h1>
-          <p>Nowy modul do dziennych wynikow sklepow, liczenia dochodu i miesiecznej kontroli wyniku bez wracania do Excela.</p>
+          <span class="tracker-hero-sub">Dzienny wynik sklepow i miesieczne podsumowanie</span>
         </div>
         <div class="tracker-hero-actions">
-          <button class="tracker-btn tracker-btn-ghost" type="button" onclick="trackerShiftMonth(-1)">â† Poprzedni miesiac</button>
+          <button class="tracker-btn tracker-btn-ghost" type="button" onclick="trackerShiftMonth(-1)">Poprzedni</button>
           <div class="tracker-month-pill">${trackerMonthLabel(data.ui.monthKey)}</div>
-          <button class="tracker-btn tracker-btn-ghost" type="button" onclick="trackerShiftMonth(1)">Nastepny â†’</button>
+          <button class="tracker-btn tracker-btn-ghost" type="button" onclick="trackerShiftMonth(1)">Nastepny</button>
         </div>
       </section>
       <section class="tracker-toolbar">
@@ -848,19 +852,15 @@
           </label>
         </div>
         <div class="tracker-toolbar-group tracker-toolbar-actions">
-          <button class="tracker-btn tracker-btn-subtle" type="button" onclick="trackerSetView('dashboard')">Dashboard</button>
-          <button class="tracker-btn tracker-btn-subtle" type="button" onclick="trackerSetView('month')">Tabela miesieczna</button>
-          <button class="tracker-btn tracker-btn-subtle" type="button" onclick="trackerSetView('store')">Widok sklepu</button>
-          <button class="tracker-btn tracker-btn-subtle" type="button" onclick="trackerSetView('manage')">Zarzadzanie</button>
           <button class="tracker-btn tracker-btn-ghost" type="button" onclick="trackerOpenStatModal()">+ Dodaj dzien</button>
           <button class="tracker-btn tracker-btn-primary" type="button" onclick="trackerOpenStoreModal()">+ Dodaj sklep</button>
         </div>
       </section>
       <nav class="tracker-nav">
-        <button class="tracker-nav-btn${data.ui.view === 'dashboard' ? ' active' : ''}" onclick="trackerSetView('dashboard')">Dashboard globalny</button>
-        <button class="tracker-nav-btn${data.ui.view === 'month' ? ' active' : ''}" onclick="trackerSetView('month')">Miesieczny uklad</button>
-        <button class="tracker-nav-btn${data.ui.view === 'store' ? ' active' : ''}" onclick="trackerSetView('store')">Pojedynczy sklep</button>
-        <button class="tracker-nav-btn${data.ui.view === 'manage' ? ' active' : ''}" onclick="trackerSetView('manage')">Zarzadzanie sklepami</button>
+        <button class="tracker-nav-btn${data.ui.view === 'dashboard' ? ' active' : ''}" onclick="trackerSetView('dashboard')">Dashboard</button>
+        <button class="tracker-nav-btn${data.ui.view === 'month' ? ' active' : ''}" onclick="trackerSetView('month')">Miesiac</button>
+        <button class="tracker-nav-btn${data.ui.view === 'store' ? ' active' : ''}" onclick="trackerSetView('store')">Sklep</button>
+        <button class="tracker-nav-btn${data.ui.view === 'manage' ? ' active' : ''}" onclick="trackerSetView('manage')">Zarzadzanie</button>
       </nav>`;
   }
 
@@ -946,12 +946,12 @@
           <div class="tracker-highlight-stack">
             <article class="tracker-highlight tracker-highlight-good">
               <span>Najlepszy sklep</span>
-              <strong>${summary.bestStore ? escHtml(summary.bestStore.store.name) : 'â€”'}</strong>
+              <strong>${summary.bestStore ? escHtml(summary.bestStore.store.name) : '-'}</strong>
               <small>${summary.bestStore ? `${trackerFmtPLN(summary.bestStore.income)} dochodu` : 'Brak danych'}</small>
             </article>
             <article class="tracker-highlight tracker-highlight-bad">
               <span>Najslabszy sklep</span>
-              <strong>${summary.worstStore ? escHtml(summary.worstStore.store.name) : 'â€”'}</strong>
+              <strong>${summary.worstStore ? escHtml(summary.worstStore.store.name) : '-'}</strong>
               <small>${summary.worstStore ? `${trackerFmtPLN(summary.worstStore.income)} dochodu` : 'Brak danych'}</small>
             </article>
           </div>
@@ -997,7 +997,7 @@
         total: trackerFmtPLN(summary.gross),
         render(date){
           const stat = statsMap.get(date);
-          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.revenue_gross) : 'ďĽ‹', 'tone-blue', '', trackerFullDateLabel(date), !!stat);
+          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.revenue_gross) : '+', 'tone-blue', '', trackerFullDateLabel(date), !!stat);
         }
       },
       {
@@ -1005,7 +1005,7 @@
         total: trackerFmtPLN(summary.net),
         render(date){
           const stat = statsMap.get(date);
-          if(!stat) return trackerCellButton(store.id, date, 'ďĽ‹', 'tone-neutral', '', trackerFullDateLabel(date), false);
+          if(!stat) return trackerCellButton(store.id, date, '+', 'tone-neutral', '', trackerFullDateLabel(date), false);
           const badge = stat.has_manual_net ? '<span class="tracker-mini-badge">R</span>' : '<span class="tracker-mini-badge auto">A</span>';
           return trackerCellButton(store.id, date, `${badge}${trackerFmtPLN(stat.revenue_net_resolved)}`, 'tone-neutral', 'tracker-cell-has-badge', trackerFullDateLabel(date), true);
         }
@@ -1015,7 +1015,7 @@
         total: trackerFmtPLN(summary.ads),
         render(date){
           const stat = statsMap.get(date);
-          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.ad_cost_tiktok) : 'ďĽ‹', 'tone-orange', '', trackerFullDateLabel(date), !!stat);
+          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.ad_cost_tiktok) : '+', 'tone-orange', '', trackerFullDateLabel(date), !!stat);
         }
       },
       {
@@ -1024,7 +1024,7 @@
         render(date){
           const stat = statsMap.get(date);
           const tone = stat ? (stat.income >= 0 ? 'tone-green' : 'tone-red') : 'tone-neutral';
-          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.income) : 'ďĽ‹', tone, '', trackerFullDateLabel(date), !!stat);
+          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.income) : '+', tone, '', trackerFullDateLabel(date), !!stat);
         }
       },
       {
@@ -1033,7 +1033,7 @@
         render(date){
           const stat = statsMap.get(date);
           const tone = stat ? (stat.per_head >= 0 ? 'tone-violet' : 'tone-red') : 'tone-neutral';
-          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.per_head) : 'ďĽ‹', tone, '', trackerFullDateLabel(date), !!stat);
+          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.per_head) : '+', tone, '', trackerFullDateLabel(date), !!stat);
         }
       },
       {
@@ -1041,7 +1041,7 @@
         total: trackerFmtPct(summary.adPct),
         render(date){
           const stat = statsMap.get(date);
-          return trackerCellButton(store.id, date, stat ? trackerFmtPct(stat.ad_pct) : 'ďĽ‹', 'tone-neutral', '', trackerFullDateLabel(date), !!stat);
+          return trackerCellButton(store.id, date, stat ? trackerFmtPct(stat.ad_pct) : '+', 'tone-neutral', '', trackerFullDateLabel(date), !!stat);
         }
       },
       {
@@ -1049,7 +1049,7 @@
         total: trackerFmtPLN(summary.refunds),
         render(date){
           const stat = statsMap.get(date);
-          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.refunds) : 'ďĽ‹', 'tone-rose', '', trackerFullDateLabel(date), !!stat);
+          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.refunds) : '+', 'tone-rose', '', trackerFullDateLabel(date), !!stat);
         }
       },
       {
@@ -1057,7 +1057,7 @@
         total: trackerFmtPLN(summary.extra),
         render(date){
           const stat = statsMap.get(date);
-          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.extra_costs) : 'ďĽ‹', 'tone-amber', '', trackerFullDateLabel(date), !!stat);
+          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.extra_costs) : '+', 'tone-amber', '', trackerFullDateLabel(date), !!stat);
         }
       }
     ];
@@ -1071,7 +1071,7 @@
               <h3>${escHtml(store.name)}</h3>
               <span class="tracker-store-chip">${store.is_active ? 'aktywny' : 'nieaktywny'}</span>
             </div>
-            <div class="tracker-store-meta">VAT ${store.vat_rate}% â€˘ ${SHARE_TYPE_LABELS[store.profit_share_type]} â€˘ ${CALCULATION_MODE_LABELS[store.calculation_mode]}</div>
+            <div class="tracker-store-meta">VAT ${store.vat_rate}% | ${SHARE_TYPE_LABELS[store.profit_share_type]} | ${CALCULATION_MODE_LABELS[store.calculation_mode]}</div>
           </div>
           <div class="tracker-store-block-actions">
             <div class="tracker-store-summary-metric">${trackerFmtCompactPLN(summary.gross)} przychodu</div>
@@ -1115,9 +1115,9 @@
               <h2>Uklad inspirowany Excelem, ale czytelny i szybszy</h2>
             </div>
             <div class="tracker-card-actions">
-              <button class="tracker-chip-btn" type="button" onclick="trackerShiftMonth(-1)">â†</button>
+              <button class="tracker-chip-btn" type="button" onclick="trackerShiftMonth(-1)">Poprz</button>
               <div class="tracker-inline-month">${trackerMonthLabel(data.ui.monthKey)}</div>
-              <button class="tracker-chip-btn" type="button" onclick="trackerShiftMonth(1)">â†’</button>
+              <button class="tracker-chip-btn" type="button" onclick="trackerShiftMonth(1)">Dalej</button>
             </div>
           </div>
           <div class="tracker-muted">Kliknij dowolna komorke, aby dodac albo zedytowac wynik dnia dla sklepu.</div>
@@ -1306,7 +1306,7 @@
               <span class="tracker-modal-kicker">Sklep</span>
               <h3>${store ? 'Edytuj sklep' : 'Dodaj nowy sklep'}</h3>
             </div>
-            <button class="tracker-modal-close" type="button" onclick="trackerCloseModal()">âś•</button>
+            <button class="tracker-modal-close" type="button" onclick="trackerCloseModal()">x</button>
           </div>
           <div class="tracker-modal-body">
             <input type="hidden" id="tracker-store-id" value="${escHtml(store?.id || '')}">
@@ -1343,7 +1343,7 @@
               <span class="tracker-modal-kicker">Dane dzienne</span>
               <h3>${stat ? 'Edytuj wynik dnia' : 'Dodaj wynik dnia'}</h3>
             </div>
-            <button class="tracker-modal-close" type="button" onclick="trackerCloseModal()">âś•</button>
+            <button class="tracker-modal-close" type="button" onclick="trackerCloseModal()">x</button>
           </div>
           <div class="tracker-modal-body">
             <div class="tracker-form-grid two">
@@ -1378,7 +1378,7 @@
               <span class="tracker-modal-kicker">Potwierdzenie</span>
               <h3>${title}</h3>
             </div>
-            <button class="tracker-modal-close" type="button" onclick="trackerCloseModal()">âś•</button>
+            <button class="tracker-modal-close" type="button" onclick="trackerCloseModal()">x</button>
           </div>
           <div class="tracker-modal-body"><p class="tracker-confirm-copy">${body}</p></div>
           <div class="tracker-modal-footer">
@@ -1413,15 +1413,30 @@
   function trackerEnsureWindow(){
     const win = document.getElementById('win-shops');
     if(!win || win.dataset.trackerSized === '1') return;
-    const width = Math.min(window.innerWidth - 34, Math.max(760, Math.round(window.innerWidth * 0.84)));
-    const height = Math.min(window.innerHeight - 44, Math.max(540, Math.round(window.innerHeight * 0.8)));
+    const width = Math.min(window.innerWidth - 16, Math.max(920, Math.round(window.innerWidth * 0.92)));
+    const height = Math.min(window.innerHeight - 24, Math.max(640, Math.round(window.innerHeight * 0.88)));
     win.style.width = `${width}px`;
     win.style.height = `${height}px`;
-    win.style.left = `${Math.max(12, Math.round((window.innerWidth - width) / 2))}px`;
-    win.style.top = '18px';
+    win.style.left = `${Math.max(8, Math.round((window.innerWidth - width) / 2))}px`;
+    win.style.top = '8px';
     win.dataset.trackerSized = '1';
     const title = win.querySelector('.win-title');
     if(title) title.textContent = 'Sklepy / Wyniki';
+  }
+
+  function trackerClampWindowToViewport(){
+    const win = document.getElementById('win-shops');
+    if(!win) return;
+    const maxWidth = Math.max(360, window.innerWidth - 12);
+    const maxHeight = Math.max(420, window.innerHeight - 12);
+    const width = Math.min(win.offsetWidth || parseInt(win.style.width || '0', 10) || maxWidth, maxWidth);
+    const height = Math.min(win.offsetHeight || parseInt(win.style.height || '0', 10) || maxHeight, maxHeight);
+    const left = parseInt(win.style.left || '0', 10);
+    const top = parseInt(win.style.top || '0', 10);
+    win.style.width = `${width}px`;
+    win.style.height = `${height}px`;
+    win.style.left = `${Math.max(6, Math.min(Number.isFinite(left) ? left : 6, window.innerWidth - width - 6))}px`;
+    win.style.top = `${Math.max(6, Math.min(Number.isFinite(top) ? top : 6, window.innerHeight - height - 6))}px`;
   }
 
   function trackerDestroyCharts(){
@@ -1432,11 +1447,13 @@
   }
 
   function trackerChartOptions(){
+    const textMuted = trackerReadCssVar('--text3', '#9e9890');
+    const border = trackerReadCssVar('--border', '#e5e2dc');
     return {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: {labels: {color: '#c9d3ea', font: {family: 'DM Sans'}}},
+        legend: {labels: {color: textMuted, boxWidth: 10, boxHeight: 10, font: {family: 'DM Sans', size: 11}}},
         tooltip: {
           callbacks: {
             label(context){
@@ -1447,13 +1464,13 @@
         }
       },
       scales: {
-        x: {ticks: {color: '#8ca0c7'}, grid: {display:false}},
+        x: {ticks: {color: textMuted}, grid: {display:false}},
         y: {
           ticks: {
-            color: '#8ca0c7',
+            color: textMuted,
             callback(value){ return trackerFmtCompactPLN(value); }
           },
-          grid: {color: 'rgba(140,160,199,.14)'}
+          grid: {color: border}
         }
       }
     };
@@ -1468,15 +1485,18 @@
 
     const globalCanvas = document.getElementById('tracker-global-chart');
     if(globalCanvas){
+      const accent = trackerReadCssVar('--accent', '#2d5be3');
+      const green = trackerReadCssVar('--green', '#22c55e');
+      const orange = trackerReadCssVar('--orange', '#f97316');
       const daily = trackerDailyTotals(data.ui.monthKey, storeIds);
       trackerRuntime.charts.global = new Chart(globalCanvas, {
         type: 'line',
         data: {
           labels: daily.map(item=>item.date.slice(-2)),
           datasets: [
-            {label:'Przychod', data: daily.map(item=>Math.round(item.gross)), borderColor:'#5b8cff', backgroundColor:'rgba(91,140,255,.16)', fill:true, tension:0.3, pointRadius:2},
-            {label:'Dochod', data: daily.map(item=>Math.round(item.income)), borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,.08)', fill:true, tension:0.3, pointRadius:2},
-            {label:'TikTok Ads', data: daily.map(item=>Math.round(item.ads)), borderColor:'#f97316', backgroundColor:'rgba(249,115,22,.08)', fill:false, tension:0.3, pointRadius:2}
+            {label:'Przychod', data: daily.map(item=>Math.round(item.gross)), borderColor:accent, backgroundColor:'rgba(45,91,227,.12)', fill:true, tension:0.3, pointRadius:2},
+            {label:'Dochod', data: daily.map(item=>Math.round(item.income)), borderColor:green, backgroundColor:'rgba(34,197,94,.10)', fill:true, tension:0.3, pointRadius:2},
+            {label:'TikTok Ads', data: daily.map(item=>Math.round(item.ads)), borderColor:orange, backgroundColor:'rgba(249,115,22,.08)', fill:false, tension:0.3, pointRadius:2}
           ]
         },
         options: trackerChartOptions()
@@ -1494,8 +1514,8 @@
             labels: summary.stats.map(stat=>stat.date.slice(-2)),
             datasets: [
               {type:'line', label:'Przychod brutto', data: summary.stats.map(stat=>Math.round(stat.revenue_gross)), borderColor:store.color, backgroundColor:`${store.color}22`, tension:0.3, pointRadius:3, fill:false},
-              {type:'bar', label:'Dochod', data: summary.stats.map(stat=>Math.round(stat.income)), backgroundColor:'rgba(34,197,94,.52)', borderRadius:10},
-              {type:'bar', label:'TikTok Ads', data: summary.stats.map(stat=>Math.round(stat.ad_cost_tiktok)), backgroundColor:'rgba(249,115,22,.45)', borderRadius:10}
+              {type:'bar', label:'Dochod', data: summary.stats.map(stat=>Math.round(stat.income)), backgroundColor:'rgba(34,197,94,.4)', borderRadius:8},
+              {type:'bar', label:'TikTok Ads', data: summary.stats.map(stat=>Math.round(stat.ad_cost_tiktok)), backgroundColor:'rgba(249,115,22,.34)', borderRadius:8}
             ]
           },
           options: trackerChartOptions()
@@ -1512,115 +1532,121 @@
       document.head.appendChild(style);
     }
     style.textContent = `
-      #shops-body{display:block;height:100%;width:100%;min-width:0;padding:0 !important;overflow:hidden;background:#f3f4f6;}
-      #shops-body .tracker-app{height:100%;width:100%;min-width:0;display:flex;flex-direction:column;color:#243041;background:#f3f4f6;}
-      #shops-body .tracker-hero{display:flex;justify-content:space-between;gap:12px;padding:12px 14px 10px;border-bottom:1px solid #e5e7eb;background:#fff;}
-      #shops-body .tracker-eyebrow,#shops-body .tracker-card-eyebrow,#shops-body .tracker-modal-kicker{display:inline-flex;align-items:center;gap:6px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#7b8496;font-weight:700;}
-      #shops-body .tracker-hero h1,#shops-body .tracker-card h2,#shops-body .tracker-modal h3{margin:4px 0 0;color:#18212f;line-height:1.15;}
-      #shops-body .tracker-hero h1{font-size:18px;}
-      #shops-body .tracker-card h2{font-size:15px;}
-      #shops-body .tracker-hero p{margin:6px 0 0;max-width:560px;font-size:12px;line-height:1.45;color:#6b7280;}
-      #shops-body .tracker-hero-actions,#shops-body .tracker-toolbar,#shops-body .tracker-nav,#shops-body .tracker-toolbar-group,#shops-body .tracker-card-actions,#shops-body .tracker-store-block-actions,#shops-body .tracker-store-card-actions,#shops-body .tracker-history-actions,#shops-body .tracker-modal-footer,#shops-body .tracker-modal-footer-left,#shops-body .tracker-modal-footer-right{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
-      #shops-body .tracker-toolbar,#shops-body .tracker-nav{justify-content:space-between;padding:10px 14px 0;}
-      #shops-body .tracker-control{display:flex;flex-direction:column;gap:6px;min-width:160px;font-size:12px;color:#6b7280;font-weight:600;}
-      #shops-body .tracker-control input,#shops-body .tracker-control select,#shops-body .tracker-field input,#shops-body .tracker-field select,#shops-body .tracker-field textarea{width:100%;border:none;outline:none;border-radius:12px;background:#fff;color:#18212f;padding:9px 11px;font:500 13px 'DM Sans', sans-serif;box-shadow:inset 0 0 0 1px #d9e0ea;}
-      #shops-body .tracker-field input[type="color"]{min-height:42px;padding:4px;}
-      #shops-body .tracker-field textarea{resize:vertical;min-height:110px;}
-      #shops-body .tracker-btn,#shops-body .tracker-chip-btn,#shops-body .tracker-nav-btn{border:none;outline:none;cursor:pointer;font:600 12px 'DM Sans', sans-serif;border-radius:12px;transition:background .14s ease,color .14s ease,transform .14s ease;}
-      #shops-body .tracker-btn:hover,#shops-body .tracker-chip-btn:hover,#shops-body .tracker-nav-btn:hover{transform:translateY(-1px);}
-      #shops-body .tracker-btn{padding:9px 12px;}
-      #shops-body .tracker-btn-primary{background:#5b7cfa;color:#fff;}
-      #shops-body .tracker-btn-ghost,#shops-body .tracker-btn-subtle,#shops-body .tracker-chip-btn,#shops-body .tracker-nav-btn{background:#fff;color:#243041;box-shadow:inset 0 0 0 1px #d9e0ea;}
-      #shops-body .tracker-btn-danger,#shops-body .tracker-chip-btn.danger{background:#fff5f5;color:#c24141;box-shadow:inset 0 0 0 1px #fecaca;}
-      #shops-body .tracker-nav-btn.active{background:#eef4ff;color:#2251c7;box-shadow:inset 0 0 0 1px #cddafe;}
-      #shops-body .tracker-month-pill,#shops-body .tracker-inline-month{padding:8px 11px;border-radius:12px;border:1px solid #d9e0ea;background:#fff;color:#18212f;font-weight:700;}
-      #shops-body .tracker-content{flex:1;min-width:0;overflow:auto;padding:10px 14px 14px;}
-      #shops-body .tracker-content > *{min-width:0;}
-      #shops-body .tracker-dashboard-grid,#shops-body .tracker-store-view-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;min-width:0;}
-      #shops-body .tracker-manage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;}
-      #shops-body .tracker-card,#shops-body .tracker-store-block,#shops-body .tracker-store-card{min-width:0;border-radius:16px;border:1px solid #e5e7eb;background:#fff;box-shadow:0 2px 10px rgba(15,23,42,.04);}
-      #shops-body .tracker-card,#shops-body .tracker-store-card{padding:14px;}
-      #shops-body .tracker-card-span-2,#shops-body .tracker-card-span-3{grid-column:1 / -1;}
-      #shops-body .tracker-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:10px;margin-top:12px;}
-      #shops-body .tracker-kpi{padding:12px;border-radius:14px;background:#f8fafc;box-shadow:inset 0 0 0 1px #e7edf4;}
-      #shops-body .tracker-kpi-label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;font-weight:700;}
-      #shops-body .tracker-kpi-value{display:block;margin-top:6px;font-size:20px;line-height:1.1;color:#18212f;}
-      #shops-body .tracker-kpi-sub,#shops-body .tracker-ranking-body small,#shops-body .tracker-muted,#shops-body .tracker-store-meta,#shops-body .tracker-store-card-meta,#shops-body .tracker-day-card-top,#shops-body .tracker-preview-label{color:#6b7280;font-size:12px;}
-      #shops-body .tracker-tone-blue .tracker-kpi-value{color:#335fda;}
-      #shops-body .tracker-tone-green .tracker-kpi-value{color:#0f9f57;}
-      #shops-body .tracker-tone-violet .tracker-kpi-value{color:#6d52d9;}
-      #shops-body .tracker-tone-orange .tracker-kpi-value{color:#d97706;}
-      #shops-body .tracker-tone-rose .tracker-kpi-value{color:#dc4c64;}
-      #shops-body .tracker-tone-red .tracker-kpi-value{color:#c24141;}
-      #shops-body .tracker-chart-wrap{position:relative;min-height:200px;margin-top:12px;}
-      #shops-body .tracker-ranking-list,#shops-body .tracker-highlight-stack,#shops-body .tracker-day-feed,#shops-body .tracker-setting-list{margin-top:12px;display:flex;flex-direction:column;gap:8px;}
-      #shops-body .tracker-ranking-item,#shops-body .tracker-day-card{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:none;border-radius:14px;cursor:pointer;color:#243041;background:#f8fafc;box-shadow:inset 0 0 0 1px #e7edf4;}
-      #shops-body .tracker-day-feed{flex-direction:row;overflow:auto;padding-bottom:4px;}
-      #shops-body .tracker-day-card{min-width:160px;flex-direction:column;align-items:flex-start;}
-      #shops-body .tracker-day-card-main{font-size:18px;font-weight:700;color:#18212f;}
-      #shops-body .tracker-ranking-index{width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:#eef2f7;font-weight:700;}
-      #shops-body .tracker-ranking-color,#shops-body .tracker-store-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;background:var(--tracker-store-color,#5b8cff);}
-      #shops-body .tracker-ranking-body{min-width:0;display:flex;flex-direction:column;gap:2px;text-align:left;}
-      #shops-body .tracker-highlight{padding:14px;border-radius:14px;box-shadow:inset 0 0 0 1px #e7edf4;}
-      #shops-body .tracker-highlight-good{background:#f4fbf6;}
-      #shops-body .tracker-highlight-bad{background:#fff5f5;}
-      #shops-body .tracker-month-layout{display:flex;flex-direction:column;gap:12px;}
-      #shops-body .tracker-store-block{overflow:hidden;}
-      #shops-body .tracker-store-block-header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:14px 14px 12px;border-bottom:1px solid #e7edf4;background:#fff;}
-      #shops-body .tracker-store-name-line{display:flex;align-items:center;gap:8px;}
-      #shops-body .tracker-store-name-line h3{margin:0;font-size:17px;color:#18212f;}
-      #shops-body .tracker-store-chip{display:inline-flex;padding:5px 9px;border-radius:999px;background:#f3f4f6;color:#4b5563;font-size:11px;font-weight:700;}
-      #shops-body .tracker-store-chip.muted{color:#7b8496;}
-      #shops-body .tracker-store-summary-metric{padding:7px 10px;border-radius:12px;background:#f8fafc;color:#243041;font-size:12px;font-weight:700;}
-      #shops-body .tracker-table-wrap,#shops-body .tracker-history-wrap{overflow:auto;max-width:100%;}
-      #shops-body .tracker-month-table,#shops-body .tracker-history-table{width:max-content;min-width:100%;border-collapse:separate;border-spacing:0;}
-      #shops-body .tracker-month-table th,#shops-body .tracker-month-table td,#shops-body .tracker-history-table th,#shops-body .tracker-history-table td{padding:8px;border-bottom:1px solid #e7edf4;text-align:center;}
-      #shops-body .tracker-month-table thead th{position:sticky;top:0;z-index:3;background:#f8fafc;color:#526076;font-size:11px;text-transform:uppercase;}
-      #shops-body .tracker-month-table thead th strong{display:block;margin-top:3px;font-size:12px;color:#18212f;}
-      #shops-body .tracker-month-table .sticky-col{position:sticky;left:0;z-index:2;background:#f8fafc;text-align:left;min-width:132px;color:#18212f;}
-      #shops-body .tracker-month-table .sticky-col-head{z-index:4;}
-      #shops-body .tracker-month-table .summary-col{min-width:112px;font-weight:700;background:#f8fafc;color:#18212f;}
-      #shops-body .tracker-cell-btn{width:100%;min-height:34px;padding:6px 8px;border:none;border-radius:10px;background:#fff;color:#243041;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:inset 0 0 0 1px #d9e0ea;}
-      #shops-body .tracker-cell-btn.is-empty{color:#9aa3b2;background:#f8fafc;}
-      #shops-body .tracker-mini-badge{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:999px;background:#eef2ff;color:#445;font-size:10px;font-weight:800;}
-      #shops-body .tracker-mini-badge.auto{color:#335fda;}
-      #shops-body .tracker-store-hero-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px;}
-      #shops-body .tracker-setting-list div,#shops-body .tracker-store-card-metrics div{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #e7edf4;}
-      #shops-body .tracker-store-card-metrics{margin-top:12px;}
-      #shops-body .tracker-store-card-top,#shops-body .tracker-store-card-title{display:flex;align-items:center;gap:8px;justify-content:space-between;}
+      #shops-body{display:block;height:100%;width:100%;min-width:0;padding:0 !important;overflow:hidden;background:var(--surface2);container-type:inline-size;}
+      #shops-body .tracker-app{height:100%;width:100%;min-width:0;display:flex;flex-direction:column;background:var(--surface2);color:var(--text);}
+      #shops-body .tracker-hero{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--surface);}
+      #shops-body .tracker-hero-title{min-width:0;display:flex;flex-direction:column;gap:3px;}
+      #shops-body .tracker-hero h1,#shops-body .tracker-card h2,#shops-body .tracker-modal h3{margin:0;color:var(--text);line-height:1.15;}
+      #shops-body .tracker-hero h1{font-size:17px;font-weight:800;}
+      #shops-body .tracker-card h2{font-size:14px;}
+      #shops-body .tracker-eyebrow,#shops-body .tracker-card-eyebrow,#shops-body .tracker-modal-kicker{display:inline-flex;align-items:center;gap:6px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);font-weight:700;}
+      #shops-body .tracker-eyebrow{display:none;}
+      #shops-body .tracker-hero-sub{font-size:11px;color:var(--text3);}
+      #shops-body .tracker-hero p{display:none;}
+      #shops-body .tracker-hero-actions,#shops-body .tracker-toolbar,#shops-body .tracker-nav,#shops-body .tracker-toolbar-group,#shops-body .tracker-card-actions,#shops-body .tracker-store-block-actions,#shops-body .tracker-store-card-actions,#shops-body .tracker-history-actions,#shops-body .tracker-modal-footer,#shops-body .tracker-modal-footer-left,#shops-body .tracker-modal-footer-right,#shops-body .tracker-card-header,#shops-body .tracker-store-card-top,#shops-body .tracker-store-card-title{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+      #shops-body .tracker-card-header,#shops-body .tracker-store-card-top{justify-content:space-between;align-items:flex-start;}
       #shops-body .tracker-store-card-title{justify-content:flex-start;}
-      #shops-body .tracker-store-card-meta{display:flex;flex-wrap:wrap;gap:8px 12px;margin-top:12px;}
+      #shops-body .tracker-toolbar,#shops-body .tracker-nav{justify-content:space-between;padding:8px 12px 0;}
+      #shops-body .tracker-toolbar-group{min-width:0;}
+      #shops-body .tracker-toolbar-actions{margin-left:auto;}
+      #shops-body .tracker-nav{padding-top:6px;}
+      #shops-body .tracker-control{display:flex;flex-direction:column;gap:4px;min-width:150px;flex:1 1 150px;font-size:11px;color:var(--text2);font-weight:600;}
+      #shops-body .tracker-control input,#shops-body .tracker-control select,#shops-body .tracker-field input,#shops-body .tracker-field select,#shops-body .tracker-field textarea{width:100%;border:1px solid var(--border);outline:none;border-radius:10px;background:var(--surface);color:var(--text);padding:8px 10px;font:500 12px 'DM Sans', sans-serif;box-shadow:none;}
+      #shops-body .tracker-field input[type="color"]{min-height:38px;padding:4px;}
+      #shops-body .tracker-field textarea{resize:vertical;min-height:96px;}
+      #shops-body .tracker-btn,#shops-body .tracker-chip-btn,#shops-body .tracker-nav-btn{border:1px solid var(--border);outline:none;cursor:pointer;font:600 12px 'DM Sans', sans-serif;border-radius:10px;transition:background .14s ease,color .14s ease,border-color .14s ease;padding:8px 10px;}
+      #shops-body .tracker-btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+      #shops-body .tracker-btn-ghost,#shops-body .tracker-btn-subtle,#shops-body .tracker-chip-btn,#shops-body .tracker-nav-btn{background:var(--surface);color:var(--text);}
+      #shops-body .tracker-btn-danger,#shops-body .tracker-chip-btn.danger{background:var(--red-bg);border-color:var(--red-bg);color:var(--red-text);}
+      #shops-body .tracker-nav-btn.active{background:var(--accent-light);border-color:var(--accent-light);color:var(--accent);}
+      #shops-body .tracker-month-pill,#shops-body .tracker-inline-month{padding:7px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-weight:700;}
+      #shops-body .tracker-content{flex:1;min-width:0;overflow:auto;padding:8px 12px 12px;}
+      #shops-body .tracker-content > *{min-width:0;}
+      #shops-body .tracker-dashboard-grid,#shops-body .tracker-store-view-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-width:0;}
+      #shops-body .tracker-manage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;}
+      #shops-body .tracker-card,#shops-body .tracker-store-block,#shops-body .tracker-store-card{min-width:0;border-radius:14px;border:1px solid var(--border);background:var(--surface);box-shadow:none;}
+      #shops-body .tracker-card,#shops-body .tracker-store-card{padding:12px;}
+      #shops-body .tracker-card-span-2,#shops-body .tracker-card-span-3{grid-column:1 / -1;}
+      #shops-body .tracker-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:8px;margin-top:10px;}
+      #shops-body .tracker-kpi{padding:10px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);}
+      #shops-body .tracker-kpi-label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-weight:700;}
+      #shops-body .tracker-kpi-value{display:block;margin-top:5px;font-size:18px;line-height:1.1;color:var(--text);}
+      #shops-body .tracker-kpi-sub,#shops-body .tracker-ranking-body small,#shops-body .tracker-muted,#shops-body .tracker-store-meta,#shops-body .tracker-store-card-meta,#shops-body .tracker-day-card-top,#shops-body .tracker-preview-label{color:var(--text3);font-size:11px;}
+      #shops-body .tracker-tone-blue .tracker-kpi-value{color:var(--accent);}
+      #shops-body .tracker-tone-green .tracker-kpi-value{color:var(--green);}
+      #shops-body .tracker-tone-violet .tracker-kpi-value{color:var(--purple);}
+      #shops-body .tracker-tone-orange .tracker-kpi-value{color:var(--orange);}
+      #shops-body .tracker-tone-rose .tracker-kpi-value{color:#e11d48;}
+      #shops-body .tracker-tone-red .tracker-kpi-value{color:var(--red);}
+      #shops-body .tracker-chart-wrap{position:relative;min-height:160px;margin-top:10px;}
+      #shops-body .tracker-ranking-list,#shops-body .tracker-highlight-stack,#shops-body .tracker-day-feed,#shops-body .tracker-setting-list{margin-top:10px;display:flex;flex-direction:column;gap:8px;}
+      #shops-body .tracker-ranking-item,#shops-body .tracker-day-card{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:12px;cursor:pointer;color:var(--text);background:var(--surface2);}
+      #shops-body .tracker-day-feed{flex-direction:row;overflow:auto;padding-bottom:4px;}
+      #shops-body .tracker-day-card{min-width:132px;flex-direction:column;align-items:flex-start;}
+      #shops-body .tracker-day-card-main{font-size:16px;font-weight:700;color:var(--text);}
+      #shops-body .tracker-ranking-index{width:24px;height:24px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);font-weight:700;font-size:11px;}
+      #shops-body .tracker-ranking-color,#shops-body .tracker-store-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;background:var(--tracker-store-color,var(--accent));}
+      #shops-body .tracker-ranking-body{min-width:0;display:flex;flex-direction:column;gap:2px;text-align:left;}
+      #shops-body .tracker-highlight{padding:12px;border-radius:12px;border:1px solid var(--border);}
+      #shops-body .tracker-highlight-good{background:var(--green-bg);}
+      #shops-body .tracker-highlight-bad{background:var(--red-bg);}
+      #shops-body .tracker-month-layout{display:flex;flex-direction:column;gap:10px;}
+      #shops-body .tracker-store-block{overflow:hidden;}
+      #shops-body .tracker-store-block-header{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;padding:12px;border-bottom:1px solid var(--border);background:var(--surface);}
+      #shops-body .tracker-store-name-line{display:flex;align-items:center;gap:8px;}
+      #shops-body .tracker-store-name-line h3{margin:0;font-size:15px;color:var(--text);}
+      #shops-body .tracker-store-chip{display:inline-flex;padding:4px 8px;border-radius:999px;background:var(--surface2);color:var(--text2);font-size:10px;font-weight:700;border:1px solid var(--border);}
+      #shops-body .tracker-store-chip.muted{color:var(--text3);}
+      #shops-body .tracker-store-summary-metric{padding:6px 9px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:11px;font-weight:700;}
+      #shops-body .tracker-table-wrap,#shops-body .tracker-history-wrap{overflow:auto;max-width:100%;}
+      #shops-body .tracker-month-table,#shops-body .tracker-history-table{width:max-content;min-width:100%;border-collapse:separate;border-spacing:0;font-size:12px;}
+      #shops-body .tracker-month-table th,#shops-body .tracker-month-table td,#shops-body .tracker-history-table th,#shops-body .tracker-history-table td{padding:7px;border-bottom:1px solid var(--border);text-align:center;}
+      #shops-body .tracker-month-table thead th{position:sticky;top:0;z-index:3;background:var(--surface2);color:var(--text3);font-size:10px;text-transform:uppercase;}
+      #shops-body .tracker-month-table thead th strong{display:block;margin-top:2px;font-size:11px;color:var(--text);}
+      #shops-body .tracker-month-table .sticky-col{position:sticky;left:0;z-index:2;background:var(--surface2);text-align:left;min-width:120px;color:var(--text);}
+      #shops-body .tracker-month-table .sticky-col-head{z-index:4;}
+      #shops-body .tracker-month-table .summary-col{min-width:104px;font-weight:700;background:var(--surface2);color:var(--text);}
+      #shops-body .tracker-cell-btn{width:100%;min-height:30px;padding:5px 7px;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;}
+      #shops-body .tracker-cell-btn.is-empty{color:var(--text3);background:var(--surface2);}
+      #shops-body .tracker-mini-badge{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:999px;background:var(--accent-light);color:var(--accent);font-size:10px;font-weight:800;}
+      #shops-body .tracker-mini-badge.auto{color:var(--accent);}
+      #shops-body .tracker-store-hero-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:10px;}
+      #shops-body .tracker-setting-list div,#shops-body .tracker-store-card-metrics div{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);}
+      #shops-body .tracker-store-card-metrics{margin-top:10px;}
+      #shops-body .tracker-store-card-meta{display:flex;flex-wrap:wrap;gap:8px 10px;margin-top:10px;}
       #shops-body .tracker-history-table{width:100%;}
-      #shops-body .tracker-history-table thead th{text-align:left;color:#6b7280;font-size:11px;text-transform:uppercase;}
+      #shops-body .tracker-history-table thead th{text-align:left;color:var(--text3);font-size:10px;text-transform:uppercase;}
       #shops-body .tracker-history-table tbody td{text-align:left;}
       #shops-body .tracker-history-date{display:flex;flex-direction:column;gap:3px;}
-      #shops-body .tracker-empty-row{text-align:center !important;color:#8fa5cf;}
-      #shops-body .tracker-empty-state{min-height:260px;border-radius:16px;border:1px solid #e5e7eb;background:#fff;display:flex;align-items:center;justify-content:center;}
+      #shops-body .tracker-empty-row{text-align:center !important;color:var(--text3);}
+      #shops-body .tracker-empty-state{min-height:220px;border-radius:14px;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;}
       #shops-body .tracker-empty-orb{display:none;}
-      #shops-body .tracker-empty-content{max-width:560px;text-align:center;padding:24px;}
-      #shops-body .tracker-empty-kicker{display:inline-flex;margin-bottom:10px;padding:7px 10px;border-radius:999px;background:#f3f4f6;color:#6b7280;font-size:11px;font-weight:700;}
-      #shops-body .tracker-empty-content h2{margin:0;font-size:26px;color:#18212f;}
-      #shops-body .tracker-empty-content p{margin:12px 0 0;color:#6b7280;}
-      #shops-body .tracker-empty-actions{display:flex;justify-content:center;gap:10px;margin-top:18px;flex-wrap:wrap;}
-      #shops-body .tracker-modal-backdrop{position:fixed;inset:0;z-index:99998;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(15,23,42,.18);backdrop-filter:blur(4px);}
-      #shops-body .tracker-modal{width:min(620px,100%);border-radius:18px;border:1px solid #e5e7eb;background:#fff;color:#243041;box-shadow:0 16px 40px rgba(15,23,42,.12);}
-      #shops-body .tracker-modal-wide{width:min(820px,100%);}
-      #shops-body .tracker-modal-confirm{width:min(520px,100%);}
-      #shops-body .tracker-modal-header,#shops-body .tracker-modal-footer{padding:18px 18px 0;}
-      #shops-body .tracker-modal-body{padding:14px 18px 10px;}
-      #shops-body .tracker-modal-footer{justify-content:space-between;padding-bottom:18px;}
-      #shops-body .tracker-modal-close{border:none;width:34px;height:34px;border-radius:50%;background:#f3f4f6;color:#243041;cursor:pointer;}
-      #shops-body .tracker-form-grid{display:grid;grid-template-columns:1fr;gap:12px;}
+      #shops-body .tracker-empty-content{max-width:480px;text-align:center;padding:20px;}
+      #shops-body .tracker-empty-kicker{display:inline-flex;margin-bottom:8px;padding:6px 9px;border-radius:999px;background:var(--surface2);color:var(--text3);font-size:10px;font-weight:700;border:1px solid var(--border);}
+      #shops-body .tracker-empty-content h2{margin:0;font-size:22px;color:var(--text);}
+      #shops-body .tracker-empty-content p{margin:10px 0 0;color:var(--text2);}
+      #shops-body .tracker-empty-actions{display:flex;justify-content:center;gap:8px;margin-top:16px;flex-wrap:wrap;}
+      #shops-body .tracker-modal-backdrop{position:fixed;inset:0;z-index:99998;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.14);backdrop-filter:blur(3px);}
+      #shops-body .tracker-modal{width:min(620px,100%);border-radius:16px;border:1px solid var(--border);background:var(--surface);color:var(--text);box-shadow:var(--shadow);}
+      #shops-body .tracker-modal-wide{width:min(780px,100%);}
+      #shops-body .tracker-modal-confirm{width:min(480px,100%);}
+      #shops-body .tracker-modal-header,#shops-body .tracker-modal-footer{padding:16px 16px 0;}
+      #shops-body .tracker-modal-body{padding:12px 16px 8px;}
+      #shops-body .tracker-modal-footer{justify-content:space-between;padding-bottom:16px;}
+      #shops-body .tracker-modal-close{border:1px solid var(--border);width:32px;height:32px;border-radius:50%;background:var(--surface2);color:var(--text);cursor:pointer;}
+      #shops-body .tracker-form-grid{display:grid;grid-template-columns:1fr;gap:10px;}
       #shops-body .tracker-form-grid.two{grid-template-columns:repeat(2,minmax(0,1fr));}
-      #shops-body .tracker-field{display:flex;flex-direction:column;gap:6px;color:#6b7280;font-size:12px;font-weight:600;}
+      #shops-body .tracker-field{display:flex;flex-direction:column;gap:6px;color:var(--text2);font-size:12px;font-weight:600;}
       #shops-body .tracker-field-full{grid-column:1 / -1;}
       #shops-body .tracker-checkbox{justify-content:flex-end;}
-      #shops-body .tracker-checkbox input{width:20px;height:20px;padding:0;}
-      #shops-body .tracker-preview-box{margin-top:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;}
-      #shops-body .tracker-preview-chip{padding:12px;border-radius:12px;background:#f8fafc;box-shadow:inset 0 0 0 1px #e7edf4;color:#243041;}
-      #shops-body .tracker-confirm-copy{margin:0;color:#4b5563;line-height:1.7;}
-      @media (max-width:1180px){#shops-body .tracker-dashboard-grid,#shops-body .tracker-store-view-grid{grid-template-columns:1fr;}#shops-body .tracker-card-span-2,#shops-body .tracker-card-span-3{grid-column:auto;}}
-      @media (max-width:860px){#shops-body .tracker-hero,#shops-body .tracker-toolbar,#shops-body .tracker-nav,#shops-body .tracker-content{padding-left:12px;padding-right:12px;}#shops-body .tracker-form-grid.two{grid-template-columns:1fr;}#shops-body .tracker-month-table .sticky-col,#shops-body .tracker-month-table .summary-col{min-width:118px;}}
+      #shops-body .tracker-checkbox input{width:18px;height:18px;padding:0;}
+      #shops-body .tracker-preview-box{margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;}
+      #shops-body .tracker-preview-chip{padding:10px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);}
+      #shops-body .tracker-confirm-copy{margin:0;color:var(--text2);line-height:1.6;}
+      @container (max-width: 1180px){#shops-body .tracker-dashboard-grid,#shops-body .tracker-store-view-grid{grid-template-columns:1fr;}#shops-body .tracker-card-span-2,#shops-body .tracker-card-span-3{grid-column:auto;}}
+      @container (max-width: 900px){#shops-body .tracker-hero{flex-direction:column;align-items:stretch;}#shops-body .tracker-hero-actions{justify-content:space-between;}#shops-body .tracker-toolbar{padding-top:8px;}#shops-body .tracker-toolbar-group{width:100%;}#shops-body .tracker-toolbar-actions{margin-left:0;justify-content:flex-end;}#shops-body .tracker-nav{overflow:auto;flex-wrap:nowrap;padding-bottom:2px;}#shops-body .tracker-nav-btn{white-space:nowrap;flex:0 0 auto;}#shops-body .tracker-card,#shops-body .tracker-store-card{padding:10px;}#shops-body .tracker-chart-wrap{min-height:150px;}#shops-body .tracker-day-card{min-width:118px;}}
+      @container (max-width: 720px){#shops-body .tracker-kpi-grid,#shops-body .tracker-store-hero-grid,#shops-body .tracker-preview-box{grid-template-columns:repeat(2,minmax(0,1fr));}#shops-body .tracker-form-grid.two{grid-template-columns:1fr;}#shops-body .tracker-month-table .sticky-col,#shops-body .tracker-month-table .summary-col{min-width:98px;}#shops-body .tracker-month-pill{display:none;}}
+      @container (max-width: 560px){#shops-body .tracker-kpi-grid,#shops-body .tracker-store-hero-grid,#shops-body .tracker-preview-box{grid-template-columns:1fr;}#shops-body .tracker-content{padding:8px 10px 10px;}#shops-body .tracker-hero,#shops-body .tracker-toolbar,#shops-body .tracker-nav{padding-left:10px;padding-right:10px;}#shops-body .tracker-btn,#shops-body .tracker-chip-btn,#shops-body .tracker-nav-btn{padding:7px 8px;font-size:11px;}#shops-body .tracker-hero h1{font-size:16px;}#shops-body .tracker-hero-sub{font-size:10px;}}
     `;
   }
 
@@ -1628,12 +1654,14 @@
     const root = document.getElementById('shops-body');
     if(!root) return;
     const data = trackerData();
+    trackerInjectStyles();
     trackerEnsureWindow();
+    trackerClampWindowToViewport();
     root.className = '';
     root.style.padding = '0';
     root.style.overflow = 'hidden';
     root.style.display = 'block';
-    root.style.background = '#f3f4f6';
+    root.style.background = trackerReadCssVar('--surface2', '#f8f7f5');
     if(Array.isArray(window.ALL_APPS)){
       const shopsApp = window.ALL_APPS.find(app=>app.id === 'shops');
       if(shopsApp){
@@ -1691,6 +1719,10 @@
   window.trackerLoadDemoData = trackerLoadDemoData;
   window.trackerRefreshStatPreview = trackerStatPreview;
   window.fillShopStats = trackerFillWidget;
+  if(!trackerRuntime.boundResize){
+    window.addEventListener('resize', ()=>trackerClampWindowToViewport());
+    trackerRuntime.boundResize = true;
+  }
 
   trackerInjectStyles();
   trackerEnsureData();
