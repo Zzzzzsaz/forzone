@@ -1,57 +1,72 @@
-﻿(function(){
+(function(){
   if(window.__storeTrackerModuleLoaded) return;
   window.__storeTrackerModuleLoaded = true;
 
-  const TRACKER_STYLE_ID = 'store-tracker-styles';
-  const STORE_COLORS = ['#4f7ef8', '#22c55e', '#f97316', '#eab308', '#f43f5e', '#14b8a6', '#8b5cf6', '#06b6d4'];
+  const MODULE_VERSION = 2;
+  const STYLE_ID = 'shops-v2-styles';
+  const STORE_COLORS = ['#2d5be3', '#22c55e', '#f97316', '#8b5cf6', '#ef4444', '#06b6d4', '#eab308', '#14b8a6'];
   const SHARE_TYPE_LABELS = {
     headcount: 'Podzial na osoby',
-    percentage: 'Procent zysku',
+    percentage: 'Procent dochodu',
     fixed: 'Stala kwota'
   };
   const CALCULATION_MODE_LABELS = {
-    gross_to_net: 'Automatyczne netto z brutto',
+    gross_to_net: 'Netto liczone z brutto',
     manual_net: 'Netto wpisywane recznie'
   };
-  const trackerRuntime = {
-    charts: {}
+  const runtime = {
+    boundResize: false
   };
 
-  function trackerUid(prefix){
-    return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,8)}`;
+  function rootState(){
+    if(typeof window.S !== 'object' || !window.S) window.S = {};
+    return window.S;
   }
 
-  function trackerNowIso(){
+  function esc(value){
+    const input = value === null || value === undefined ? '' : String(value);
+    if(typeof window.escHtml === 'function') return window.escHtml(input);
+    return input
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function toastMsg(message, type, duration){
+    if(typeof window.toast === 'function') window.toast(message, type || 'info', duration || 2400);
+    else if(typeof window.notify === 'function') window.notify(message);
+  }
+
+  function uid(prefix){
+    return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  function nowIso(){
     return new Date().toISOString();
   }
 
-  function trackerLocalDate(date){
-    const value = date instanceof Date ? date : new Date(date || Date.now());
-    const year = value.getFullYear();
-    const month = String(value.getMonth() + 1).padStart(2, '0');
-    const day = String(value.getDate()).padStart(2, '0');
+  function localDate(value){
+    const date = value ? (value instanceof Date ? value : new Date(value)) : new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   }
 
-  function trackerMonthKey(value){
+  function monthKey(value){
     const date = value ? (value instanceof Date ? value : new Date(value)) : new Date();
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     return `${year}-${month}`;
   }
 
-  function trackerParseMonthKey(monthKey){
-    const match = String(monthKey || '').match(/^(\d{4})-(\d{2})$/);
-    if(!match){
-      const fallback = new Date();
-      return {
-        year: fallback.getFullYear(),
-        monthIndex: fallback.getMonth(),
-        daysInMonth: new Date(fallback.getFullYear(), fallback.getMonth() + 1, 0).getDate()
-      };
-    }
-    const year = Number(match[1]);
-    const monthIndex = Number(match[2]) - 1;
+  function parseMonthKey(key){
+    const match = String(key || '').match(/^(\d{4})-(\d{2})$/);
+    const base = match ? new Date(Number(match[1]), Number(match[2]) - 1, 1) : new Date();
+    const year = base.getFullYear();
+    const monthIndex = base.getMonth();
     return {
       year,
       monthIndex,
@@ -59,38 +74,34 @@
     };
   }
 
-  function trackerDateFromMonthDay(monthKey, day){
-    const meta = trackerParseMonthKey(monthKey);
+  function dateFromMonthDay(key, day){
+    const meta = parseMonthKey(key);
     const month = String(meta.monthIndex + 1).padStart(2, '0');
-    const dayPart = String(day).padStart(2, '0');
-    return `${meta.year}-${month}-${dayPart}`;
+    return `${meta.year}-${month}-${String(day).padStart(2, '0')}`;
   }
 
-  function trackerDayList(monthKey){
-    const meta = trackerParseMonthKey(monthKey);
-    return Array.from({length: meta.daysInMonth}, (_, index)=>trackerDateFromMonthDay(monthKey, index + 1));
+  function monthDays(key){
+    const meta = parseMonthKey(key);
+    return Array.from({length: meta.daysInMonth}, (_, index)=>dateFromMonthDay(key, index + 1));
   }
 
-  function trackerMonthLabel(monthKey){
-    const meta = trackerParseMonthKey(monthKey);
+  function isDateInMonth(date, key){
+    return String(date || '').slice(0, 7) === String(key || '');
+  }
+
+  function monthLabel(key){
+    const meta = parseMonthKey(key);
     return new Intl.DateTimeFormat('pl-PL', {month:'long', year:'numeric'})
       .format(new Date(meta.year, meta.monthIndex, 1))
       .replace(/^./, value=>value.toUpperCase());
   }
 
-  function trackerWeekdayShort(dateStr){
-    return new Intl.DateTimeFormat('pl-PL', {weekday:'short'})
-      .format(new Date(`${dateStr}T12:00:00`))
-      .replace('.', '')
-      .toUpperCase();
-  }
-
-  function trackerDateLabel(dateStr){
+  function shortDateLabel(dateStr){
     return new Intl.DateTimeFormat('pl-PL', {day:'numeric', month:'short'})
       .format(new Date(`${dateStr}T12:00:00`));
   }
 
-  function trackerFullDateLabel(dateStr){
+  function fullDateLabel(dateStr){
     return new Intl.DateTimeFormat('pl-PL', {
       weekday:'long',
       day:'numeric',
@@ -99,1634 +110,1917 @@
     }).format(new Date(`${dateStr}T12:00:00`));
   }
 
-  function trackerNum(value){
+  function weekdayShort(dateStr){
+    return new Intl.DateTimeFormat('pl-PL', {weekday:'short'})
+      .format(new Date(`${dateStr}T12:00:00`))
+      .replace('.', '')
+      .replace(/^./, value=>value.toUpperCase());
+  }
+
+  function numberValue(value){
     if(typeof value === 'number') return Number.isFinite(value) ? value : 0;
     const normalized = String(value ?? '').trim().replace(/\s+/g, '').replace(',', '.');
     if(!normalized) return 0;
-    const number = Number(normalized);
-    return Number.isFinite(number) ? number : 0;
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : 0;
   }
 
-  function trackerMaybeNum(value){
+  function maybeNumber(value){
     const normalized = String(value ?? '').trim().replace(/\s+/g, '').replace(',', '.');
     if(!normalized) return null;
-    const number = Number(normalized);
-    return Number.isFinite(number) ? number : null;
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
   }
 
-  function trackerFmtPLN(value){
+  function nonNegative(value){
+    return Math.max(0, numberValue(value));
+  }
+
+  function formatPLN(value){
     return new Intl.NumberFormat('pl-PL', {
       style:'currency',
       currency:'PLN',
       minimumFractionDigits:0,
       maximumFractionDigits:2
-    }).format(trackerNum(value));
+    }).format(numberValue(value));
   }
 
-  function trackerFmtCompactPLN(value){
-    const amount = trackerNum(value);
+  function formatCompactPLN(value){
+    const amount = numberValue(value);
     const abs = Math.abs(amount);
     if(abs >= 1000000) return `${(amount / 1000000).toLocaleString('pl-PL', {maximumFractionDigits:1})} mln zl`;
     if(abs >= 1000) return `${(amount / 1000).toLocaleString('pl-PL', {maximumFractionDigits:1})} tys. zl`;
-    return trackerFmtPLN(amount);
+    return formatPLN(amount);
   }
 
-  function trackerFmtPct(value){
+  function formatPct(value){
     if(value === null || value === undefined || Number.isNaN(Number(value))) return '-';
-    return `${trackerNum(value).toLocaleString('pl-PL', {maximumFractionDigits:1})}%`;
+    return `${numberValue(value).toLocaleString('pl-PL', {maximumFractionDigits:1})}%`;
   }
 
-  function trackerColor(index){
-    return STORE_COLORS[index % STORE_COLORS.length];
+  function formatInputNumber(value){
+    if(value === null || value === undefined || value === '') return '';
+    const parsed = Number(value);
+    if(!Number.isFinite(parsed)) return '';
+    return String(parsed);
   }
 
-  function trackerReadCssVar(name, fallback){
+  function cssVar(name, fallback){
     const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     return value || fallback;
   }
 
-  function trackerDefaultUi(){
+  function defaultUi(){
     return {
-      view: 'dashboard',
-      monthKey: trackerMonthKey(new Date()),
-      storeFilter: 'all',
-      activeStoreId: null,
+      view: 'overview',
+      monthKey: monthKey(new Date()),
+      selectedDate: localDate(new Date()),
+      summaryMode: 'month',
+      companyId: null,
+      storeId: null,
       modal: null
     };
   }
 
-  function trackerNormalizeStore(store, index){
-    const now = trackerNowIso();
+  function normalizeCompany(company, index){
+    const now = nowIso();
     return {
-      id: store.id || trackerUid('store'),
-      name: String(store.name || 'Nowy sklep').trim(),
-      is_active: store.is_active !== false,
-      color: store.color || trackerColor(index || 0),
-      vat_rate: Math.max(0, Math.min(99, trackerNum(store.vat_rate || 23))),
-      profit_share_type: ['headcount', 'percentage', 'fixed'].includes(store.profit_share_type) ? store.profit_share_type : 'headcount',
-      profit_share_value: trackerNum(store.profit_share_value || 0),
-      headcount: Math.max(1, parseInt(store.headcount || 1, 10)),
-      calculation_mode: ['gross_to_net', 'manual_net'].includes(store.calculation_mode) ? store.calculation_mode : 'gross_to_net',
-      created_at: store.created_at || now,
-      updated_at: store.updated_at || now
+      id: company?.id ? String(company.id) : uid(`company_${index || 0}`),
+      name: String(company?.name || `Firma ${index + 1 || ''}`).trim() || `Firma ${index + 1 || ''}`,
+      is_active: company?.is_active !== false,
+      created_at: company?.created_at || now,
+      updated_at: company?.updated_at || now
     };
   }
 
-  function trackerNormalizeStat(stat){
-    if(!stat || !stat.store_id || !stat.date) return null;
-    const now = trackerNowIso();
+  function normalizeStore(store, index, fallbackCompanyId){
+    const now = nowIso();
+    const color = store?.color || STORE_COLORS[index % STORE_COLORS.length];
     return {
-      id: stat.id || trackerUid('stat'),
-      store_id: stat.store_id,
+      id: store?.id ? String(store.id) : uid(`store_${index || 0}`),
+      company_id: store?.company_id ? String(store.company_id) : String(fallbackCompanyId || ''),
+      name: String(store?.name || `Sklep ${index + 1 || ''}`).trim() || `Sklep ${index + 1 || ''}`,
+      is_active: store?.is_active !== false,
+      color,
+      vat_rate: Math.max(0, Math.min(99, numberValue(store?.vat_rate ?? 23))),
+      headcount: Math.max(1, parseInt(store?.headcount ?? 1, 10) || 1),
+      profit_share_type: ['headcount', 'percentage', 'fixed'].includes(store?.profit_share_type) ? store.profit_share_type : 'headcount',
+      profit_share_value: numberValue(store?.profit_share_value || 0),
+      calculation_mode: ['gross_to_net', 'manual_net'].includes(store?.calculation_mode) ? store.calculation_mode : 'gross_to_net',
+      created_at: store?.created_at || now,
+      updated_at: store?.updated_at || now
+    };
+  }
+
+  function normalizeStat(stat){
+    if(!stat || !stat.store_id || !stat.date) return null;
+    const now = nowIso();
+    return {
+      id: stat.id ? String(stat.id) : uid('stat'),
+      store_id: String(stat.store_id),
       date: String(stat.date).slice(0, 10),
-      revenue_gross: trackerNum(stat.revenue_gross),
-      revenue_net: stat.revenue_net === null || stat.revenue_net === undefined || stat.revenue_net === '' ? null : trackerNum(stat.revenue_net),
-      ad_cost_tiktok: trackerNum(stat.ad_cost_tiktok),
-      refunds: trackerNum(stat.refunds),
-      extra_costs: trackerNum(stat.extra_costs),
+      revenue_gross: nonNegative(stat.revenue_gross),
+      revenue_net: stat.revenue_net === null || stat.revenue_net === undefined || stat.revenue_net === '' ? null : nonNegative(stat.revenue_net),
+      ad_cost_tiktok: nonNegative(stat.ad_cost_tiktok),
+      refunds: nonNegative(stat.refunds),
+      extra_costs: nonNegative(stat.extra_costs),
       notes: String(stat.notes || '').trim(),
       created_at: stat.created_at || now,
       updated_at: stat.updated_at || now
     };
   }
 
-  function trackerEnsureData(){
-    if(!S.storeTracker || typeof S.storeTracker !== 'object') S.storeTracker = {};
-    const data = S.storeTracker;
+  function sumAmounts(items, field){
+    return (items || []).reduce((total, item)=>total + numberValue(field ? item?.[field] : item), 0);
+  }
+
+  function migrateLegacyData(data){
+    if(data.meta.migratedToCompanies) return;
+
+    if(Array.isArray(data.companies) && data.companies.length){
+      data.meta.migratedToCompanies = true;
+      return;
+    }
+
+    if(Array.isArray(data.stores) && data.stores.length){
+      const companyId = uid('company_import');
+      data.companies = [normalizeCompany({id:companyId, name:'Zaimportowane', is_active:true}, 0)];
+      data.stores = data.stores.map((store, index)=>normalizeStore({
+        ...store,
+        company_id: store.company_id || companyId
+      }, index, companyId));
+      data.meta.migratedToCompanies = true;
+      return;
+    }
+
+    const state = rootState();
+    if(Array.isArray(state.shops) && state.shops.length){
+      const companyId = uid('company_legacy');
+      data.companies = [normalizeCompany({id:companyId, name:'Zaimportowane', is_active:true}, 0)];
+      const importedStats = [];
+      data.stores = state.shops.map((shop, index)=>{
+        const storeId = String(shop.id || uid('legacy_store'));
+        (shop.entries || []).forEach(entry=>{
+          importedStats.push(normalizeStat({
+            id: entry.id ? `legacy_${shop.id}_${entry.id}` : uid('legacy_stat'),
+            store_id: storeId,
+            date: String(entry.date || '').slice(0, 10),
+            revenue_gross: Array.isArray(entry.revenues) ? sumAmounts(entry.revenues, 'amount') : numberValue(entry.revenue),
+            revenue_net: null,
+            ad_cost_tiktok: Array.isArray(entry.adEntries) ? sumAmounts(entry.adEntries, 'amount') : 0,
+            refunds: 0,
+            extra_costs: 0,
+            notes: ''
+          }));
+        });
+        return normalizeStore({
+          id: storeId,
+          company_id: companyId,
+          name: shop.name,
+          is_active: shop.status !== 'inactive',
+          vat_rate: shop.vatRate ?? 23,
+          headcount: shop.people ?? 1,
+          profit_share_type: 'headcount',
+          profit_share_value: 0,
+          calculation_mode: 'gross_to_net',
+          color: STORE_COLORS[index % STORE_COLORS.length]
+        }, index, companyId);
+      });
+      data.dailyStats = importedStats.filter(Boolean);
+    }
+
+    data.meta.migratedToCompanies = true;
+  }
+
+  function seedDemoData(data){
+    if(data.meta.seeded) return;
+    if(data.companies.length || data.stores.length || data.dailyStats.length) return;
+
+    const firstCompanyId = uid('company');
+    const secondCompanyId = uid('company');
+    const companies = [
+      normalizeCompany({id:firstCompanyId, name:'Forzone Commerce', is_active:true}, 0),
+      normalizeCompany({id:secondCompanyId, name:'Nova Brands', is_active:true}, 1)
+    ];
+    const stores = [
+      normalizeStore({id:uid('store'), company_id:firstCompanyId, name:'FashionDrop PL', vat_rate:23, headcount:2, profit_share_type:'headcount', profit_share_value:0, calculation_mode:'gross_to_net', color:'#2d5be3'}, 0, firstCompanyId),
+      normalizeStore({id:uid('store'), company_id:firstCompanyId, name:'TechGear EU', vat_rate:23, headcount:3, profit_share_type:'headcount', profit_share_value:0, calculation_mode:'gross_to_net', color:'#22c55e'}, 1, firstCompanyId),
+      normalizeStore({id:uid('store'), company_id:secondCompanyId, name:'GlowSkin Studio', vat_rate:23, headcount:2, profit_share_type:'percentage', profit_share_value:35, calculation_mode:'manual_net', color:'#f97316'}, 2, secondCompanyId),
+      normalizeStore({id:uid('store'), company_id:secondCompanyId, name:'HomeCraft Lab', vat_rate:8, headcount:1, profit_share_type:'fixed', profit_share_value:850, calculation_mode:'gross_to_net', color:'#8b5cf6'}, 3, secondCompanyId)
+    ];
+
+    const currentMonth = monthKey(new Date());
+    const stats = [
+      {store_id:stores[0].id, date:dateFromMonthDay(currentMonth, 2), revenue_gross:15400, revenue_net:null, ad_cost_tiktok:2600, refunds:340, extra_costs:180, notes:'Wyprzedaz weekendowa'},
+      {store_id:stores[0].id, date:dateFromMonthDay(currentMonth, 5), revenue_gross:18220, revenue_net:null, ad_cost_tiktok:3180, refunds:520, extra_costs:240, notes:'Nowe kreacje UGC'},
+      {store_id:stores[0].id, date:dateFromMonthDay(currentMonth, 12), revenue_gross:16780, revenue_net:null, ad_cost_tiktok:2950, refunds:410, extra_costs:160, notes:''},
+      {store_id:stores[1].id, date:dateFromMonthDay(currentMonth, 3), revenue_gross:12340, revenue_net:null, ad_cost_tiktok:2140, refunds:210, extra_costs:120, notes:'Start nowej kampanii'},
+      {store_id:stores[1].id, date:dateFromMonthDay(currentMonth, 9), revenue_gross:14180, revenue_net:null, ad_cost_tiktok:2480, refunds:280, extra_costs:190, notes:''},
+      {store_id:stores[1].id, date:dateFromMonthDay(currentMonth, 15), revenue_gross:13260, revenue_net:null, ad_cost_tiktok:2210, refunds:320, extra_costs:140, notes:'Dobra konwersja z Tiktoka'},
+      {store_id:stores[2].id, date:dateFromMonthDay(currentMonth, 4), revenue_gross:9800, revenue_net:7967, ad_cost_tiktok:1690, refunds:120, extra_costs:80, notes:'Manualne netto z ERP'},
+      {store_id:stores[2].id, date:dateFromMonthDay(currentMonth, 11), revenue_gross:11750, revenue_net:9552, ad_cost_tiktok:1910, refunds:180, extra_costs:130, notes:''},
+      {store_id:stores[3].id, date:dateFromMonthDay(currentMonth, 6), revenue_gross:8340, revenue_net:null, ad_cost_tiktok:980, refunds:60, extra_costs:110, notes:'Niski koszt zwrotow'},
+      {store_id:stores[3].id, date:dateFromMonthDay(currentMonth, 13), revenue_gross:9050, revenue_net:null, ad_cost_tiktok:1140, refunds:90, extra_costs:140, notes:'Nowa oferta pakietowa'}
+    ].map((stat, index)=>normalizeStat({id:`seed_${index + 1}`, ...stat}));
+
+    data.companies = companies;
+    data.stores = stores;
+    data.dailyStats = stats;
+    data.meta.seeded = true;
+  }
+
+  function ensureData(){
+    const state = rootState();
+    if(!state.storeTracker || typeof state.storeTracker !== 'object') state.storeTracker = {};
+    const data = state.storeTracker;
+    if(!Array.isArray(data.companies)) data.companies = [];
     if(!Array.isArray(data.stores)) data.stores = [];
     if(!Array.isArray(data.dailyStats)) data.dailyStats = [];
     if(!data.ui || typeof data.ui !== 'object') data.ui = {};
     if(!data.meta || typeof data.meta !== 'object') data.meta = {};
-    data.version = 1;
+    data.version = MODULE_VERSION;
+    if(typeof data.meta.migratedToCompanies !== 'boolean') data.meta.migratedToCompanies = false;
+    if(typeof data.meta.seeded !== 'boolean') data.meta.seeded = false;
 
-    const defaults = trackerDefaultUi();
+    const defaults = defaultUi();
     Object.keys(defaults).forEach(key=>{
       if(data.ui[key] === undefined || data.ui[key] === null || data.ui[key] === '') data.ui[key] = defaults[key];
     });
-    if(typeof data.meta.migratedLegacy !== 'boolean') data.meta.migratedLegacy = false;
-    if(typeof data.meta.seeded !== 'boolean') data.meta.seeded = false;
 
-    data.stores = data.stores.map((store, index)=>trackerNormalizeStore(store, index));
-    data.dailyStats = data.dailyStats.map(trackerNormalizeStat).filter(Boolean);
+    migrateLegacyData(data);
+    seedDemoData(data);
 
-    trackerMigrateLegacyShops();
+    data.companies = data.companies.map((company, index)=>normalizeCompany(company, index));
+    const companyIds = new Set(data.companies.map(company=>company.id));
+    const fallbackCompanyId = data.companies[0]?.id || null;
+    data.stores = data.stores
+      .map((store, index)=>normalizeStore({
+        ...store,
+        company_id: companyIds.has(String(store.company_id || '')) ? String(store.company_id) : fallbackCompanyId
+      }, index, fallbackCompanyId))
+      .filter(store=>store.company_id);
+    const storeIds = new Set(data.stores.map(store=>store.id));
+    data.dailyStats = data.dailyStats
+      .map(normalizeStat)
+      .filter(Boolean)
+      .filter(stat=>storeIds.has(stat.store_id))
+      .sort((a, b)=>a.date.localeCompare(b.date));
 
-    data.stores = data.stores.map((store, index)=>trackerNormalizeStore(store, index));
-    data.dailyStats = data.dailyStats.map(trackerNormalizeStat).filter(Boolean);
-    data.dailyStats.sort((a, b)=>a.date.localeCompare(b.date));
-
-    if(!data.ui.activeStoreId && data.stores.length) data.ui.activeStoreId = data.stores[0].id;
-    if(data.ui.activeStoreId && !data.stores.some(store=>store.id === data.ui.activeStoreId)) data.ui.activeStoreId = data.stores[0]?.id || null;
-    if(data.ui.storeFilter !== 'all' && !data.stores.some(store=>store.id === data.ui.storeFilter)) data.ui.storeFilter = 'all';
-
-    trackerSyncLegacyMirror();
+    if(!data.ui.companyId || !data.companies.some(company=>company.id === data.ui.companyId)){
+      data.ui.companyId = data.companies[0]?.id || null;
+    }
+    if(!data.ui.storeId || !data.stores.some(store=>store.id === data.ui.storeId)){
+      data.ui.storeId = data.stores.find(store=>store.company_id === data.ui.companyId)?.id || data.stores[0]?.id || null;
+    }
+    if(data.ui.view === 'company' && !data.ui.companyId) data.ui.view = 'overview';
+    if(data.ui.view === 'store' && !data.ui.storeId) data.ui.view = data.ui.companyId ? 'company' : 'overview';
+    if(!isDateInMonth(data.ui.selectedDate, data.ui.monthKey)){
+      const today = localDate(new Date());
+      data.ui.selectedDate = isDateInMonth(today, data.ui.monthKey) ? today : dateFromMonthDay(data.ui.monthKey, 1);
+    }
+    syncLegacyMirror(data);
     return data;
   }
 
-  function trackerMigrateLegacyShops(){
-    const data = S.storeTracker;
-    if(data.meta.migratedLegacy) return;
-
-    const legacyShops = Array.isArray(S.shops) ? S.shops : [];
-    if(!legacyShops.length){
-      data.meta.migratedLegacy = true;
-      return;
-    }
-
-    const existingNames = new Set((data.stores || []).map(store=>String(store.name || '').trim().toLowerCase()));
-    legacyShops.forEach((shop, index)=>{
-      const normalizedName = String(shop.name || '').trim();
-      if(!normalizedName || existingNames.has(normalizedName.toLowerCase())) return;
-
-      const storeId = `legacy_${shop.id || trackerUid('store')}`;
-      data.stores.push({
-        id: storeId,
-        name: normalizedName,
-        is_active: shop.status !== 'archived',
-        color: trackerColor(index),
-        vat_rate: trackerNum(shop.vatRate || 23),
-        profit_share_type: 'headcount',
-        profit_share_value: 0,
-        headcount: Math.max(1, parseInt(shop.people || 1, 10)),
-        calculation_mode: 'gross_to_net',
-        created_at: trackerNowIso(),
-        updated_at: trackerNowIso()
+  function syncLegacyMirror(data){
+    const companiesById = new Map((data.companies || []).map(company=>[company.id, company]));
+    const statsByStore = new Map();
+    (data.dailyStats || []).forEach(stat=>{
+      const items = statsByStore.get(stat.store_id) || [];
+      items.push({
+        id: stat.id,
+        date: stat.date,
+        revenue_gross: nonNegative(stat.revenue_gross),
+        ad_cost_tiktok: nonNegative(stat.ad_cost_tiktok)
       });
-
-      (shop.entries || []).forEach(entry=>{
-        if(!entry || !entry.date) return;
-        const revenues = Array.isArray(entry.revenues) ? entry.revenues : [];
-        const adEntries = Array.isArray(entry.adEntries) ? entry.adEntries : [];
-        const gross = revenues.reduce((sum, item)=>sum + trackerNum(item.amount), 0);
-        const allAds = adEntries.reduce((sum, item)=>sum + trackerNum(item.amount), 0);
-        const tiktokAds = adEntries.filter(item=>item.platformId === 'tiktok').reduce((sum, item)=>sum + trackerNum(item.amount), 0);
-        const notes = [];
-        if(allAds && !tiktokAds) notes.push('Zmigrowano z legacy jako laczny koszt reklam');
-        if(entry.notes) notes.push(entry.notes);
-        data.dailyStats.push({
-          id: trackerUid('stat'),
-          store_id: storeId,
-          date: String(entry.date).slice(0, 10),
-          revenue_gross: gross,
-          revenue_net: null,
-          ad_cost_tiktok: tiktokAds || allAds,
-          refunds: 0,
-          extra_costs: 0,
-          notes: notes.join(' | '),
-          created_at: trackerNowIso(),
-          updated_at: trackerNowIso()
-        });
-      });
-
-      existingNames.add(normalizedName.toLowerCase());
+      statsByStore.set(stat.store_id, items);
     });
-
-    data.meta.migratedLegacy = true;
+    rootState().shops = (data.stores || []).map(store=>{
+      const company = companiesById.get(store.company_id);
+      const entries = (statsByStore.get(store.id) || []).map(item=>({
+        id: item.id,
+        date: item.date,
+        revenues: item.revenue_gross > 0 ? [{id:`${item.id}_gross`, amount:item.revenue_gross}] : [],
+        adEntries: item.ad_cost_tiktok > 0 ? [{id:`${item.id}_ads`, amount:item.ad_cost_tiktok}] : []
+      }));
+      return {
+        id: store.id,
+        name: store.name,
+        platform: company ? company.name : 'Firma',
+        notes: '',
+        adsOn: store.is_active,
+        campaignOk: true,
+        status: store.is_active ? 'active' : 'inactive',
+        vatRate: store.vat_rate,
+        people: store.headcount,
+        entries
+      };
+    });
   }
 
-  function trackerSyncLegacyMirror(){
-    const data = S.storeTracker;
-    if(!data) return;
-    S.shops = (data.stores || []).map(store=>({
-      id: store.id,
-      name: store.name,
-      platform: 'Profit Tracker',
-      notes: '',
-      adsOn: store.is_active,
-      campaignOk: true,
-      status: store.is_active ? 'active' : 'muted',
-      entries: (data.dailyStats || [])
-        .filter(stat=>stat.store_id === store.id)
-        .map(stat=>({
-          id: stat.id,
-          date: stat.date,
-          revenues: stat.revenue_gross ? [{id:`${stat.id}_rev`, amount: trackerNum(stat.revenue_gross)}] : [],
-          adEntries: stat.ad_cost_tiktok ? [{id:`${stat.id}_ads`, platformId:'tiktok', amount: trackerNum(stat.ad_cost_tiktok)}] : [],
-          refunds: trackerNum(stat.refunds),
-          extraCosts: trackerNum(stat.extra_costs)
-        })),
-      adPlatforms: [{id:'tiktok', name:'TikTok Ads', enabled:true, color:'#010101'}],
-      vatRate: store.vat_rate,
-      people: store.headcount,
-      apiKey: ''
-    }));
+  function persist(message, type){
+    const data = ensureData();
+    syncLegacyMirror(data);
+    if(typeof window.saveS === 'function') window.saveS();
+    if(message) toastMsg(message, type || 'success', 2200);
   }
 
-  function trackerData(){
-    return trackerEnsureData();
+  function getCompany(companyId){
+    return ensureData().companies.find(company=>company.id === String(companyId)) || null;
   }
 
-  function trackerGetAllStores(){
-    return trackerData().stores
-      .slice()
-      .sort((a, b)=>(Number(b.is_active) - Number(a.is_active)) || a.name.localeCompare(b.name, 'pl'));
+  function getStore(storeId){
+    return ensureData().stores.find(store=>store.id === String(storeId)) || null;
   }
 
-  function trackerGetStore(storeId){
-    return trackerData().stores.find(store=>store.id === storeId) || null;
+  function getStoreStat(storeId, date){
+    return ensureData().dailyStats.find(stat=>stat.store_id === String(storeId) && stat.date === String(date)) || null;
   }
 
-  function trackerGetFilteredStores(includeInactive){
-    const data = trackerData();
-    let stores = trackerGetAllStores();
-    if(data.ui.storeFilter !== 'all') stores = stores.filter(store=>store.id === data.ui.storeFilter);
-    else if(!includeInactive) stores = stores.filter(store=>store.is_active);
-    return stores;
+  function getStoresForCompany(companyId, includeInactive){
+    return ensureData().stores
+      .filter(store=>store.company_id === String(companyId))
+      .filter(store=>includeInactive ? true : store.is_active)
+      .sort((a, b)=>a.name.localeCompare(b.name, 'pl'));
   }
 
-  function trackerGetStatsForMonth(monthKey, storeIds){
-    const ids = Array.isArray(storeIds) ? new Set(storeIds) : null;
-    return trackerData().dailyStats
-      .filter(stat=>stat.date.startsWith(`${monthKey}-`) && (!ids || ids.has(stat.store_id)))
-      .sort((a, b)=>a.date.localeCompare(b.date));
+  function getStatsForStore(storeId){
+    return ensureData().dailyStats.filter(stat=>stat.store_id === String(storeId));
   }
 
-  function trackerGetStat(storeId, date){
-    return trackerData().dailyStats.find(stat=>stat.store_id === storeId && stat.date === date) || null;
+  function resolveRevenueNet(store, stat){
+    const manual = maybeNumber(stat.revenue_net);
+    if(store.calculation_mode === 'manual_net') return manual ?? 0;
+    return manual ?? (nonNegative(stat.revenue_gross) / (1 + store.vat_rate / 100));
   }
 
-  function trackerComputeNet(store, stat){
-    if(stat.revenue_net !== null && stat.revenue_net !== undefined) return trackerNum(stat.revenue_net);
-    if(store.calculation_mode === 'gross_to_net'){
-      const divider = 1 + (trackerNum(store.vat_rate) / 100);
-      return divider > 0 ? trackerNum(stat.revenue_gross) / divider : trackerNum(stat.revenue_gross);
-    }
-    return 0;
+  function calculatePerHead(store, income){
+    if(store.profit_share_type === 'percentage') return income * (numberValue(store.profit_share_value) / 100);
+    if(store.profit_share_type === 'fixed') return numberValue(store.profit_share_value);
+    return income / Math.max(1, store.headcount || 1);
   }
 
-  function trackerComputePerHead(store, income){
-    const type = store.profit_share_type || 'headcount';
-    const shareValue = trackerNum(store.profit_share_value);
-    if(type === 'percentage') return income * (shareValue / 100);
-    if(type === 'fixed') return shareValue;
-    return income / Math.max(1, parseInt(store.headcount || 1, 10));
-  }
-
-  function trackerComputeMonthlyPerHead(store, income, statCount){
-    const type = store.profit_share_type || 'headcount';
-    const shareValue = trackerNum(store.profit_share_value);
-    if(type === 'percentage') return income * (shareValue / 100);
-    if(type === 'fixed') return statCount > 0 ? shareValue * statCount : 0;
-    return income / Math.max(1, parseInt(store.headcount || 1, 10));
-  }
-
-  function trackerComputeStat(store, stat){
-    const revenueGross = trackerNum(stat.revenue_gross);
-    const revenueNet = trackerComputeNet(store, stat);
-    const adCost = trackerNum(stat.ad_cost_tiktok);
-    const refunds = trackerNum(stat.refunds);
-    const extraCosts = trackerNum(stat.extra_costs);
-    const income = revenueNet - adCost - refunds - extraCosts;
+  function computeStat(store, stat){
+    const revenueGross = nonNegative(stat.revenue_gross);
+    const revenueNetResolved = Math.max(0, resolveRevenueNet(store, stat));
+    const adCostTiktok = nonNegative(stat.ad_cost_tiktok);
+    const refunds = nonNegative(stat.refunds);
+    const extraCosts = nonNegative(stat.extra_costs);
+    const income = revenueNetResolved - adCostTiktok - refunds - extraCosts;
+    const perHead = calculatePerHead(store, income);
+    const adPct = revenueGross > 0 ? (adCostTiktok / revenueGross) * 100 : null;
+    const hasManualNet = maybeNumber(stat.revenue_net) !== null;
+    const hasAnyData = revenueGross > 0 || revenueNetResolved > 0 || adCostTiktok > 0 || refunds > 0 || extraCosts > 0 || !!String(stat.notes || '').trim();
     return {
       ...stat,
       revenue_gross: revenueGross,
-      revenue_net_resolved: revenueNet,
-      ad_cost_tiktok: adCost,
+      revenue_net_resolved: revenueNetResolved,
+      ad_cost_tiktok: adCostTiktok,
       refunds,
       extra_costs: extraCosts,
       income,
-      per_head: trackerComputePerHead(store, income),
-      ad_pct: revenueGross > 0 ? (adCost / revenueGross) * 100 : 0,
-      has_manual_net: stat.revenue_net !== null && stat.revenue_net !== undefined
+      per_head: perHead,
+      ad_pct: adPct,
+      has_manual_net: hasManualNet,
+      has_any_data: hasAnyData
     };
   }
 
-  function trackerStoreSummary(store, monthKey){
-    const stats = trackerGetStatsForMonth(monthKey, [store.id]).map(stat=>trackerComputeStat(store, stat));
-    const summary = {
+  function statsForStoreInMonth(storeId, key){
+    const store = getStore(storeId);
+    if(!store) return [];
+    return getStatsForStore(storeId)
+      .filter(stat=>isDateInMonth(stat.date, key))
+      .map(stat=>computeStat(store, stat))
+      .sort((a, b)=>a.date.localeCompare(b.date));
+  }
+
+  function statsForStoreInDay(storeId, date){
+    const store = getStore(storeId);
+    const stat = getStoreStat(storeId, date);
+    if(!store || !stat) return [];
+    return [computeStat(store, stat)];
+  }
+
+  function summarizeStore(store, key, mode, selectedDate){
+    const stats = mode === 'day' ? statsForStoreInDay(store.id, selectedDate) : statsForStoreInMonth(store.id, key);
+    const gross = sumAmounts(stats, 'revenue_gross');
+    const net = sumAmounts(stats, 'revenue_net_resolved');
+    const ads = sumAmounts(stats, 'ad_cost_tiktok');
+    const refunds = sumAmounts(stats, 'refunds');
+    const extra = sumAmounts(stats, 'extra_costs');
+    const income = sumAmounts(stats, 'income');
+    return {
       store,
       stats,
-      gross: 0,
-      net: 0,
-      ads: 0,
-      refunds: 0,
-      extra: 0,
-      income: 0,
-      perHead: 0,
-      adPct: 0,
-      daysWithData: stats.length,
-      bestDay: null,
-      worstDay: null
+      gross,
+      net,
+      ads,
+      refunds,
+      extra,
+      income,
+      perHead: calculatePerHead(store, income),
+      adPct: gross > 0 ? (ads / gross) * 100 : null,
+      filledDays: stats.filter(stat=>stat.has_any_data).length
     };
-
-    stats.forEach(stat=>{
-      summary.gross += stat.revenue_gross;
-      summary.net += stat.revenue_net_resolved;
-      summary.ads += stat.ad_cost_tiktok;
-      summary.refunds += stat.refunds;
-      summary.extra += stat.extra_costs;
-      summary.income += stat.income;
-      if(!summary.bestDay || stat.income > summary.bestDay.income) summary.bestDay = stat;
-      if(!summary.worstDay || stat.income < summary.worstDay.income) summary.worstDay = stat;
-    });
-
-    summary.perHead = trackerComputeMonthlyPerHead(store, summary.income, summary.daysWithData);
-    summary.adPct = summary.gross > 0 ? (summary.ads / summary.gross) * 100 : 0;
-    return summary;
   }
 
-  function trackerRanking(monthKey, storeIds){
-    const targetIds = Array.isArray(storeIds) ? new Set(storeIds) : null;
-    return trackerGetAllStores()
-      .filter(store=>!targetIds || targetIds.has(store.id))
-      .map(store=>trackerStoreSummary(store, monthKey))
-      .filter(summary=>summary.daysWithData > 0 || targetIds)
+  function aggregateSummaries(summaries){
+    const gross = sumAmounts(summaries, 'gross');
+    const net = sumAmounts(summaries, 'net');
+    const ads = sumAmounts(summaries, 'ads');
+    const refunds = sumAmounts(summaries, 'refunds');
+    const extra = sumAmounts(summaries, 'extra');
+    const income = sumAmounts(summaries, 'income');
+    const perHead = sumAmounts(summaries, 'perHead');
+    const ranking = summaries
+      .filter(summary=>summary.gross > 0 || summary.income !== 0 || summary.ads > 0 || summary.refunds > 0 || summary.extra > 0)
       .sort((a, b)=>b.income - a.income);
-  }
-
-  function trackerGlobalSummary(monthKey, storeIds){
-    const ids = Array.isArray(storeIds) ? storeIds : trackerGetFilteredStores(false).map(store=>store.id);
-    const ranking = trackerRanking(monthKey, ids);
-    const summary = {
-      gross: 0,
-      net: 0,
-      ads: 0,
-      refunds: 0,
-      extra: 0,
-      income: 0,
-      perHead: 0,
-      adPct: 0,
-      storeCount: ids.length,
-      bestStore: ranking[0] || null,
-      worstStore: ranking[ranking.length - 1] || null,
-      ranking
+    return {
+      gross,
+      net,
+      ads,
+      refunds,
+      extra,
+      income,
+      perHead,
+      adPct: gross > 0 ? (ads / gross) * 100 : null,
+      ranking,
+      best: ranking[0] || null,
+      worst: ranking[ranking.length - 1] || null
     };
-
-    ranking.forEach(item=>{
-      summary.gross += item.gross;
-      summary.net += item.net;
-      summary.ads += item.ads;
-      summary.refunds += item.refunds;
-      summary.extra += item.extra;
-      summary.income += item.income;
-      summary.perHead += item.perHead;
-    });
-    summary.adPct = summary.gross > 0 ? (summary.ads / summary.gross) * 100 : 0;
-    return summary;
   }
 
-  function trackerDailyTotals(monthKey, storeIds){
-    const ids = Array.isArray(storeIds) ? new Set(storeIds) : new Set(trackerGetFilteredStores(false).map(store=>store.id));
-    const storeMap = new Map(trackerGetAllStores().map(store=>[store.id, store]));
-    const result = trackerDayList(monthKey).map(date=>({
-      date,
-      label: trackerDateLabel(date),
-      weekday: trackerWeekdayShort(date),
-      gross: 0,
-      net: 0,
-      ads: 0,
-      refunds: 0,
-      extra: 0,
-      income: 0,
-      perHead: 0,
-      entries: 0
-    }));
-    const byDate = new Map(result.map(item=>[item.date, item]));
-
-    trackerGetStatsForMonth(monthKey).forEach(stat=>{
-      if(!ids.has(stat.store_id)) return;
-      const store = storeMap.get(stat.store_id);
-      if(!store) return;
-      const computed = trackerComputeStat(store, stat);
-      const bucket = byDate.get(stat.date);
-      if(!bucket) return;
-      bucket.gross += computed.revenue_gross;
-      bucket.net += computed.revenue_net_resolved;
-      bucket.ads += computed.ad_cost_tiktok;
-      bucket.refunds += computed.refunds;
-      bucket.extra += computed.extra_costs;
-      bucket.income += computed.income;
-      bucket.perHead += computed.per_head;
-      bucket.entries += 1;
-    });
-
-    return result;
+  function summarizeCompany(company, key, mode, selectedDate){
+    const stores = getStoresForCompany(company.id, true);
+    const storeSummaries = stores.map(store=>summarizeStore(store, key, mode, selectedDate));
+    return {
+      company,
+      stores,
+      storeSummaries,
+      ...aggregateSummaries(storeSummaries)
+    };
   }
 
-  function trackerPersist(message, type){
-    trackerSyncLegacyMirror();
-    saveS();
-    try{ updateMenubar(); }catch(e){}
-    try{ renderPillStats(); }catch(e){}
-    try{ renderNotifBubble(); }catch(e){}
-    try{
-      if(S.widgets?.['shop-stats']?.enabled && typeof fillWidget === 'function') fillWidget('shop-stats');
-    }catch(e){}
-    trackerRenderShops();
-    if(message) toast(message, type || 'success', 2600);
+  function summarizeGlobal(key, mode, selectedDate){
+    const companies = ensureData().companies;
+    const companySummaries = companies.map(company=>summarizeCompany(company, key, mode, selectedDate));
+    const storeSummaries = companySummaries.flatMap(summary=>summary.storeSummaries);
+    return {
+      companies: companySummaries,
+      stores: storeSummaries,
+      ...aggregateSummaries(storeSummaries)
+    };
   }
 
-  function trackerSetView(view){
-    trackerData().ui.view = view;
-    trackerRenderShops();
+  function ensureSelectedDateForStore(storeId){
+    const data = ensureData();
+    const store = getStore(storeId);
+    if(!store) return;
+    if(isDateInMonth(data.ui.selectedDate, data.ui.monthKey)) return;
+    const monthStats = statsForStoreInMonth(storeId, data.ui.monthKey);
+    const today = localDate(new Date());
+    data.ui.selectedDate = monthStats[0]?.date || (isDateInMonth(today, data.ui.monthKey) ? today : dateFromMonthDay(data.ui.monthKey, 1));
   }
 
-  function trackerSetFilter(storeId){
-    const data = trackerData();
-    data.ui.storeFilter = storeId || 'all';
-    if(storeId && storeId !== 'all') data.ui.activeStoreId = storeId;
-    trackerRenderShops();
+  function setMonth(key){
+    if(!/^\d{4}-\d{2}$/.test(String(key || ''))) return;
+    const data = ensureData();
+    data.ui.monthKey = key;
+    if(!isDateInMonth(data.ui.selectedDate, key)){
+      const today = localDate(new Date());
+      data.ui.selectedDate = isDateInMonth(today, key) ? today : dateFromMonthDay(key, 1);
+    }
+    if(data.ui.storeId) ensureSelectedDateForStore(data.ui.storeId);
+    renderShops();
   }
 
-  function trackerSetMonth(monthKey){
-    if(!/^\d{4}-\d{2}$/.test(String(monthKey || ''))) return;
-    trackerData().ui.monthKey = monthKey;
-    trackerRenderShops();
+  function shiftMonth(delta){
+    const meta = parseMonthKey(ensureData().ui.monthKey);
+    setMonth(monthKey(new Date(meta.year, meta.monthIndex + Number(delta || 0), 1)));
   }
 
-  function trackerShiftMonth(delta){
-    const data = trackerData();
-    const meta = trackerParseMonthKey(data.ui.monthKey);
-    const next = new Date(meta.year, meta.monthIndex + delta, 1);
-    data.ui.monthKey = trackerMonthKey(next);
-    trackerRenderShops();
+  function setSummaryMode(mode){
+    const data = ensureData();
+    data.ui.summaryMode = mode === 'day' ? 'day' : 'month';
+    renderShops();
   }
 
-  function trackerSelectStore(storeId){
-    const data = trackerData();
-    data.ui.activeStoreId = storeId;
+  function setSelectedDate(date){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date || ''))) return;
+    const data = ensureData();
+    data.ui.selectedDate = date;
+    renderShops();
+  }
+
+  function openOverview(){
+    const data = ensureData();
+    data.ui.view = 'overview';
+    renderShops();
+  }
+
+  function openCompany(companyId){
+    const data = ensureData();
+    const company = getCompany(companyId);
+    if(!company) return;
+    data.ui.companyId = company.id;
+    data.ui.storeId = getStoresForCompany(company.id, true)[0]?.id || null;
+    data.ui.view = 'company';
+    renderShops();
+  }
+
+  function openStore(storeId){
+    const data = ensureData();
+    const store = getStore(storeId);
+    if(!store) return;
+    data.ui.storeId = store.id;
+    data.ui.companyId = store.company_id;
     data.ui.view = 'store';
-    trackerRenderShops();
+    ensureSelectedDateForStore(store.id);
+    renderShops();
   }
 
-  function trackerOpenStoreModal(storeId){
-    const data = trackerData();
-    data.ui.modal = {type:'store', storeId: storeId || null};
-    trackerRenderShops();
+  function plural(value, one, few, many){
+    const count = Math.abs(Number(value) || 0);
+    const mod10 = count % 10;
+    const mod100 = count % 100;
+    if(count === 1) return one;
+    if(mod10 >= 2 && mod10 <= 4 && !(mod100 >= 12 && mod100 <= 14)) return few;
+    return many;
   }
 
-  function trackerOpenStatModal(storeId, date){
-    const data = trackerData();
-    const targetStoreId = storeId || data.ui.activeStoreId || data.stores[0]?.id || null;
-    if(!targetStoreId){
-      toast('Najpierw dodaj sklep.', 'warning', 2800);
-      data.ui.modal = {type:'store', storeId:null};
-      trackerRenderShops();
-      return;
+  function rangeLabel(key, mode, selectedDate){
+    return mode === 'day' ? fullDateLabel(selectedDate) : monthLabel(key);
+  }
+
+  function companyAccent(companySummary){
+    return companySummary?.storeSummaries?.[0]?.store?.color || cssVar('--accent', '#4f7ef8');
+  }
+
+  function statMapForStore(storeId, key){
+    return new Map(statsForStoreInMonth(storeId, key).map(stat=>[stat.date, stat]));
+  }
+
+  function buildCalendarCells(key){
+    const meta = parseMonthKey(key);
+    const firstDate = new Date(meta.year, meta.monthIndex, 1);
+    const firstWeekday = firstDate.getDay();
+    const mondayIndex = firstWeekday === 0 ? 6 : firstWeekday - 1;
+    const prevMonth = new Date(meta.year, meta.monthIndex - 1, 1);
+    const nextMonth = new Date(meta.year, meta.monthIndex + 1, 1);
+    const prevMeta = parseMonthKey(monthKey(prevMonth));
+    const cells = [];
+
+    for(let index = mondayIndex - 1; index >= 0; index -= 1){
+      const day = prevMeta.daysInMonth - index;
+      const date = dateFromMonthDay(monthKey(prevMonth), day);
+      cells.push({
+        date,
+        day,
+        otherMonth: true,
+        weekend: [6, 0].includes(new Date(`${date}T12:00:00`).getDay())
+      });
     }
-    const targetDate = date || trackerLocalDate(new Date());
-    const existing = trackerGetStat(targetStoreId, targetDate);
+
+    for(let day = 1; day <= meta.daysInMonth; day += 1){
+      const date = dateFromMonthDay(key, day);
+      cells.push({
+        date,
+        day,
+        otherMonth: false,
+        weekend: [6, 0].includes(new Date(`${date}T12:00:00`).getDay())
+      });
+    }
+
+    let nextDay = 1;
+    while(cells.length < 35 || cells.length % 7 !== 0){
+      const date = dateFromMonthDay(monthKey(nextMonth), nextDay);
+      cells.push({
+        date,
+        day: nextDay,
+        otherMonth: true,
+        weekend: [6, 0].includes(new Date(`${date}T12:00:00`).getDay())
+      });
+      nextDay += 1;
+    }
+
+    return cells;
+  }
+
+  function jumpToDate(date){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date || ''))) return;
+    const data = ensureData();
+    data.ui.monthKey = String(date).slice(0, 7);
+    data.ui.selectedDate = date;
+    renderShops();
+  }
+
+  function touchUpdated(entity){
+    entity.updated_at = nowIso();
+    return entity;
+  }
+
+  function openCompanyModal(companyId){
+    const data = ensureData();
     data.ui.modal = {
-      type:'stat',
-      storeId: targetStoreId,
-      date: targetDate,
-      statId: existing?.id || null
+      type: 'company',
+      mode: companyId ? 'edit' : 'create',
+      companyId: companyId ? String(companyId) : null
     };
-    trackerRenderShops();
+    renderShops();
   }
 
-  function trackerOpenDeleteStore(storeId){
-    trackerData().ui.modal = {type:'confirm-delete-store', storeId};
-    trackerRenderShops();
-  }
-
-  function trackerOpenDeleteStat(statId){
-    trackerData().ui.modal = {type:'confirm-delete-stat', statId};
-    trackerRenderShops();
-  }
-
-  function trackerCloseModal(){
-    trackerData().ui.modal = null;
-    trackerRenderShops();
-  }
-
-  function trackerSaveStoreForm(){
-    const data = trackerData();
-    const id = document.getElementById('tracker-store-id')?.value || null;
-    const name = String(document.getElementById('tracker-store-name')?.value || '').trim();
-    const vatRate = trackerNum(document.getElementById('tracker-store-vat')?.value);
-    const headcount = Math.max(1, parseInt(document.getElementById('tracker-store-headcount')?.value || 1, 10));
-    const profitShareType = document.getElementById('tracker-store-share-type')?.value || 'headcount';
-    const profitShareValue = trackerNum(document.getElementById('tracker-store-share-value')?.value || 0);
-    const calculationMode = document.getElementById('tracker-store-calc-mode')?.value || 'gross_to_net';
-    const color = document.getElementById('tracker-store-color')?.value || trackerColor(data.stores.length);
-    const isActive = !!document.getElementById('tracker-store-active')?.checked;
-
-    if(!name){
-      toast('Podaj nazwe sklepu.', 'warning', 2600);
+  function openStoreModal(companyId, storeId){
+    const data = ensureData();
+    const store = storeId ? getStore(storeId) : null;
+    const resolvedCompanyId = store?.company_id || companyId || data.ui.companyId || data.companies[0]?.id || null;
+    if(!resolvedCompanyId){
+      toastMsg('Najpierw dodaj firmę', 'info', 2200);
       return;
     }
-
-    const existingIndex = data.stores.findIndex(store=>store.id === id);
-    const existing = existingIndex >= 0 ? data.stores[existingIndex] : null;
-    const nextStore = trackerNormalizeStore({
-      id: existing?.id || trackerUid('store'),
-      name,
-      is_active: isActive,
-      color,
-      vat_rate: vatRate,
-      profit_share_type: profitShareType,
-      profit_share_value: profitShareValue,
-      headcount,
-      calculation_mode: calculationMode,
-      created_at: existing?.created_at || trackerNowIso(),
-      updated_at: trackerNowIso()
-    }, existingIndex >= 0 ? existingIndex : data.stores.length);
-
-    if(existingIndex >= 0) data.stores.splice(existingIndex, 1, nextStore);
-    else data.stores.unshift(nextStore);
-
-    data.ui.activeStoreId = nextStore.id;
-    data.ui.modal = null;
-    if(data.ui.view === 'manage') data.ui.view = 'store';
-    trackerPersist(existing ? 'Zapisano sklep.' : 'Dodano nowy sklep.');
+    data.ui.modal = {
+      type: 'store',
+      mode: store ? 'edit' : 'create',
+      storeId: store ? store.id : null,
+      companyId: resolvedCompanyId
+    };
+    renderShops();
   }
 
-  function trackerSaveStatForm(){
-    const data = trackerData();
-    const modal = data.ui.modal || {};
-    const storeId = document.getElementById('tracker-stat-store')?.value || '';
-    const date = document.getElementById('tracker-stat-date')?.value || '';
-    const gross = trackerNum(document.getElementById('tracker-stat-gross')?.value);
-    const manualNet = trackerMaybeNum(document.getElementById('tracker-stat-net')?.value);
-    const ads = trackerNum(document.getElementById('tracker-stat-ads')?.value);
-    const refunds = trackerNum(document.getElementById('tracker-stat-refunds')?.value);
-    const extraCosts = trackerNum(document.getElementById('tracker-stat-extra')?.value);
-    const notes = String(document.getElementById('tracker-stat-notes')?.value || '').trim();
-    const store = trackerGetStore(storeId);
-
+  function openStatModal(storeId, date){
+    const data = ensureData();
+    const store = getStore(storeId || data.ui.storeId);
     if(!store){
-      toast('Wybierz sklep.', 'warning', 2500);
+      toastMsg('Najpierw wybierz sklep', 'info', 2200);
       return;
     }
-    if(!date){
-      toast('Wybierz date.', 'warning', 2500);
-      return;
-    }
-    if([gross, ads, refunds, extraCosts].some(value=>value < 0) || (manualNet !== null && manualNet < 0)){
-      toast('Wartosci nie moga byc ujemne.', 'warning', 2800);
-      return;
-    }
-    if(store.calculation_mode === 'manual_net' && manualNet === null){
-      toast('Ten sklep wymaga recznego wpisania netto.', 'warning', 3200);
+    const resolvedDate = /^\d{4}-\d{2}-\d{2}$/.test(String(date || ''))
+      ? String(date)
+      : (data.ui.selectedDate || dateFromMonthDay(data.ui.monthKey, 1));
+    data.ui.storeId = store.id;
+    data.ui.companyId = store.company_id;
+    data.ui.selectedDate = resolvedDate;
+    data.ui.modal = {
+      type: 'stat',
+      mode: getStoreStat(store.id, resolvedDate) ? 'edit' : 'create',
+      storeId: store.id,
+      date: resolvedDate
+    };
+    renderShops();
+  }
+
+  function confirmDeleteCompany(companyId){
+    const company = getCompany(companyId);
+    if(!company) return;
+    const storeCount = getStoresForCompany(company.id, true).length;
+    const data = ensureData();
+    data.ui.modal = {
+      type: 'confirm',
+      entity: 'company',
+      companyId: company.id,
+      title: 'Usunąć firmę?',
+      description: `Firma "${company.name}" oraz ${storeCount} ${plural(storeCount, 'sklep', 'sklepy', 'sklepów')} zostaną usunięte razem z danymi dziennymi.`
+    };
+    renderShops();
+  }
+
+  function confirmDeleteStore(storeId){
+    const store = getStore(storeId);
+    if(!store) return;
+    const entries = getStatsForStore(store.id).length;
+    const data = ensureData();
+    data.ui.modal = {
+      type: 'confirm',
+      entity: 'store',
+      storeId: store.id,
+      title: 'Usunąć sklep?',
+      description: `Sklep "${store.name}" oraz ${entries} ${plural(entries, 'dzień', 'dni', 'dni')} danych zostaną usunięte.`
+    };
+    renderShops();
+  }
+
+  function confirmDeleteStat(storeId, date){
+    const store = getStore(storeId);
+    const stat = getStoreStat(storeId, date);
+    if(!store || !stat) return;
+    const data = ensureData();
+    data.ui.modal = {
+      type: 'confirm',
+      entity: 'stat',
+      storeId: store.id,
+      date: stat.date,
+      title: 'Usunąć dane dnia?',
+      description: `${store.name} • ${fullDateLabel(stat.date)}`
+    };
+    renderShops();
+  }
+
+  function closeModal(){
+    ensureData().ui.modal = null;
+    renderShops();
+  }
+
+  function saveCompanyForm(){
+    const data = ensureData();
+    const modal = data.ui.modal || {};
+    const name = String(document.getElementById('shops-company-name')?.value || '').trim();
+    const isActive = !!document.getElementById('shops-company-active')?.checked;
+    if(!name){
+      toastMsg('Podaj nazwę firmy', 'error', 2200);
       return;
     }
 
-    const existingIndex = data.dailyStats.findIndex(stat=>(
-      (modal.statId && stat.id === modal.statId) ||
-      (stat.store_id === storeId && stat.date === date)
-    ));
-    const existing = existingIndex >= 0 ? data.dailyStats[existingIndex] : null;
-    const nextStat = trackerNormalizeStat({
-      id: existing?.id || trackerUid('stat'),
-      store_id: storeId,
+    let company = modal.companyId ? getCompany(modal.companyId) : null;
+    if(company){
+      company.name = name;
+      company.is_active = isActive;
+      touchUpdated(company);
+    }else{
+      company = normalizeCompany({
+        id: uid('company'),
+        name,
+        is_active: isActive
+      }, data.companies.length);
+      data.companies.push(company);
+      data.ui.companyId = company.id;
+    }
+
+    data.ui.modal = null;
+    if(!data.ui.storeId){
+      data.ui.view = 'company';
+      data.ui.companyId = company.id;
+    }
+    persist(company.id === modal.companyId ? 'Zapisano firmę' : 'Dodano firmę');
+    renderShops();
+  }
+
+  function saveStoreForm(){
+    const data = ensureData();
+    const modal = data.ui.modal || {};
+    const companyId = String(document.getElementById('shops-store-company')?.value || '').trim();
+    const name = String(document.getElementById('shops-store-name')?.value || '').trim();
+    const isActive = !!document.getElementById('shops-store-active')?.checked;
+    const vatRate = Math.max(0, Math.min(99, numberValue(document.getElementById('shops-store-vat')?.value)));
+    const headcount = Math.max(1, parseInt(document.getElementById('shops-store-headcount')?.value || '1', 10) || 1);
+    const profitShareType = String(document.getElementById('shops-store-share-type')?.value || 'headcount');
+    const profitShareValue = numberValue(document.getElementById('shops-store-share-value')?.value);
+    const calculationMode = String(document.getElementById('shops-store-calc-mode')?.value || 'gross_to_net');
+    const color = String(document.getElementById('shops-store-color')?.value || cssVar('--accent', '#4f7ef8')).trim() || cssVar('--accent', '#4f7ef8');
+
+    if(!companyId || !getCompany(companyId)){
+      toastMsg('Wybierz firmę', 'error', 2200);
+      return;
+    }
+    if(!name){
+      toastMsg('Podaj nazwę sklepu', 'error', 2200);
+      return;
+    }
+
+    let store = modal.storeId ? getStore(modal.storeId) : null;
+    if(store){
+      store.company_id = companyId;
+      store.name = name;
+      store.is_active = isActive;
+      store.vat_rate = vatRate;
+      store.headcount = headcount;
+      store.profit_share_type = ['headcount', 'percentage', 'fixed'].includes(profitShareType) ? profitShareType : 'headcount';
+      store.profit_share_value = profitShareValue;
+      store.calculation_mode = ['gross_to_net', 'manual_net'].includes(calculationMode) ? calculationMode : 'gross_to_net';
+      store.color = color;
+      touchUpdated(store);
+    }else{
+      store = normalizeStore({
+        id: uid('store'),
+        company_id: companyId,
+        name,
+        is_active: isActive,
+        vat_rate: vatRate,
+        headcount,
+        profit_share_type: profitShareType,
+        profit_share_value: profitShareValue,
+        calculation_mode: calculationMode,
+        color
+      }, data.stores.length, companyId);
+      data.stores.push(store);
+    }
+
+    data.ui.companyId = companyId;
+    data.ui.storeId = store.id;
+    data.ui.modal = null;
+    data.ui.view = 'company';
+    persist(store.id === modal.storeId ? 'Zapisano sklep' : 'Dodano sklep');
+    renderShops();
+  }
+
+  function saveStatForm(){
+    const data = ensureData();
+    const modal = data.ui.modal || {};
+    const store = getStore(modal.storeId || data.ui.storeId);
+    if(!store){
+      toastMsg('Najpierw wybierz sklep', 'error', 2200);
+      return;
+    }
+
+    const date = String(document.getElementById('shops-stat-date')?.value || '').trim();
+    const revenueGross = nonNegative(document.getElementById('shops-stat-gross')?.value);
+    const revenueNet = maybeNumber(document.getElementById('shops-stat-net')?.value);
+    const adCostTiktok = nonNegative(document.getElementById('shops-stat-ads')?.value);
+    const refunds = nonNegative(document.getElementById('shops-stat-refunds')?.value);
+    const extraCosts = nonNegative(document.getElementById('shops-stat-extra')?.value);
+    const notes = String(document.getElementById('shops-stat-notes')?.value || '').trim();
+
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){
+      toastMsg('Wybierz poprawną datę', 'error', 2200);
+      return;
+    }
+
+    if(revenueGross === 0 && revenueNet === null && adCostTiktok === 0 && refunds === 0 && extraCosts === 0 && !notes){
+      toastMsg('Wpisz przynajmniej jedną wartość', 'info', 2200);
+      return;
+    }
+
+    const current = modal.date ? getStoreStat(store.id, modal.date) : null;
+    const duplicate = ensureData().dailyStats.find(stat=>stat.store_id === store.id && stat.date === date && stat.id !== current?.id) || null;
+    const base = duplicate || current;
+    const payload = normalizeStat({
+      id: base?.id || uid('stat'),
+      store_id: store.id,
       date,
-      revenue_gross: gross,
-      revenue_net: manualNet,
-      ad_cost_tiktok: ads,
+      revenue_gross: revenueGross,
+      revenue_net: revenueNet,
+      ad_cost_tiktok: adCostTiktok,
       refunds,
       extra_costs: extraCosts,
       notes,
-      created_at: existing?.created_at || trackerNowIso(),
-      updated_at: trackerNowIso()
+      created_at: base?.created_at || nowIso(),
+      updated_at: nowIso()
     });
 
-    if(existingIndex >= 0) data.dailyStats.splice(existingIndex, 1, nextStat);
-    else data.dailyStats.push(nextStat);
+    if(current && current.id !== payload.id){
+      data.dailyStats = data.dailyStats.filter(stat=>stat.id !== current.id);
+    }
+
+    const existingIndex = data.dailyStats.findIndex(stat=>stat.id === payload.id);
+    if(existingIndex >= 0) data.dailyStats[existingIndex] = payload;
+    else data.dailyStats.push(payload);
+
     data.dailyStats.sort((a, b)=>a.date.localeCompare(b.date));
-
-    data.ui.activeStoreId = storeId;
+    data.ui.selectedDate = payload.date;
+    data.ui.monthKey = payload.date.slice(0, 7);
+    data.ui.storeId = store.id;
+    data.ui.companyId = store.company_id;
+    data.ui.view = 'store';
     data.ui.modal = null;
-    trackerPersist(existing ? 'Zapisano dzien.' : 'Dodano dane dzienne.');
+    persist(existingIndex >= 0 ? 'Zapisano dzień' : 'Dodano dzień');
+    renderShops();
   }
 
-  function trackerDeleteStoreConfirmed(){
-    const data = trackerData();
-    const storeId = data.ui.modal?.storeId;
-    if(!storeId) return;
-    data.stores = data.stores.filter(store=>store.id !== storeId);
-    data.dailyStats = data.dailyStats.filter(stat=>stat.store_id !== storeId);
-    data.ui.activeStoreId = data.stores[0]?.id || null;
-    data.ui.storeFilter = data.ui.storeFilter === storeId ? 'all' : data.ui.storeFilter;
+  function deleteCompanyConfirmed(companyId){
+    const data = ensureData();
+    const stores = getStoresForCompany(companyId, true).map(store=>store.id);
+    const storeSet = new Set(stores);
+    data.companies = data.companies.filter(company=>company.id !== String(companyId));
+    data.stores = data.stores.filter(store=>store.company_id !== String(companyId));
+    data.dailyStats = data.dailyStats.filter(stat=>!storeSet.has(stat.store_id));
     data.ui.modal = null;
-    trackerPersist('Usunieto sklep i jego dane.', 'info');
+    data.ui.companyId = data.companies[0]?.id || null;
+    data.ui.storeId = data.stores.find(store=>store.company_id === data.ui.companyId)?.id || data.stores[0]?.id || null;
+    data.ui.view = 'overview';
+    persist('Usunięto firmę', 'success');
+    renderShops();
   }
 
-  function trackerDeleteStatConfirmed(){
-    const data = trackerData();
-    const statId = data.ui.modal?.statId;
-    if(!statId) return;
-    data.dailyStats = data.dailyStats.filter(stat=>stat.id !== statId);
+  function deleteStoreConfirmed(storeId){
+    const data = ensureData();
+    const store = getStore(storeId);
+    if(!store) return;
+    data.stores = data.stores.filter(item=>item.id !== String(storeId));
+    data.dailyStats = data.dailyStats.filter(stat=>stat.store_id !== String(storeId));
     data.ui.modal = null;
-    trackerPersist('Usunieto wpis dzienny.', 'info');
+    data.ui.storeId = data.stores.find(item=>item.company_id === store.company_id)?.id || data.stores[0]?.id || null;
+    data.ui.companyId = store.company_id;
+    data.ui.view = data.ui.storeId ? 'company' : 'overview';
+    persist('Usunięto sklep', 'success');
+    renderShops();
   }
 
-  function trackerToggleStoreActive(storeId){
-    const store = trackerGetStore(storeId);
+  function deleteStatConfirmed(storeId, date){
+    const data = ensureData();
+    data.dailyStats = data.dailyStats.filter(stat=>!(stat.store_id === String(storeId) && stat.date === String(date)));
+    data.ui.modal = null;
+    if(data.ui.selectedDate === String(date)) data.ui.selectedDate = String(date);
+    persist('Usunięto dane dnia', 'success');
+    renderShops();
+  }
+
+  function confirmModalAction(){
+    const modal = ensureData().ui.modal || {};
+    if(modal.entity === 'company') deleteCompanyConfirmed(modal.companyId);
+    else if(modal.entity === 'store') deleteStoreConfirmed(modal.storeId);
+    else if(modal.entity === 'stat') deleteStatConfirmed(modal.storeId, modal.date);
+  }
+
+  function toggleCompanyActive(companyId){
+    const company = getCompany(companyId);
+    if(!company) return;
+    company.is_active = !company.is_active;
+    touchUpdated(company);
+    persist(company.is_active ? 'Firma aktywna' : 'Firma zdezaktywowana', 'success');
+    renderShops();
+  }
+
+  function toggleStoreActive(storeId){
+    const store = getStore(storeId);
     if(!store) return;
     store.is_active = !store.is_active;
-    store.updated_at = trackerNowIso();
-    trackerPersist(store.is_active ? 'Sklep aktywowany.' : 'Sklep zdezaktywowany.', 'info');
+    touchUpdated(store);
+    persist(store.is_active ? 'Sklep aktywny' : 'Sklep zdezaktywowany', 'success');
+    renderShops();
   }
 
-  function trackerLoadDemoData(){
-    const data = trackerData();
-    if(data.stores.length || data.dailyStats.length){
-      toast('Demo wczytasz na pustym module albo po usunieciu obecnych sklepow.', 'warning', 3600);
-      return;
+  function viewTitle(ui){
+    if(ui.view === 'company'){
+      const company = getCompany(ui.companyId);
+      return company ? company.name : 'Firma';
     }
-
-    const monthKey = data.ui.monthKey || trackerMonthKey(new Date());
-    const demoStores = [
-      {id:'demo_fashiondrop', name:'FashionDrop', color:'#4f7ef8', vat_rate:23, headcount:2, calculation_mode:'gross_to_net', profit_share_type:'headcount', profit_share_value:0, is_active:true},
-      {id:'demo_techgear', name:'TechGear', color:'#22c55e', vat_rate:23, headcount:3, calculation_mode:'gross_to_net', profit_share_type:'percentage', profit_share_value:35, is_active:true},
-      {id:'demo_homebloom', name:'HomeBloom', color:'#f97316', vat_rate:8, headcount:1, calculation_mode:'manual_net', profit_share_type:'fixed', profit_share_value:900, is_active:true}
-    ].map((store, index)=>trackerNormalizeStore(store, index));
-
-    const seeds = {
-      demo_fashiondrop: {
-        gross: [21500, 19800, 22650, 24500, 21900, 23300, 24120, 25210],
-        ads: [4200, 3980, 4370, 4620, 4310, 4480, 4510, 4725],
-        refunds: [520, 300, 410, 640, 590, 470, 520, 610],
-        extra: [260, 260, 320, 410, 300, 290, 340, 360]
-      },
-      demo_techgear: {
-        gross: [16800, 17220, 18140, 17680, 19020, 20110, 18450, 20890],
-        ads: [3350, 3480, 3620, 3540, 3800, 4010, 3710, 4180],
-        refunds: [230, 180, 260, 210, 290, 240, 220, 310],
-        extra: [180, 200, 200, 220, 220, 240, 210, 260]
-      },
-      demo_homebloom: {
-        gross: [12400, 13200, 14120, 13680, 14900, 15740, 16210, 16850],
-        net: [11480, 12210, 13040, 12680, 13890, 14620, 15140, 15710],
-        ads: [1800, 1900, 2100, 2050, 2240, 2320, 2410, 2550],
-        refunds: [160, 120, 210, 180, 190, 200, 170, 210],
-        extra: [220, 220, 260, 260, 280, 280, 300, 320]
-      }
-    };
-
-    const days = [1, 2, 4, 6, 9, 12, 14, 15];
-    data.stores = demoStores;
-    data.dailyStats = [];
-
-    demoStores.forEach(store=>{
-      const source = seeds[store.id];
-      days.forEach((day, index)=>{
-        data.dailyStats.push(trackerNormalizeStat({
-          id: trackerUid('stat'),
-          store_id: store.id,
-          date: trackerDateFromMonthDay(monthKey, day),
-          revenue_gross: source.gross[index],
-          revenue_net: Array.isArray(source.net) ? source.net[index] : null,
-          ad_cost_tiktok: source.ads[index],
-          refunds: source.refunds[index],
-          extra_costs: source.extra[index],
-          notes: index % 3 === 0 ? 'Dzien po wiekszej optymalizacji kampanii.' : ''
-        }));
-      });
-    });
-
-    data.meta.seeded = true;
-    data.ui.activeStoreId = demoStores[0].id;
-    data.ui.storeFilter = 'all';
-    data.ui.view = 'dashboard';
-    trackerPersist('Wczytano przykladowe dane sklepow.');
+    if(ui.view === 'store'){
+      const store = getStore(ui.storeId);
+      return store ? store.name : 'Sklep';
+    }
+    return 'Sklepy';
   }
 
-  function trackerStatPreview(){
-    const storeId = document.getElementById('tracker-stat-store')?.value || '';
-    const date = document.getElementById('tracker-stat-date')?.value || '';
-    const store = trackerGetStore(storeId);
-    const preview = document.getElementById('tracker-stat-preview');
-    if(!preview || !store || !date) return;
-
-    const pseudo = trackerNormalizeStat({
-      id: 'preview',
-      store_id: storeId,
-      date,
-      revenue_gross: document.getElementById('tracker-stat-gross')?.value || 0,
-      revenue_net: trackerMaybeNum(document.getElementById('tracker-stat-net')?.value),
-      ad_cost_tiktok: document.getElementById('tracker-stat-ads')?.value || 0,
-      refunds: document.getElementById('tracker-stat-refunds')?.value || 0,
-      extra_costs: document.getElementById('tracker-stat-extra')?.value || 0,
-      notes: ''
-    });
-    const computed = trackerComputeStat(store, pseudo);
-    const autoLabel = computed.has_manual_net ? 'Reczne netto' : (store.calculation_mode === 'gross_to_net' ? 'Netto automatyczne' : 'Netto nieuzupelnione');
-
-    preview.innerHTML = `
-      <div class="tracker-preview-chip">
-        <span class="tracker-preview-label">${autoLabel}</span>
-        <strong>${trackerFmtPLN(computed.revenue_net_resolved)}</strong>
-      </div>
-      <div class="tracker-preview-chip">
-        <span class="tracker-preview-label">Dochod</span>
-        <strong>${trackerFmtPLN(computed.income)}</strong>
-      </div>
-      <div class="tracker-preview-chip">
-        <span class="tracker-preview-label">Na glowe</span>
-        <strong>${trackerFmtPLN(computed.per_head)}</strong>
-      </div>
-      <div class="tracker-preview-chip">
-        <span class="tracker-preview-label">TikTok / przychod</span>
-        <strong>${trackerFmtPct(computed.ad_pct)}</strong>
-      </div>`;
-  }
-
-  function trackerToolbarHtml(data){
-    const stores = trackerGetAllStores();
-    return `
-      <section class="tracker-hero">
-        <div class="tracker-hero-title">
-          <h1>Sklepy / Wyniki</h1>
-          <span class="tracker-hero-sub">Dzienny wynik sklepow i miesieczne podsumowanie</span>
-        </div>
-        <div class="tracker-hero-actions">
-          <button class="tracker-btn tracker-btn-ghost" type="button" onclick="trackerShiftMonth(-1)">Poprzedni</button>
-          <div class="tracker-month-pill">${trackerMonthLabel(data.ui.monthKey)}</div>
-          <button class="tracker-btn tracker-btn-ghost" type="button" onclick="trackerShiftMonth(1)">Nastepny</button>
-        </div>
-      </section>
-      <section class="tracker-toolbar">
-        <div class="tracker-toolbar-group">
-          <label class="tracker-control">
-            <span>Miesiac</span>
-            <input type="month" value="${escHtml(data.ui.monthKey)}" onchange="trackerSetMonth(this.value)">
-          </label>
-          <label class="tracker-control">
-            <span>Filtr sklepu</span>
-            <select onchange="trackerSetFilter(this.value)">
-              <option value="all"${data.ui.storeFilter === 'all' ? ' selected' : ''}>Wszystkie aktywne</option>
-              ${stores.map(store=>`<option value="${escHtml(store.id)}"${data.ui.storeFilter === store.id ? ' selected' : ''}>${escHtml(store.name)}${store.is_active ? '' : ' (nieaktywny)'}</option>`).join('')}
-            </select>
-          </label>
-        </div>
-        <div class="tracker-toolbar-group tracker-toolbar-actions">
-          <button class="tracker-btn tracker-btn-ghost" type="button" onclick="trackerOpenStatModal()">+ Dodaj dzien</button>
-          <button class="tracker-btn tracker-btn-primary" type="button" onclick="trackerOpenStoreModal()">+ Dodaj sklep</button>
-        </div>
-      </section>
-      <nav class="tracker-nav">
-        <button class="tracker-nav-btn${data.ui.view === 'dashboard' ? ' active' : ''}" onclick="trackerSetView('dashboard')">Dashboard</button>
-        <button class="tracker-nav-btn${data.ui.view === 'month' ? ' active' : ''}" onclick="trackerSetView('month')">Miesiac</button>
-        <button class="tracker-nav-btn${data.ui.view === 'store' ? ' active' : ''}" onclick="trackerSetView('store')">Sklep</button>
-        <button class="tracker-nav-btn${data.ui.view === 'manage' ? ' active' : ''}" onclick="trackerSetView('manage')">Zarzadzanie</button>
-      </nav>`;
-  }
-
-  function trackerMetricCard(label, value, tone, sub){
-    return `
-      <article class="tracker-kpi tracker-tone-${tone || 'neutral'}">
-        <span class="tracker-kpi-label">${label}</span>
-        <strong class="tracker-kpi-value">${value}</strong>
-        <span class="tracker-kpi-sub">${sub || ''}</span>
-      </article>`;
-  }
-
-  function trackerDashboardHtml(data){
-    const filteredStores = trackerGetFilteredStores(false);
-    if(!filteredStores.length) return trackerEmptyStateHtml();
-
-    const storeIds = filteredStores.map(store=>store.id);
-    const summary = trackerGlobalSummary(data.ui.monthKey, storeIds);
-    const ranking = summary.ranking.slice(0, 6);
-    const daily = trackerDailyTotals(data.ui.monthKey, storeIds).filter(day=>day.entries > 0);
-
-    return `
-      <div class="tracker-dashboard-grid">
-        <section class="tracker-card tracker-card-span-2">
-          <div class="tracker-card-header">
-            <div>
-              <div class="tracker-card-eyebrow">Miesieczne podsumowanie</div>
-              <h2>Globalny wynik wszystkich sklepow</h2>
-            </div>
-            <div class="tracker-card-actions">
-              <button class="tracker-chip-btn" type="button" onclick="trackerOpenStatModal()">Dodaj wynik dnia</button>
-            </div>
-          </div>
-          <div class="tracker-kpi-grid">
-            ${trackerMetricCard('Przychod lacznie', trackerFmtPLN(summary.gross), 'blue', `${summary.storeCount} sklepow w zestawieniu`)}
-            ${trackerMetricCard('Dochod lacznie', trackerFmtPLN(summary.income), summary.income >= 0 ? 'green' : 'red', 'Po kosztach i zwrotach')}
-            ${trackerMetricCard('Na glowe', trackerFmtPLN(summary.perHead), 'violet', 'Wedlug modelu podzialu sklepow')}
-            ${trackerMetricCard('Koszty reklam', trackerFmtPLN(summary.ads), 'orange', trackerFmtPct(summary.adPct))}
-            ${trackerMetricCard('Zwroty', trackerFmtPLN(summary.refunds), 'rose', 'Miesieczny koszt zwrotow')}
-          </div>
-        </section>
-
-        <section class="tracker-card tracker-card-chart tracker-card-span-2">
-          <div class="tracker-card-header">
-            <div>
-              <div class="tracker-card-eyebrow">Trend dzienny</div>
-              <h2>Przychod i dochod w czasie</h2>
-            </div>
-          </div>
-          <div class="tracker-chart-wrap">
-            <canvas id="tracker-global-chart" aria-label="Wykres przychodu i dochodu"></canvas>
-          </div>
-        </section>
-
-        <section class="tracker-card">
-          <div class="tracker-card-header">
-            <div>
-              <div class="tracker-card-eyebrow">Ranking sklepow</div>
-              <h2>Najmocniejsze sklepy miesiaca</h2>
-            </div>
-          </div>
-          <div class="tracker-ranking-list">
-            ${ranking.length ? ranking.map((item, index)=>`
-              <button class="tracker-ranking-item" type="button" onclick="trackerSelectStore('${escHtml(item.store.id)}')">
-                <span class="tracker-ranking-index">${index + 1}</span>
-                <span class="tracker-ranking-color" style="background:${item.store.color}"></span>
-                <span class="tracker-ranking-body">
-                  <strong>${escHtml(item.store.name)}</strong>
-                  <small>${trackerFmtPLN(item.gross)} przychodu</small>
-                </span>
-                <span class="tracker-ranking-value ${item.income >= 0 ? 'is-positive' : 'is-negative'}">${trackerFmtCompactPLN(item.income)}</span>
-              </button>`).join('') : `<div class="tracker-muted">Brak wpisow za wybrany miesiac.</div>`}
-          </div>
-        </section>
-
-        <section class="tracker-card">
-          <div class="tracker-card-header">
-            <div>
-              <div class="tracker-card-eyebrow">Sklepy miesiaca</div>
-              <h2>Najlepszy i najgorszy wynik</h2>
-            </div>
-          </div>
-          <div class="tracker-highlight-stack">
-            <article class="tracker-highlight tracker-highlight-good">
-              <span>Najlepszy sklep</span>
-              <strong>${summary.bestStore ? escHtml(summary.bestStore.store.name) : '-'}</strong>
-              <small>${summary.bestStore ? `${trackerFmtPLN(summary.bestStore.income)} dochodu` : 'Brak danych'}</small>
-            </article>
-            <article class="tracker-highlight tracker-highlight-bad">
-              <span>Najslabszy sklep</span>
-              <strong>${summary.worstStore ? escHtml(summary.worstStore.store.name) : '-'}</strong>
-              <small>${summary.worstStore ? `${trackerFmtPLN(summary.worstStore.income)} dochodu` : 'Brak danych'}</small>
-            </article>
-          </div>
-        </section>
-
-        <section class="tracker-card tracker-card-span-3">
-          <div class="tracker-card-header">
-            <div>
-              <div class="tracker-card-eyebrow">Dzienne sumy</div>
-              <h2>Wszystkie sklepy razem dzien po dniu</h2>
-            </div>
-          </div>
-          <div class="tracker-day-feed">
-            ${daily.length ? daily.map(day=>`
-              <button class="tracker-day-card" type="button" onclick="trackerSetMonth('${escHtml(day.date.slice(0,7))}')">
-                <span class="tracker-day-card-top">${day.weekday} <strong>${trackerDateLabel(day.date)}</strong></span>
-                <span class="tracker-day-card-main">${trackerFmtCompactPLN(day.gross)}</span>
-                <span class="tracker-day-card-sub ${day.income >= 0 ? 'is-positive' : 'is-negative'}">${trackerFmtPLN(day.income)} dochodu</span>
-              </button>`).join('') : `<div class="tracker-muted">Dodaj pierwszy wpis dnia, aby zobaczyc podsumowanie.</div>`}
-          </div>
-        </section>
-      </div>`;
-  }
-
-  function trackerCellButton(storeId, date, display, tone, extraClass, title, hasData){
-    return `
-      <button
-        class="tracker-cell-btn ${tone || ''} ${extraClass || ''}${hasData ? '' : ' is-empty'}"
-        type="button"
-        title="${escHtml(title || 'Edytuj dane dnia')}"
-        onclick="trackerOpenStatModal('${escHtml(storeId)}','${escHtml(date)}')"
-      >${display}</button>`;
-  }
-
-  function trackerMonthBlock(store, monthKey){
-    const days = trackerDayList(monthKey);
-    const summary = trackerStoreSummary(store, monthKey);
-    const statsMap = new Map(summary.stats.map(stat=>[stat.date, stat]));
-
-    const rows = [
-      {
-        label: 'Przychod brutto',
-        total: trackerFmtPLN(summary.gross),
-        render(date){
-          const stat = statsMap.get(date);
-          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.revenue_gross) : '+', 'tone-blue', '', trackerFullDateLabel(date), !!stat);
-        }
-      },
-      {
-        label: 'Przychod netto',
-        total: trackerFmtPLN(summary.net),
-        render(date){
-          const stat = statsMap.get(date);
-          if(!stat) return trackerCellButton(store.id, date, '+', 'tone-neutral', '', trackerFullDateLabel(date), false);
-          const badge = stat.has_manual_net ? '<span class="tracker-mini-badge">R</span>' : '<span class="tracker-mini-badge auto">A</span>';
-          return trackerCellButton(store.id, date, `${badge}${trackerFmtPLN(stat.revenue_net_resolved)}`, 'tone-neutral', 'tracker-cell-has-badge', trackerFullDateLabel(date), true);
-        }
-      },
-      {
-        label: 'Koszty TikTok',
-        total: trackerFmtPLN(summary.ads),
-        render(date){
-          const stat = statsMap.get(date);
-          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.ad_cost_tiktok) : '+', 'tone-orange', '', trackerFullDateLabel(date), !!stat);
-        }
-      },
-      {
-        label: 'Dochod',
-        total: trackerFmtPLN(summary.income),
-        render(date){
-          const stat = statsMap.get(date);
-          const tone = stat ? (stat.income >= 0 ? 'tone-green' : 'tone-red') : 'tone-neutral';
-          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.income) : '+', tone, '', trackerFullDateLabel(date), !!stat);
-        }
-      },
-      {
-        label: 'Na glowe',
-        total: trackerFmtPLN(summary.perHead),
-        render(date){
-          const stat = statsMap.get(date);
-          const tone = stat ? (stat.per_head >= 0 ? 'tone-violet' : 'tone-red') : 'tone-neutral';
-          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.per_head) : '+', tone, '', trackerFullDateLabel(date), !!stat);
-        }
-      },
-      {
-        label: 'TikTok / przychod',
-        total: trackerFmtPct(summary.adPct),
-        render(date){
-          const stat = statsMap.get(date);
-          return trackerCellButton(store.id, date, stat ? trackerFmtPct(stat.ad_pct) : '+', 'tone-neutral', '', trackerFullDateLabel(date), !!stat);
-        }
-      },
-      {
-        label: 'Zwroty',
-        total: trackerFmtPLN(summary.refunds),
-        render(date){
-          const stat = statsMap.get(date);
-          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.refunds) : '+', 'tone-rose', '', trackerFullDateLabel(date), !!stat);
-        }
-      },
-      {
-        label: 'Dodatkowe koszty',
-        total: trackerFmtPLN(summary.extra),
-        render(date){
-          const stat = statsMap.get(date);
-          return trackerCellButton(store.id, date, stat ? trackerFmtPLN(stat.extra_costs) : '+', 'tone-amber', '', trackerFullDateLabel(date), !!stat);
-        }
-      }
+  function renderBreadcrumbs(data){
+    const parts = [
+      `<button type="button" class="shops-v2-crumb${data.ui.view === 'overview' ? ' active' : ''}" onclick="openShopsOverview()">Sklepy</button>`
     ];
 
-    return `
-      <section class="tracker-store-block" style="--tracker-store-color:${store.color}">
-        <div class="tracker-store-block-header">
-          <div>
-            <div class="tracker-store-name-line">
-              <span class="tracker-store-dot"></span>
-              <h3>${escHtml(store.name)}</h3>
-              <span class="tracker-store-chip">${store.is_active ? 'aktywny' : 'nieaktywny'}</span>
-            </div>
-            <div class="tracker-store-meta">VAT ${store.vat_rate}% | ${SHARE_TYPE_LABELS[store.profit_share_type]} | ${CALCULATION_MODE_LABELS[store.calculation_mode]}</div>
-          </div>
-          <div class="tracker-store-block-actions">
-            <div class="tracker-store-summary-metric">${trackerFmtCompactPLN(summary.gross)} przychodu</div>
-            <div class="tracker-store-summary-metric ${summary.income >= 0 ? 'is-positive' : 'is-negative'}">${trackerFmtCompactPLN(summary.income)} dochodu</div>
-            <button class="tracker-chip-btn" type="button" onclick="trackerOpenStatModal('${escHtml(store.id)}')">Dodaj dzien</button>
-            <button class="tracker-chip-btn" type="button" onclick="trackerSelectStore('${escHtml(store.id)}')">Otworz sklep</button>
-          </div>
-        </div>
-        <div class="tracker-table-wrap">
-          <table class="tracker-month-table">
-            <thead>
-              <tr>
-                <th class="sticky-col sticky-col-head">Metryka</th>
-                ${days.map(date=>`<th><span>${trackerWeekdayShort(date)}</span><strong>${date.slice(-2)}</strong></th>`).join('')}
-                <th class="summary-col">Suma</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows.map(row=>`
-                <tr>
-                  <th class="sticky-col">${row.label}</th>
-                  ${days.map(date=>`<td>${row.render(date)}</td>`).join('')}
-                  <td class="summary-col">${row.total}</td>
-                </tr>`).join('')}
-            </tbody>
-          </table>
-        </div>
-      </section>`;
-  }
-
-  function trackerMonthlyHtml(data){
-    const stores = trackerGetFilteredStores(false);
-    if(!stores.length) return trackerEmptyStateHtml();
-
-    return `
-      <div class="tracker-month-layout">
-        <section class="tracker-card tracker-card-inline">
-          <div class="tracker-card-header">
-            <div>
-              <div class="tracker-card-eyebrow">Widok miesieczny</div>
-              <h2>Uklad inspirowany Excelem, ale czytelny i szybszy</h2>
-            </div>
-            <div class="tracker-card-actions">
-              <button class="tracker-chip-btn" type="button" onclick="trackerShiftMonth(-1)">Poprz</button>
-              <div class="tracker-inline-month">${trackerMonthLabel(data.ui.monthKey)}</div>
-              <button class="tracker-chip-btn" type="button" onclick="trackerShiftMonth(1)">Dalej</button>
-            </div>
-          </div>
-          <div class="tracker-muted">Kliknij dowolna komorke, aby dodac albo zedytowac wynik dnia dla sklepu.</div>
-        </section>
-        ${stores.map(store=>trackerMonthBlock(store, data.ui.monthKey)).join('')}
-      </div>`;
-  }
-
-  function trackerStoreDetailHtml(data){
-    const store = trackerGetStore(data.ui.activeStoreId) || trackerGetFilteredStores(true)[0] || null;
-    if(!store) return trackerEmptyStateHtml();
-
-    const summary = trackerStoreSummary(store, data.ui.monthKey);
-    const recent = summary.stats.slice().sort((a, b)=>b.date.localeCompare(a.date));
-
-    return `
-      <div class="tracker-store-view-grid">
-        <section class="tracker-card tracker-card-span-2">
-          <div class="tracker-card-header">
-            <div>
-              <div class="tracker-card-eyebrow">Widok sklepu</div>
-              <h2>${escHtml(store.name)}</h2>
-            </div>
-            <div class="tracker-card-actions">
-              <button class="tracker-chip-btn" type="button" onclick="trackerOpenStoreModal('${escHtml(store.id)}')">Edytuj sklep</button>
-              <button class="tracker-chip-btn" type="button" onclick="trackerOpenStatModal('${escHtml(store.id)}')">Dodaj dzien</button>
-            </div>
-          </div>
-          <div class="tracker-store-hero-grid">
-            ${trackerMetricCard('Przychod', trackerFmtPLN(summary.gross), 'blue', `${summary.daysWithData} dni z danymi`)}
-            ${trackerMetricCard('Dochod', trackerFmtPLN(summary.income), summary.income >= 0 ? 'green' : 'red', 'Po kosztach reklam i zwrotach')}
-            ${trackerMetricCard('Na glowe', trackerFmtPLN(summary.perHead), 'violet', SHARE_TYPE_LABELS[store.profit_share_type])}
-            ${trackerMetricCard('TikTok / przychod', trackerFmtPct(summary.adPct), 'orange', trackerFmtPLN(summary.ads))}
-          </div>
-        </section>
-
-        <section class="tracker-card">
-          <div class="tracker-card-header">
-            <div>
-              <div class="tracker-card-eyebrow">Ustawienia sklepu</div>
-              <h2>Model liczenia</h2>
-            </div>
-          </div>
-          <div class="tracker-setting-list">
-            <div><span>Status</span><strong>${store.is_active ? 'Aktywny' : 'Nieaktywny'}</strong></div>
-            <div><span>VAT</span><strong>${store.vat_rate}%</strong></div>
-            <div><span>Netto</span><strong>${CALCULATION_MODE_LABELS[store.calculation_mode]}</strong></div>
-            <div><span>Podzial</span><strong>${SHARE_TYPE_LABELS[store.profit_share_type]}</strong></div>
-            <div><span>Wartosc podzialu</span><strong>${trackerFmtPLN(store.profit_share_value)}</strong></div>
-            <div><span>Liczba osob</span><strong>${store.headcount}</strong></div>
-          </div>
-        </section>
-
-        <section class="tracker-card tracker-card-chart tracker-card-span-2">
-          <div class="tracker-card-header">
-            <div>
-              <div class="tracker-card-eyebrow">Wykres sklepu</div>
-              <h2>Przychod, dochod i reklama</h2>
-            </div>
-          </div>
-          <div class="tracker-chart-wrap">
-            <canvas id="tracker-store-chart" aria-label="Wykres sklepu"></canvas>
-          </div>
-        </section>
-
-        <section class="tracker-card tracker-card-span-2">
-          <div class="tracker-card-header">
-            <div>
-              <div class="tracker-card-eyebrow">Historia dni</div>
-              <h2>Wpisy za ${trackerMonthLabel(data.ui.monthKey)}</h2>
-            </div>
-          </div>
-          <div class="tracker-history-wrap">
-            <table class="tracker-history-table">
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Brutto</th>
-                  <th>Netto</th>
-                  <th>TikTok</th>
-                  <th>Dochod</th>
-                  <th>Na glowe</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                ${recent.length ? recent.map(stat=>`
-                  <tr>
-                    <td>
-                      <div class="tracker-history-date">
-                        <strong>${trackerDateLabel(stat.date)}</strong>
-                        <small>${trackerWeekdayShort(stat.date)}</small>
-                      </div>
-                    </td>
-                    <td>${trackerFmtPLN(stat.revenue_gross)}</td>
-                    <td>${trackerFmtPLN(stat.revenue_net_resolved)}</td>
-                    <td>${trackerFmtPLN(stat.ad_cost_tiktok)}</td>
-                    <td class="${stat.income >= 0 ? 'is-positive' : 'is-negative'}">${trackerFmtPLN(stat.income)}</td>
-                    <td>${trackerFmtPLN(stat.per_head)}</td>
-                    <td class="tracker-history-actions">
-                      <button class="tracker-chip-btn" type="button" onclick="trackerOpenStatModal('${escHtml(store.id)}','${escHtml(stat.date)}')">Edytuj</button>
-                      <button class="tracker-chip-btn danger" type="button" onclick="trackerOpenDeleteStat('${escHtml(stat.id)}')">Usun</button>
-                    </td>
-                  </tr>`).join('') : `<tr><td colspan="7" class="tracker-empty-row">Brak danych w tym miesiacu.</td></tr>`}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </div>`;
-  }
-
-  function trackerManageHtml(data){
-    const stores = trackerGetAllStores();
-    if(!stores.length) return trackerEmptyStateHtml();
-
-    return `
-      <div class="tracker-manage-layout">
-        <section class="tracker-card tracker-card-inline">
-          <div class="tracker-card-header">
-            <div>
-              <div class="tracker-card-eyebrow">Zarzadzanie sklepami</div>
-              <h2>Dynamiczna lista sklepow i ustawien</h2>
-            </div>
-            <div class="tracker-card-actions">
-              <button class="tracker-btn tracker-btn-primary" type="button" onclick="trackerOpenStoreModal()">+ Dodaj sklep</button>
-            </div>
-          </div>
-          <div class="tracker-muted">Tu ustawiasz liczenie netto, VAT, podzial zysku i aktywnosc sklepu bez grzebania w danych dziennych.</div>
-        </section>
-        <div class="tracker-manage-grid">
-          ${stores.map(store=>{
-            const summary = trackerStoreSummary(store, data.ui.monthKey);
-            return `
-              <article class="tracker-store-card" style="--tracker-store-color:${store.color}">
-                <div class="tracker-store-card-top">
-                  <div class="tracker-store-card-title">
-                    <span class="tracker-store-dot"></span>
-                    <strong>${escHtml(store.name)}</strong>
-                  </div>
-                  <span class="tracker-store-chip ${store.is_active ? '' : 'muted'}">${store.is_active ? 'aktywny' : 'nieaktywny'}</span>
-                </div>
-                <div class="tracker-store-card-metrics">
-                  <div><span>Przychod</span><strong>${trackerFmtCompactPLN(summary.gross)}</strong></div>
-                  <div><span>Dochod</span><strong class="${summary.income >= 0 ? 'is-positive' : 'is-negative'}">${trackerFmtCompactPLN(summary.income)}</strong></div>
-                  <div><span>Na glowe</span><strong>${trackerFmtCompactPLN(summary.perHead)}</strong></div>
-                  <div><span>VAT</span><strong>${store.vat_rate}%</strong></div>
-                </div>
-                <div class="tracker-store-card-meta">
-                  <span>${CALCULATION_MODE_LABELS[store.calculation_mode]}</span>
-                  <span>${SHARE_TYPE_LABELS[store.profit_share_type]}</span>
-                </div>
-                <div class="tracker-store-card-actions">
-                  <button class="tracker-chip-btn" type="button" onclick="trackerSelectStore('${escHtml(store.id)}')">Otworz</button>
-                  <button class="tracker-chip-btn" type="button" onclick="trackerOpenStoreModal('${escHtml(store.id)}')">Edytuj</button>
-                  <button class="tracker-chip-btn" type="button" onclick="trackerToggleStoreActive('${escHtml(store.id)}')">${store.is_active ? 'Dezaktywuj' : 'Aktywuj'}</button>
-                  <button class="tracker-chip-btn danger" type="button" onclick="trackerOpenDeleteStore('${escHtml(store.id)}')">Usun</button>
-                </div>
-              </article>`;
-          }).join('')}
-        </div>
-      </div>`;
-  }
-
-  function trackerEmptyStateHtml(){
-    return `
-      <div class="tracker-empty-state">
-        <div class="tracker-empty-orb"></div>
-        <div class="tracker-empty-content">
-          <span class="tracker-empty-kicker">Sklepy / Wyniki</span>
-          <h2>Nowy profit tracker jest gotowy</h2>
-          <p>Dodaj pierwszy sklep albo wczytaj demo, zeby zobaczyc dashboard, miesieczna tabele i pelne liczenie dochodu w jednej aplikacji.</p>
-          <div class="tracker-empty-actions">
-            <button class="tracker-btn tracker-btn-primary" type="button" onclick="trackerOpenStoreModal()">+ Dodaj pierwszy sklep</button>
-            <button class="tracker-btn tracker-btn-ghost" type="button" onclick="trackerLoadDemoData()">Wczytaj demo</button>
-          </div>
-        </div>
-      </div>`;
-  }
-
-  function trackerStoreModalHtml(store){
-    return `
-      <div class="tracker-modal-backdrop" onclick="trackerCloseModal()">
-        <div class="tracker-modal" onclick="event.stopPropagation()">
-          <div class="tracker-modal-header">
-            <div>
-              <span class="tracker-modal-kicker">Sklep</span>
-              <h3>${store ? 'Edytuj sklep' : 'Dodaj nowy sklep'}</h3>
-            </div>
-            <button class="tracker-modal-close" type="button" onclick="trackerCloseModal()">x</button>
-          </div>
-          <div class="tracker-modal-body">
-            <input type="hidden" id="tracker-store-id" value="${escHtml(store?.id || '')}">
-            <div class="tracker-form-grid two">
-              <label class="tracker-field"><span>Nazwa sklepu</span><input id="tracker-store-name" type="text" value="${escHtml(store?.name || '')}" placeholder="np. FashionDrop"></label>
-              <label class="tracker-field"><span>Kolor</span><input id="tracker-store-color" type="color" value="${escHtml(store?.color || '#4f7ef8')}"></label>
-              <label class="tracker-field"><span>VAT (%)</span><input id="tracker-store-vat" type="number" min="0" max="99" step="1" value="${trackerNum(store?.vat_rate || 23)}"></label>
-              <label class="tracker-field"><span>Liczba osob</span><input id="tracker-store-headcount" type="number" min="1" step="1" value="${Math.max(1, parseInt(store?.headcount || 1, 10))}"></label>
-              <label class="tracker-field"><span>Sposob liczenia netto</span><select id="tracker-store-calc-mode"><option value="gross_to_net"${store?.calculation_mode === 'gross_to_net' || !store ? ' selected' : ''}>Automatycznie z brutto</option><option value="manual_net"${store?.calculation_mode === 'manual_net' ? ' selected' : ''}>Recznie wpisywane netto</option></select></label>
-              <label class="tracker-field"><span>Model podzialu</span><select id="tracker-store-share-type"><option value="headcount"${store?.profit_share_type === 'headcount' || !store ? ' selected' : ''}>Dochod / headcount</option><option value="percentage"${store?.profit_share_type === 'percentage' ? ' selected' : ''}>Procent dochodu</option><option value="fixed"${store?.profit_share_type === 'fixed' ? ' selected' : ''}>Stala kwota</option></select></label>
-              <label class="tracker-field"><span>Wartosc podzialu</span><input id="tracker-store-share-value" type="number" min="0" step="0.01" value="${trackerNum(store?.profit_share_value || 0)}"></label>
-              <label class="tracker-field tracker-checkbox"><span>Aktywny sklep</span><input id="tracker-store-active" type="checkbox"${store?.is_active !== false ? ' checked' : ''}></label>
-            </div>
-          </div>
-          <div class="tracker-modal-footer">
-            <button class="tracker-btn tracker-btn-subtle" type="button" onclick="trackerCloseModal()">Anuluj</button>
-            <button class="tracker-btn tracker-btn-primary" type="button" onclick="trackerSaveStoreForm()">Zapisz sklep</button>
-          </div>
-        </div>
-      </div>`;
-  }
-
-  function trackerStatModalHtml(modal){
-    const data = trackerData();
-    const stat = modal.statId ? data.dailyStats.find(item=>item.id === modal.statId) : trackerGetStat(modal.storeId, modal.date);
-    const storeId = stat?.store_id || modal.storeId || data.ui.activeStoreId || data.stores[0]?.id || '';
-    const date = stat?.date || modal.date || trackerLocalDate(new Date());
-
-    return `
-      <div class="tracker-modal-backdrop" onclick="trackerCloseModal()">
-        <div class="tracker-modal tracker-modal-wide" onclick="event.stopPropagation()">
-          <div class="tracker-modal-header">
-            <div>
-              <span class="tracker-modal-kicker">Dane dzienne</span>
-              <h3>${stat ? 'Edytuj wynik dnia' : 'Dodaj wynik dnia'}</h3>
-            </div>
-            <button class="tracker-modal-close" type="button" onclick="trackerCloseModal()">x</button>
-          </div>
-          <div class="tracker-modal-body">
-            <div class="tracker-form-grid two">
-              <label class="tracker-field"><span>Sklep</span><select id="tracker-stat-store" onchange="trackerRefreshStatPreview()">${data.stores.map(store=>`<option value="${escHtml(store.id)}"${store.id === storeId ? ' selected' : ''}>${escHtml(store.name)}</option>`).join('')}</select></label>
-              <label class="tracker-field"><span>Data</span><input id="tracker-stat-date" type="date" value="${escHtml(date)}" onchange="trackerRefreshStatPreview()"></label>
-              <label class="tracker-field"><span>Przychod brutto</span><input id="tracker-stat-gross" type="number" min="0" step="0.01" value="${trackerNum(stat?.revenue_gross || 0)}" oninput="trackerRefreshStatPreview()"></label>
-              <label class="tracker-field"><span>Przychod netto</span><input id="tracker-stat-net" type="number" min="0" step="0.01" value="${stat?.revenue_net === null || stat?.revenue_net === undefined ? '' : trackerNum(stat.revenue_net)}" placeholder="Zostaw puste, jesli ma liczyc sie samo" oninput="trackerRefreshStatPreview()"></label>
-              <label class="tracker-field"><span>Koszty reklam TikTok</span><input id="tracker-stat-ads" type="number" min="0" step="0.01" value="${trackerNum(stat?.ad_cost_tiktok || 0)}" oninput="trackerRefreshStatPreview()"></label>
-              <label class="tracker-field"><span>Zwroty</span><input id="tracker-stat-refunds" type="number" min="0" step="0.01" value="${trackerNum(stat?.refunds || 0)}" oninput="trackerRefreshStatPreview()"></label>
-              <label class="tracker-field"><span>Dodatkowe koszty</span><input id="tracker-stat-extra" type="number" min="0" step="0.01" value="${trackerNum(stat?.extra_costs || 0)}" oninput="trackerRefreshStatPreview()"></label>
-              <label class="tracker-field tracker-field-full"><span>Notatki</span><textarea id="tracker-stat-notes" rows="4" placeholder="np. problem z platnosciami, mocny dzien po kampanii, wieksze zwroty...">${escHtml(stat?.notes || '')}</textarea></label>
-            </div>
-            <div id="tracker-stat-preview" class="tracker-preview-box"></div>
-          </div>
-          <div class="tracker-modal-footer">
-            <div class="tracker-modal-footer-left">${stat ? `<button class="tracker-btn tracker-btn-danger" type="button" onclick="trackerOpenDeleteStat('${escHtml(stat.id)}')">Usun wpis</button>` : ''}</div>
-            <div class="tracker-modal-footer-right">
-              <button class="tracker-btn tracker-btn-subtle" type="button" onclick="trackerCloseModal()">Anuluj</button>
-              <button class="tracker-btn tracker-btn-primary" type="button" onclick="trackerSaveStatForm()">Zapisz dane</button>
-            </div>
-          </div>
-        </div>
-      </div>`;
-  }
-
-  function trackerConfirmModalHtml(title, body, actionLabel, actionFn, tone){
-    return `
-      <div class="tracker-modal-backdrop" onclick="trackerCloseModal()">
-        <div class="tracker-modal tracker-modal-confirm" onclick="event.stopPropagation()">
-          <div class="tracker-modal-header">
-            <div>
-              <span class="tracker-modal-kicker">Potwierdzenie</span>
-              <h3>${title}</h3>
-            </div>
-            <button class="tracker-modal-close" type="button" onclick="trackerCloseModal()">x</button>
-          </div>
-          <div class="tracker-modal-body"><p class="tracker-confirm-copy">${body}</p></div>
-          <div class="tracker-modal-footer">
-            <button class="tracker-btn tracker-btn-subtle" type="button" onclick="trackerCloseModal()">Anuluj</button>
-            <button class="tracker-btn ${tone === 'danger' ? 'tracker-btn-danger' : 'tracker-btn-primary'}" type="button" onclick="${actionFn}">${actionLabel}</button>
-          </div>
-        </div>
-      </div>`;
-  }
-
-  function trackerModalHtml(data){
-    const modal = data.ui.modal;
-    if(!modal) return '';
-    if(modal.type === 'store') return trackerStoreModalHtml(modal.storeId ? trackerGetStore(modal.storeId) : null);
-    if(modal.type === 'stat') return trackerStatModalHtml(modal);
-    if(modal.type === 'confirm-delete-store'){
-      const store = trackerGetStore(modal.storeId);
-      return trackerConfirmModalHtml('Usunac sklep?', `Sklep ${store ? `"${store.name}"` : ''} zostanie usuniety razem ze wszystkimi danymi dziennymi.`, 'Usun sklep', 'trackerDeleteStoreConfirmed()', 'danger');
-    }
-    if(modal.type === 'confirm-delete-stat') return trackerConfirmModalHtml('Usunac wpis dnia?', 'Ta operacja usuwa caly zapis dzienny dla wybranego sklepu.', 'Usun wpis', 'trackerDeleteStatConfirmed()', 'danger');
-    return '';
-  }
-
-  function trackerContentHtml(data){
-    if(!data.stores.length) return trackerEmptyStateHtml();
-    if(data.ui.view === 'month') return trackerMonthlyHtml(data);
-    if(data.ui.view === 'store') return trackerStoreDetailHtml(data);
-    if(data.ui.view === 'manage') return trackerManageHtml(data);
-    return trackerDashboardHtml(data);
-  }
-
-  function trackerEnsureWindow(){
-    const win = document.getElementById('win-shops');
-    if(!win || win.dataset.trackerSized === '1') return;
-    const width = Math.min(window.innerWidth - 16, Math.max(920, Math.round(window.innerWidth * 0.92)));
-    const height = Math.min(window.innerHeight - 24, Math.max(640, Math.round(window.innerHeight * 0.88)));
-    win.style.width = `${width}px`;
-    win.style.height = `${height}px`;
-    win.style.left = `${Math.max(8, Math.round((window.innerWidth - width) / 2))}px`;
-    win.style.top = '8px';
-    win.dataset.trackerSized = '1';
-    const title = win.querySelector('.win-title');
-    if(title) title.textContent = 'Sklepy / Wyniki';
-  }
-
-  function trackerClampWindowToViewport(){
-    const win = document.getElementById('win-shops');
-    if(!win) return;
-    const maxWidth = Math.max(360, window.innerWidth - 12);
-    const maxHeight = Math.max(420, window.innerHeight - 12);
-    const width = Math.min(win.offsetWidth || parseInt(win.style.width || '0', 10) || maxWidth, maxWidth);
-    const height = Math.min(win.offsetHeight || parseInt(win.style.height || '0', 10) || maxHeight, maxHeight);
-    const left = parseInt(win.style.left || '0', 10);
-    const top = parseInt(win.style.top || '0', 10);
-    win.style.width = `${width}px`;
-    win.style.height = `${height}px`;
-    win.style.left = `${Math.max(6, Math.min(Number.isFinite(left) ? left : 6, window.innerWidth - width - 6))}px`;
-    win.style.top = `${Math.max(6, Math.min(Number.isFinite(top) ? top : 6, window.innerHeight - height - 6))}px`;
-  }
-
-  function trackerDestroyCharts(){
-    Object.keys(trackerRuntime.charts).forEach(key=>{
-      try{ trackerRuntime.charts[key].destroy(); }catch(e){}
-    });
-    trackerRuntime.charts = {};
-  }
-
-  function trackerChartOptions(){
-    const textMuted = trackerReadCssVar('--text3', '#9e9890');
-    const border = trackerReadCssVar('--border', '#e5e2dc');
-    return {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {labels: {color: textMuted, boxWidth: 10, boxHeight: 10, font: {family: 'DM Sans', size: 11}}},
-        tooltip: {
-          callbacks: {
-            label(context){
-              const label = context.dataset.label || '';
-              return `${label}: ${trackerFmtPLN(context.parsed.y)}`;
-            }
-          }
-        }
-      },
-      scales: {
-        x: {ticks: {color: textMuted}, grid: {display:false}},
-        y: {
-          ticks: {
-            color: textMuted,
-            callback(value){ return trackerFmtCompactPLN(value); }
-          },
-          grid: {color: border}
-        }
+    if(data.ui.companyId){
+      const company = getCompany(data.ui.companyId);
+      if(company){
+        parts.push('<span class="shops-v2-crumb-sep">/</span>');
+        parts.push(`<button type="button" class="shops-v2-crumb${data.ui.view === 'company' ? ' active' : ''}" onclick="openShopsCompany('${company.id}')">${esc(company.name)}</button>`);
       }
-    };
-  }
-
-  function trackerRenderCharts(){
-    if(!window.Chart) return;
-    trackerDestroyCharts();
-    const data = trackerData();
-    const filteredStores = trackerGetFilteredStores(false);
-    const storeIds = filteredStores.map(store=>store.id);
-
-    const globalCanvas = document.getElementById('tracker-global-chart');
-    if(globalCanvas){
-      const accent = trackerReadCssVar('--accent', '#2d5be3');
-      const green = trackerReadCssVar('--green', '#22c55e');
-      const orange = trackerReadCssVar('--orange', '#f97316');
-      const daily = trackerDailyTotals(data.ui.monthKey, storeIds);
-      trackerRuntime.charts.global = new Chart(globalCanvas, {
-        type: 'line',
-        data: {
-          labels: daily.map(item=>item.date.slice(-2)),
-          datasets: [
-            {label:'Przychod', data: daily.map(item=>Math.round(item.gross)), borderColor:accent, backgroundColor:'rgba(45,91,227,.12)', fill:true, tension:0.3, pointRadius:2},
-            {label:'Dochod', data: daily.map(item=>Math.round(item.income)), borderColor:green, backgroundColor:'rgba(34,197,94,.10)', fill:true, tension:0.3, pointRadius:2},
-            {label:'TikTok Ads', data: daily.map(item=>Math.round(item.ads)), borderColor:orange, backgroundColor:'rgba(249,115,22,.08)', fill:false, tension:0.3, pointRadius:2}
-          ]
-        },
-        options: trackerChartOptions()
-      });
     }
 
-    const storeCanvas = document.getElementById('tracker-store-chart');
-    if(storeCanvas){
-      const store = trackerGetStore(data.ui.activeStoreId) || filteredStores[0];
+    if(data.ui.view === 'store' && data.ui.storeId){
+      const store = getStore(data.ui.storeId);
       if(store){
-        const summary = trackerStoreSummary(store, data.ui.monthKey);
-        trackerRuntime.charts.store = new Chart(storeCanvas, {
-          type: 'bar',
-          data: {
-            labels: summary.stats.map(stat=>stat.date.slice(-2)),
-            datasets: [
-              {type:'line', label:'Przychod brutto', data: summary.stats.map(stat=>Math.round(stat.revenue_gross)), borderColor:store.color, backgroundColor:`${store.color}22`, tension:0.3, pointRadius:3, fill:false},
-              {type:'bar', label:'Dochod', data: summary.stats.map(stat=>Math.round(stat.income)), backgroundColor:'rgba(34,197,94,.4)', borderRadius:8},
-              {type:'bar', label:'TikTok Ads', data: summary.stats.map(stat=>Math.round(stat.ad_cost_tiktok)), backgroundColor:'rgba(249,115,22,.34)', borderRadius:8}
-            ]
-          },
-          options: trackerChartOptions()
-        });
+        parts.push('<span class="shops-v2-crumb-sep">/</span>');
+        parts.push(`<button type="button" class="shops-v2-crumb active" onclick="openShopsStore('${store.id}')">${esc(store.name)}</button>`);
       }
     }
+
+    return `<div class="shops-v2-breadcrumbs">${parts.join('')}</div>`;
   }
 
-  function trackerInjectStyles(){
-    let style = document.getElementById(TRACKER_STYLE_ID);
-    if(!style){
-      style = document.createElement('style');
-      style.id = TRACKER_STYLE_ID;
-      document.head.appendChild(style);
+  function renderHeader(data){
+    const ui = data.ui;
+    const title = viewTitle(ui);
+    const subtitle = ui.view === 'overview'
+      ? 'Globalny widok firm i sklepów'
+      : ui.view === 'company'
+        ? 'Sklepy przypisane do wybranej firmy'
+        : 'Dzienny kalendarz i tabela miesięczna sklepu';
+    let actions = '';
+    if(ui.view === 'overview'){
+      actions = `<button class="btn btn-primary" type="button" onclick="openCompanyModal()">+ Dodaj firmę</button>`;
+    }else if(ui.view === 'company'){
+      actions = [
+        `<button class="btn btn-ghost" type="button" onclick="openCompanyModal('${ui.companyId}')">Edytuj firmę</button>`,
+        `<button class="btn btn-primary" type="button" onclick="openStoreModal('${ui.companyId}')">+ Dodaj sklep</button>`
+      ].join('');
+    }else if(ui.view === 'store'){
+      actions = [
+        `<button class="btn btn-ghost" type="button" onclick="openStoreModal('${ui.companyId}','${ui.storeId}')">Edytuj sklep</button>`,
+        `<button class="btn btn-primary" type="button" onclick="openStatModal('${ui.storeId}','${ui.selectedDate}')">+ Dodaj / edytuj dzień</button>`
+      ].join('');
     }
-    style.textContent = `
-      #shops-body{display:block;height:100%;width:100%;min-width:0;padding:0 !important;overflow:hidden;background:var(--surface2);container-type:inline-size;}
-      #shops-body .tracker-app{height:100%;width:100%;min-width:0;display:flex;flex-direction:column;background:var(--surface2);color:var(--text);}
-      #shops-body .tracker-hero{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--surface);}
-      #shops-body .tracker-hero-title{min-width:0;display:flex;flex-direction:column;gap:3px;}
-      #shops-body .tracker-hero h1,#shops-body .tracker-card h2,#shops-body .tracker-modal h3{margin:0;color:var(--text);line-height:1.15;}
-      #shops-body .tracker-hero h1{font-size:17px;font-weight:800;}
-      #shops-body .tracker-card h2{font-size:14px;}
-      #shops-body .tracker-eyebrow,#shops-body .tracker-card-eyebrow,#shops-body .tracker-modal-kicker{display:inline-flex;align-items:center;gap:6px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);font-weight:700;}
-      #shops-body .tracker-eyebrow{display:none;}
-      #shops-body .tracker-hero-sub{font-size:11px;color:var(--text3);}
-      #shops-body .tracker-hero p{display:none;}
-      #shops-body .tracker-hero-actions,#shops-body .tracker-toolbar,#shops-body .tracker-nav,#shops-body .tracker-toolbar-group,#shops-body .tracker-card-actions,#shops-body .tracker-store-block-actions,#shops-body .tracker-store-card-actions,#shops-body .tracker-history-actions,#shops-body .tracker-modal-footer,#shops-body .tracker-modal-footer-left,#shops-body .tracker-modal-footer-right,#shops-body .tracker-card-header,#shops-body .tracker-store-card-top,#shops-body .tracker-store-card-title{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
-      #shops-body .tracker-card-header,#shops-body .tracker-store-card-top{justify-content:space-between;align-items:flex-start;}
-      #shops-body .tracker-store-card-title{justify-content:flex-start;}
-      #shops-body .tracker-toolbar,#shops-body .tracker-nav{justify-content:space-between;padding:8px 12px 0;}
-      #shops-body .tracker-toolbar-group{min-width:0;}
-      #shops-body .tracker-toolbar-actions{margin-left:auto;}
-      #shops-body .tracker-nav{padding-top:6px;}
-      #shops-body .tracker-control{display:flex;flex-direction:column;gap:4px;min-width:150px;flex:1 1 150px;font-size:11px;color:var(--text2);font-weight:600;}
-      #shops-body .tracker-control input,#shops-body .tracker-control select,#shops-body .tracker-field input,#shops-body .tracker-field select,#shops-body .tracker-field textarea{width:100%;border:1px solid var(--border);outline:none;border-radius:10px;background:var(--surface);color:var(--text);padding:8px 10px;font:500 12px 'DM Sans', sans-serif;box-shadow:none;}
-      #shops-body .tracker-field input[type="color"]{min-height:38px;padding:4px;}
-      #shops-body .tracker-field textarea{resize:vertical;min-height:96px;}
-      #shops-body .tracker-btn,#shops-body .tracker-chip-btn,#shops-body .tracker-nav-btn{border:1px solid var(--border);outline:none;cursor:pointer;font:600 12px 'DM Sans', sans-serif;border-radius:10px;transition:background .14s ease,color .14s ease,border-color .14s ease;padding:8px 10px;}
-      #shops-body .tracker-btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;}
-      #shops-body .tracker-btn-ghost,#shops-body .tracker-btn-subtle,#shops-body .tracker-chip-btn,#shops-body .tracker-nav-btn{background:var(--surface);color:var(--text);}
-      #shops-body .tracker-btn-danger,#shops-body .tracker-chip-btn.danger{background:var(--red-bg);border-color:var(--red-bg);color:var(--red-text);}
-      #shops-body .tracker-nav-btn.active{background:var(--accent-light);border-color:var(--accent-light);color:var(--accent);}
-      #shops-body .tracker-month-pill,#shops-body .tracker-inline-month{padding:7px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-weight:700;}
-      #shops-body .tracker-content{flex:1;min-width:0;overflow:auto;padding:8px 12px 12px;}
-      #shops-body .tracker-content > *{min-width:0;}
-      #shops-body .tracker-dashboard-grid,#shops-body .tracker-store-view-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-width:0;}
-      #shops-body .tracker-manage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;}
-      #shops-body .tracker-card,#shops-body .tracker-store-block,#shops-body .tracker-store-card{min-width:0;border-radius:14px;border:1px solid var(--border);background:var(--surface);box-shadow:none;}
-      #shops-body .tracker-card,#shops-body .tracker-store-card{padding:12px;}
-      #shops-body .tracker-card-span-2,#shops-body .tracker-card-span-3{grid-column:1 / -1;}
-      #shops-body .tracker-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:8px;margin-top:10px;}
-      #shops-body .tracker-kpi{padding:10px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);}
-      #shops-body .tracker-kpi-label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-weight:700;}
-      #shops-body .tracker-kpi-value{display:block;margin-top:5px;font-size:18px;line-height:1.1;color:var(--text);}
-      #shops-body .tracker-kpi-sub,#shops-body .tracker-ranking-body small,#shops-body .tracker-muted,#shops-body .tracker-store-meta,#shops-body .tracker-store-card-meta,#shops-body .tracker-day-card-top,#shops-body .tracker-preview-label{color:var(--text3);font-size:11px;}
-      #shops-body .tracker-tone-blue .tracker-kpi-value{color:var(--accent);}
-      #shops-body .tracker-tone-green .tracker-kpi-value{color:var(--green);}
-      #shops-body .tracker-tone-violet .tracker-kpi-value{color:var(--purple);}
-      #shops-body .tracker-tone-orange .tracker-kpi-value{color:var(--orange);}
-      #shops-body .tracker-tone-rose .tracker-kpi-value{color:#e11d48;}
-      #shops-body .tracker-tone-red .tracker-kpi-value{color:var(--red);}
-      #shops-body .tracker-chart-wrap{position:relative;min-height:160px;margin-top:10px;}
-      #shops-body .tracker-ranking-list,#shops-body .tracker-highlight-stack,#shops-body .tracker-day-feed,#shops-body .tracker-setting-list{margin-top:10px;display:flex;flex-direction:column;gap:8px;}
-      #shops-body .tracker-ranking-item,#shops-body .tracker-day-card{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:12px;cursor:pointer;color:var(--text);background:var(--surface2);}
-      #shops-body .tracker-day-feed{flex-direction:row;overflow:auto;padding-bottom:4px;}
-      #shops-body .tracker-day-card{min-width:132px;flex-direction:column;align-items:flex-start;}
-      #shops-body .tracker-day-card-main{font-size:16px;font-weight:700;color:var(--text);}
-      #shops-body .tracker-ranking-index{width:24px;height:24px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);font-weight:700;font-size:11px;}
-      #shops-body .tracker-ranking-color,#shops-body .tracker-store-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;background:var(--tracker-store-color,var(--accent));}
-      #shops-body .tracker-ranking-body{min-width:0;display:flex;flex-direction:column;gap:2px;text-align:left;}
-      #shops-body .tracker-highlight{padding:12px;border-radius:12px;border:1px solid var(--border);}
-      #shops-body .tracker-highlight-good{background:var(--green-bg);}
-      #shops-body .tracker-highlight-bad{background:var(--red-bg);}
-      #shops-body .tracker-month-layout{display:flex;flex-direction:column;gap:10px;}
-      #shops-body .tracker-store-block{overflow:hidden;}
-      #shops-body .tracker-store-block-header{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;padding:12px;border-bottom:1px solid var(--border);background:var(--surface);}
-      #shops-body .tracker-store-name-line{display:flex;align-items:center;gap:8px;}
-      #shops-body .tracker-store-name-line h3{margin:0;font-size:15px;color:var(--text);}
-      #shops-body .tracker-store-chip{display:inline-flex;padding:4px 8px;border-radius:999px;background:var(--surface2);color:var(--text2);font-size:10px;font-weight:700;border:1px solid var(--border);}
-      #shops-body .tracker-store-chip.muted{color:var(--text3);}
-      #shops-body .tracker-store-summary-metric{padding:6px 9px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:11px;font-weight:700;}
-      #shops-body .tracker-table-wrap,#shops-body .tracker-history-wrap{overflow:auto;max-width:100%;}
-      #shops-body .tracker-month-table,#shops-body .tracker-history-table{width:max-content;min-width:100%;border-collapse:separate;border-spacing:0;font-size:12px;}
-      #shops-body .tracker-month-table th,#shops-body .tracker-month-table td,#shops-body .tracker-history-table th,#shops-body .tracker-history-table td{padding:7px;border-bottom:1px solid var(--border);text-align:center;}
-      #shops-body .tracker-month-table thead th{position:sticky;top:0;z-index:3;background:var(--surface2);color:var(--text3);font-size:10px;text-transform:uppercase;}
-      #shops-body .tracker-month-table thead th strong{display:block;margin-top:2px;font-size:11px;color:var(--text);}
-      #shops-body .tracker-month-table .sticky-col{position:sticky;left:0;z-index:2;background:var(--surface2);text-align:left;min-width:120px;color:var(--text);}
-      #shops-body .tracker-month-table .sticky-col-head{z-index:4;}
-      #shops-body .tracker-month-table .summary-col{min-width:104px;font-weight:700;background:var(--surface2);color:var(--text);}
-      #shops-body .tracker-cell-btn{width:100%;min-height:30px;padding:5px 7px;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;}
-      #shops-body .tracker-cell-btn.is-empty{color:var(--text3);background:var(--surface2);}
-      #shops-body .tracker-mini-badge{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:999px;background:var(--accent-light);color:var(--accent);font-size:10px;font-weight:800;}
-      #shops-body .tracker-mini-badge.auto{color:var(--accent);}
-      #shops-body .tracker-store-hero-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:10px;}
-      #shops-body .tracker-setting-list div,#shops-body .tracker-store-card-metrics div{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);}
-      #shops-body .tracker-store-card-metrics{margin-top:10px;}
-      #shops-body .tracker-store-card-meta{display:flex;flex-wrap:wrap;gap:8px 10px;margin-top:10px;}
-      #shops-body .tracker-history-table{width:100%;}
-      #shops-body .tracker-history-table thead th{text-align:left;color:var(--text3);font-size:10px;text-transform:uppercase;}
-      #shops-body .tracker-history-table tbody td{text-align:left;}
-      #shops-body .tracker-history-date{display:flex;flex-direction:column;gap:3px;}
-      #shops-body .tracker-empty-row{text-align:center !important;color:var(--text3);}
-      #shops-body .tracker-empty-state{min-height:220px;border-radius:14px;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;}
-      #shops-body .tracker-empty-orb{display:none;}
-      #shops-body .tracker-empty-content{max-width:480px;text-align:center;padding:20px;}
-      #shops-body .tracker-empty-kicker{display:inline-flex;margin-bottom:8px;padding:6px 9px;border-radius:999px;background:var(--surface2);color:var(--text3);font-size:10px;font-weight:700;border:1px solid var(--border);}
-      #shops-body .tracker-empty-content h2{margin:0;font-size:22px;color:var(--text);}
-      #shops-body .tracker-empty-content p{margin:10px 0 0;color:var(--text2);}
-      #shops-body .tracker-empty-actions{display:flex;justify-content:center;gap:8px;margin-top:16px;flex-wrap:wrap;}
-      #shops-body .tracker-modal-backdrop{position:fixed;inset:0;z-index:99998;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.14);backdrop-filter:blur(3px);}
-      #shops-body .tracker-modal{width:min(620px,100%);border-radius:16px;border:1px solid var(--border);background:var(--surface);color:var(--text);box-shadow:var(--shadow);}
-      #shops-body .tracker-modal-wide{width:min(780px,100%);}
-      #shops-body .tracker-modal-confirm{width:min(480px,100%);}
-      #shops-body .tracker-modal-header,#shops-body .tracker-modal-footer{padding:16px 16px 0;}
-      #shops-body .tracker-modal-body{padding:12px 16px 8px;}
-      #shops-body .tracker-modal-footer{justify-content:space-between;padding-bottom:16px;}
-      #shops-body .tracker-modal-close{border:1px solid var(--border);width:32px;height:32px;border-radius:50%;background:var(--surface2);color:var(--text);cursor:pointer;}
-      #shops-body .tracker-form-grid{display:grid;grid-template-columns:1fr;gap:10px;}
-      #shops-body .tracker-form-grid.two{grid-template-columns:repeat(2,minmax(0,1fr));}
-      #shops-body .tracker-field{display:flex;flex-direction:column;gap:6px;color:var(--text2);font-size:12px;font-weight:600;}
-      #shops-body .tracker-field-full{grid-column:1 / -1;}
-      #shops-body .tracker-checkbox{justify-content:flex-end;}
-      #shops-body .tracker-checkbox input{width:18px;height:18px;padding:0;}
-      #shops-body .tracker-preview-box{margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;}
-      #shops-body .tracker-preview-chip{padding:10px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);}
-      #shops-body .tracker-confirm-copy{margin:0;color:var(--text2);line-height:1.6;}
-      @container (max-width: 1180px){#shops-body .tracker-dashboard-grid,#shops-body .tracker-store-view-grid{grid-template-columns:1fr;}#shops-body .tracker-card-span-2,#shops-body .tracker-card-span-3{grid-column:auto;}}
-      @container (max-width: 900px){#shops-body .tracker-hero{flex-direction:column;align-items:stretch;}#shops-body .tracker-hero-actions{justify-content:space-between;}#shops-body .tracker-toolbar{padding-top:8px;}#shops-body .tracker-toolbar-group{width:100%;}#shops-body .tracker-toolbar-actions{margin-left:0;justify-content:flex-end;}#shops-body .tracker-nav{overflow:auto;flex-wrap:nowrap;padding-bottom:2px;}#shops-body .tracker-nav-btn{white-space:nowrap;flex:0 0 auto;}#shops-body .tracker-card,#shops-body .tracker-store-card{padding:10px;}#shops-body .tracker-chart-wrap{min-height:150px;}#shops-body .tracker-day-card{min-width:118px;}}
-      @container (max-width: 720px){#shops-body .tracker-kpi-grid,#shops-body .tracker-store-hero-grid,#shops-body .tracker-preview-box{grid-template-columns:repeat(2,minmax(0,1fr));}#shops-body .tracker-form-grid.two{grid-template-columns:1fr;}#shops-body .tracker-month-table .sticky-col,#shops-body .tracker-month-table .summary-col{min-width:98px;}#shops-body .tracker-month-pill{display:none;}}
-      @container (max-width: 560px){#shops-body .tracker-kpi-grid,#shops-body .tracker-store-hero-grid,#shops-body .tracker-preview-box{grid-template-columns:1fr;}#shops-body .tracker-content{padding:8px 10px 10px;}#shops-body .tracker-hero,#shops-body .tracker-toolbar,#shops-body .tracker-nav{padding-left:10px;padding-right:10px;}#shops-body .tracker-btn,#shops-body .tracker-chip-btn,#shops-body .tracker-nav-btn{padding:7px 8px;font-size:11px;}#shops-body .tracker-hero h1{font-size:16px;}#shops-body .tracker-hero-sub{font-size:10px;}}
+
+    return `
+      <div class="card shops-v2-header-card">
+        <div class="shops-v2-header-top">
+          <div class="shops-v2-header-main">
+            ${renderBreadcrumbs(data)}
+            <div class="shops-v2-header-copy">
+              <div class="shops-v2-title">${esc(title)}</div>
+              <div class="shops-v2-subtitle">${esc(subtitle)}</div>
+            </div>
+          </div>
+          <div class="shops-v2-actions">${actions}</div>
+        </div>
+        <div class="shops-v2-toolbar">
+          <div class="shops-v2-month-nav">
+            <button class="cal-nav-btn" type="button" onclick="shiftShopsMonth(-1)">‹</button>
+            <input type="month" value="${esc(ui.monthKey)}" onchange="setShopsMonth(this.value)" aria-label="Wybór miesiąca">
+            <button class="cal-nav-btn" type="button" onclick="shiftShopsMonth(1)">›</button>
+            <button class="btn btn-ghost btn-sm" type="button" onclick="setShopsMonth('${monthKey(new Date())}')">Dziś</button>
+          </div>
+          <div class="todo-filters shops-v2-filters">
+            <button class="filter-btn${ui.summaryMode === 'month' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('month')">Miesiąc</button>
+            <button class="filter-btn${ui.summaryMode === 'day' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('day')">Dzień</button>
+            <button class="filter-btn${ui.view === 'overview' ? ' active' : ''}" type="button" onclick="openShopsOverview()">Wszystko</button>
+          </div>
+          <div class="shops-v2-range-badge badge badge-gray">${esc(rangeLabel(ui.monthKey, ui.summaryMode, ui.selectedDate))}</div>
+        </div>
+      </div>
     `;
   }
 
-  function trackerRenderShops(){
-    const root = document.getElementById('shops-body');
-    if(!root) return;
-    const data = trackerData();
-    trackerInjectStyles();
-    trackerEnsureWindow();
-    trackerClampWindowToViewport();
-    root.className = '';
-    root.style.padding = '0';
-    root.style.overflow = 'hidden';
-    root.style.display = 'block';
-    root.style.background = trackerReadCssVar('--surface2', '#f8f7f5');
-    if(Array.isArray(window.ALL_APPS)){
-      const shopsApp = window.ALL_APPS.find(app=>app.id === 'shops');
-      if(shopsApp){
-        shopsApp.label = 'Sklepy / Wyniki';
-        shopsApp.desc = 'Profit tracker sklepow';
-      }
+  function renderStatCard(label, value, meta, tone){
+    return `
+      <div class="stat-box shops-v2-stat shops-v2-stat-${tone || 'neutral'}">
+        <div class="shops-v2-stat-label">${esc(label)}</div>
+        <div class="shops-v2-stat-value">${value}</div>
+        <div class="shops-v2-stat-meta">${meta}</div>
+      </div>
+    `;
+  }
+
+  function renderSummaryGrid(summary, options){
+    const label = esc(options?.label || '');
+    const filled = Number(options?.filledDays || 0);
+    const cards = [
+      renderStatCard('Przychód', formatPLN(summary.gross), `Netto: ${formatPLN(summary.net)}`, 'blue'),
+      renderStatCard('Dochód', formatPLN(summary.income), label || 'Po odjęciu reklam i kosztów', summary.income >= 0 ? 'green' : 'red'),
+      renderStatCard('Na głowę', formatPLN(summary.perHead), 'Według ustawień podziału', 'purple'),
+      renderStatCard('Reklamy', formatPLN(summary.ads), `TikTok / przychód: ${formatPct(summary.adPct)}`, 'orange'),
+      renderStatCard('Zwroty', formatPLN(summary.refunds), `Dodatkowe koszty: ${formatPLN(summary.extra)}${filled ? ` • dni z danymi: ${filled}` : ''}`, 'gray')
+    ];
+    return `
+      <div class="shops-v2-summary-block">
+        <div class="sec-title">Dashboard</div>
+        <div class="shops-v2-summary-grid">${cards.join('')}</div>
+      </div>
+    `;
+  }
+
+  function renderCompanyCard(companySummary){
+    const company = companySummary.company;
+    const stores = companySummary.stores || [];
+    const activeStores = stores.filter(store=>store.is_active).length;
+    return `
+      <div class="card shops-v2-entity-card">
+        <div class="shops-v2-entity-head">
+          <div class="shops-v2-entity-brand">
+            <span class="shops-v2-entity-dot" style="background:${companyAccent(companySummary)}"></span>
+            <div>
+              <div class="shops-v2-entity-title">${esc(company.name)}</div>
+              <div class="shops-v2-entity-sub">${stores.length} ${plural(stores.length, 'sklep', 'sklepy', 'sklepów')} • ${activeStores} aktywne</div>
+            </div>
+          </div>
+          <span class="badge ${company.is_active ? 'badge-blue' : 'badge-gray'}">${company.is_active ? 'Aktywna' : 'Pauza'}</span>
+        </div>
+        <div class="shops-v2-kpi-grid">
+          <div class="shops-v2-kpi-chip"><span>Przychód</span><strong>${formatPLN(companySummary.gross)}</strong></div>
+          <div class="shops-v2-kpi-chip"><span>Dochód</span><strong>${formatPLN(companySummary.income)}</strong></div>
+          <div class="shops-v2-kpi-chip"><span>Na głowę</span><strong>${formatPLN(companySummary.perHead)}</strong></div>
+          <div class="shops-v2-kpi-chip"><span>Reklamy</span><strong>${formatPLN(companySummary.ads)}</strong></div>
+        </div>
+        <div class="shops-v2-card-actions">
+          <button class="btn btn-primary btn-sm" type="button" onclick="openShopsCompany('${company.id}')">Otwórz</button>
+          <button class="btn btn-ghost btn-sm" type="button" onclick="openCompanyModal('${company.id}')">Edytuj</button>
+          <button class="btn btn-ghost btn-sm" type="button" onclick="toggleCompanyActive('${company.id}')">${company.is_active ? 'Dezaktywuj' : 'Aktywuj'}</button>
+          <button class="btn btn-danger btn-sm" type="button" onclick="confirmDeleteCompany('${company.id}')">Usuń</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderStoreCard(storeSummary){
+    const store = storeSummary.store;
+    return `
+      <div class="card shops-v2-entity-card">
+        <div class="shops-v2-entity-head">
+          <div class="shops-v2-entity-brand">
+            <span class="shops-v2-entity-dot" style="background:${store.color}"></span>
+            <div>
+              <div class="shops-v2-entity-title">${esc(store.name)}</div>
+              <div class="shops-v2-entity-sub">
+                VAT ${store.vat_rate}% • ${store.headcount} ${plural(store.headcount, 'osoba', 'osoby', 'osób')} • ${esc(CALCULATION_MODE_LABELS[store.calculation_mode] || '')}
+              </div>
+            </div>
+          </div>
+          <span class="badge ${store.is_active ? 'badge-blue' : 'badge-gray'}">${store.is_active ? 'Aktywny' : 'Pauza'}</span>
+        </div>
+        <div class="shops-v2-kpi-grid">
+          <div class="shops-v2-kpi-chip"><span>Przychód</span><strong>${formatPLN(storeSummary.gross)}</strong></div>
+          <div class="shops-v2-kpi-chip"><span>Dochód</span><strong>${formatPLN(storeSummary.income)}</strong></div>
+          <div class="shops-v2-kpi-chip"><span>Reklamy</span><strong>${formatPLN(storeSummary.ads)}</strong></div>
+          <div class="shops-v2-kpi-chip"><span>Na głowę</span><strong>${formatPLN(storeSummary.perHead)}</strong></div>
+        </div>
+        <div class="shops-v2-card-actions">
+          <button class="btn btn-primary btn-sm" type="button" onclick="openShopsStore('${store.id}')">Otwórz sklep</button>
+          <button class="btn btn-ghost btn-sm" type="button" onclick="openStoreModal('${store.company_id}','${store.id}')">Edytuj</button>
+          <button class="btn btn-ghost btn-sm" type="button" onclick="toggleStoreActive('${store.id}')">${store.is_active ? 'Dezaktywuj' : 'Aktywuj'}</button>
+          <button class="btn btn-danger btn-sm" type="button" onclick="confirmDeleteStore('${store.id}')">Usuń</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderInsightsCard(summary, isCompany){
+    const ranking = isCompany
+      ? (summary.ranking || [])
+      : (summary.companies || [])
+        .filter(item=>item.gross > 0 || item.income !== 0 || item.ads > 0 || item.refunds > 0 || item.extra > 0)
+        .sort((a, b)=>b.income - a.income);
+    const best = ranking[0] || null;
+    const worst = ranking[ranking.length - 1] || null;
+    return `
+      <div class="shops-v2-overview-grid">
+        <div class="card">
+          <div class="sec-title">Ranking</div>
+          ${ranking.length ? `
+            <div class="shops-v2-ranking">
+              ${ranking.slice(0, 5).map((item, index)=>`
+                <button type="button" class="shops-v2-ranking-row" onclick="${isCompany ? `openShopsStore('${item.store.id}')` : `openShopsCompany('${item.company.id}')`}">
+                  <span class="shops-v2-ranking-index">${index + 1}</span>
+                  <span class="shops-v2-ranking-name">${esc(isCompany ? item.store.name : item.company.name)}</span>
+                  <strong>${formatPLN(item.income)}</strong>
+                </button>
+              `).join('')}
+            </div>
+          ` : `<div class="shops-v2-empty-inline">Brak danych dla wybranego zakresu.</div>`}
+        </div>
+        <div class="card">
+          <div class="sec-title">Szybki podgląd</div>
+          <div class="shops-v2-highlight-grid">
+            <div class="shops-v2-highlight">
+              <span>Najlepszy wynik</span>
+              <strong>${best ? esc(isCompany ? best.store.name : best.company.name) : '—'}</strong>
+              <small>${best ? formatPLN(best.income) : 'Brak danych'}</small>
+            </div>
+            <div class="shops-v2-highlight">
+              <span>Najniższy wynik</span>
+              <strong>${worst ? esc(isCompany ? worst.store.name : worst.company.name) : '—'}</strong>
+              <small>${worst ? formatPLN(worst.income) : 'Brak danych'}</small>
+            </div>
+            <div class="shops-v2-highlight">
+              <span>Reklamy / przychód</span>
+              <strong>${formatPct(summary.adPct)}</strong>
+              <small>W całym zakresie</small>
+            </div>
+            <div class="shops-v2-highlight">
+              <span>Zwroty + koszty</span>
+              <strong>${formatPLN(summary.refunds + summary.extra)}</strong>
+              <small>Refundy i dodatkowe koszty</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderOverview(data){
+    const summary = summarizeGlobal(data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate);
+    const filledDays = summary.stores.reduce((total, item)=>total + item.filledDays, 0);
+    return `
+      <div class="shops-v2-scroll">
+        ${renderSummaryGrid(summary, {label: rangeLabel(data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate), filledDays})}
+        ${renderInsightsCard(summary, false)}
+        <div class="card shops-v2-section-card">
+          <div class="shops-v2-section-head">
+            <div>
+              <div class="sec-title">Firmy</div>
+              <div class="shops-v2-muted">Najpierw firma, potem sklepy i dane dnia. Bez chaosu i bez płaskiego Excela.</div>
+            </div>
+            <button class="btn btn-primary" type="button" onclick="openCompanyModal()">+ Dodaj firmę</button>
+          </div>
+          <div class="shops-v2-card-grid">
+            ${summary.companies.length ? summary.companies.map(renderCompanyCard).join('') : `
+              <div class="shops-v2-empty-block">
+                <div class="es-icon">🏢</div>
+                <div>Nie masz jeszcze żadnej firmy.</div>
+              </div>
+            `}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderCompanyView(data){
+    const company = getCompany(data.ui.companyId);
+    if(!company) return renderOverview(data);
+    const summary = summarizeCompany(company, data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate);
+    const filledDays = summary.storeSummaries.reduce((total, item)=>total + item.filledDays, 0);
+    return `
+      <div class="shops-v2-scroll">
+        <div class="card shops-v2-company-head">
+          <div class="shops-v2-company-copy">
+            <span class="shops-v2-entity-dot" style="background:${companyAccent(summary)}"></span>
+            <div>
+              <div class="shops-v2-company-title">${esc(company.name)}</div>
+              <div class="shops-v2-muted">${summary.stores.length} ${plural(summary.stores.length, 'sklep', 'sklepy', 'sklepów')} • ${rangeLabel(data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate)}</div>
+            </div>
+          </div>
+          <div class="shops-v2-actions">
+            <button class="btn btn-ghost" type="button" onclick="openCompanyModal('${company.id}')">Edytuj firmę</button>
+            <button class="btn btn-primary" type="button" onclick="openStoreModal('${company.id}')">+ Dodaj sklep</button>
+          </div>
+        </div>
+        ${renderSummaryGrid(summary, {label: rangeLabel(data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate), filledDays})}
+        ${renderInsightsCard(summary, true)}
+        <div class="card shops-v2-section-card">
+          <div class="shops-v2-section-head">
+            <div>
+              <div class="sec-title">Sklepy w firmie</div>
+              <div class="shops-v2-muted">Każdy sklep ma osobny kalendarz, tabelę miesiąca i swoje ustawienia liczenia.</div>
+            </div>
+            <button class="btn btn-primary" type="button" onclick="openStoreModal('${company.id}')">+ Dodaj sklep</button>
+          </div>
+          <div class="shops-v2-card-grid">
+            ${summary.storeSummaries.length ? summary.storeSummaries.map(renderStoreCard).join('') : `
+              <div class="shops-v2-empty-block">
+                <div class="es-icon">🏪</div>
+                <div>Ta firma nie ma jeszcze sklepów.</div>
+              </div>
+            `}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderStoreCalendar(store, key, selectedDate){
+    const statsMap = statMapForStore(store.id, key);
+    const today = localDate(new Date());
+    const cells = buildCalendarCells(key);
+    return `
+      <div class="shops-v2-panel shops-v2-calendar-panel">
+        <div class="shops-v2-panel-head">
+          <div class="sec-title">Kalendarz sklepu</div>
+          <div class="shops-v2-muted">Kliknij dzień, a potem edytuj dane tego dnia.</div>
+        </div>
+        <div class="shops-v2-calendar-inner">
+          <div class="cal-nav">
+            <button class="cal-nav-btn" type="button" onclick="shiftShopsMonth(-1)">‹</button>
+            <span class="cal-month-lbl">${esc(monthLabel(key))}</span>
+            <button class="cal-nav-btn" type="button" onclick="shiftShopsMonth(1)">›</button>
+          </div>
+          <div class="cal-hdr">
+            <div class="cal-day-name">Pon</div>
+            <div class="cal-day-name">Wt</div>
+            <div class="cal-day-name">Śr</div>
+            <div class="cal-day-name">Czw</div>
+            <div class="cal-day-name">Pt</div>
+            <div class="cal-day-name" style="color:var(--orange)">Sob</div>
+            <div class="cal-day-name" style="color:var(--red)">Nd</div>
+          </div>
+          <div class="cal-grid shops-v2-cal-grid">
+            ${cells.map(cell=>{
+              const stat = statsMap.get(cell.date);
+              const isSelected = cell.date === selectedDate;
+              const isToday = cell.date === today;
+              const cls = [
+                'cal-day',
+                cell.otherMonth ? 'other-month' : '',
+                cell.weekend ? 'weekend' : '',
+                isToday ? 'today' : '',
+                isSelected ? 'shops-v2-selected-day' : '',
+                stat ? 'has-tasks shops-v2-has-data' : ''
+              ].filter(Boolean).join(' ');
+              const label = esc(shortDateLabel(cell.date));
+              return `
+                <button type="button" class="${cls}" onclick="jumpToShopsDate('${cell.date}')"
+                  title="${label}${stat ? ' • dane zapisane' : ''}">
+                  <span>${cell.day}</span>
+                  ${stat ? `<span class="cal-badge">1</span>` : ''}
+                </button>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderSelectedDayPanel(store, selectedDate){
+    const rawStat = getStoreStat(store.id, selectedDate);
+    const stat = rawStat ? computeStat(store, rawStat) : null;
+    const noteText = stat?.notes ? esc(stat.notes).replace(/\n/g, '<br>') : '';
+    return `
+      <div class="shops-v2-panel shops-v2-side-panel">
+        <div class="shops-v2-panel-head">
+          <div>
+            <div class="sec-title">Wybrany dzień</div>
+            <div class="shops-v2-side-title">${esc(fullDateLabel(selectedDate))}</div>
+          </div>
+          <span class="badge ${stat ? 'badge-blue' : 'badge-gray'}">${stat ? 'Dane wpisane' : 'Brak danych'}</span>
+        </div>
+        <div class="shops-v2-side-actions">
+          <button class="btn btn-primary" type="button" onclick="openStatModal('${store.id}','${selectedDate}')">${stat ? 'Edytuj dzień' : 'Dodaj dane'}</button>
+          ${stat ? `<button class="btn btn-danger" type="button" onclick="confirmDeleteStat('${store.id}','${selectedDate}')">Usuń</button>` : ''}
+        </div>
+        <div class="shops-v2-mini-grid">
+          <div class="shops-v2-mini-stat"><span>Brutto</span><strong>${stat ? formatPLN(stat.revenue_gross) : '—'}</strong></div>
+          <div class="shops-v2-mini-stat"><span>Netto</span><strong>${stat ? formatPLN(stat.revenue_net_resolved) : '—'}</strong></div>
+          <div class="shops-v2-mini-stat"><span>Reklamy</span><strong>${stat ? formatPLN(stat.ad_cost_tiktok) : '—'}</strong></div>
+          <div class="shops-v2-mini-stat"><span>Zwroty</span><strong>${stat ? formatPLN(stat.refunds) : '—'}</strong></div>
+          <div class="shops-v2-mini-stat"><span>Dodatkowe</span><strong>${stat ? formatPLN(stat.extra_costs) : '—'}</strong></div>
+          <div class="shops-v2-mini-stat"><span>Dochód</span><strong>${stat ? formatPLN(stat.income) : '—'}</strong></div>
+          <div class="shops-v2-mini-stat"><span>Na głowę</span><strong>${stat ? formatPLN(stat.per_head) : '—'}</strong></div>
+          <div class="shops-v2-mini-stat"><span>TikTok / przychód</span><strong>${stat ? formatPct(stat.ad_pct) : '—'}</strong></div>
+        </div>
+        <div class="shops-v2-note-box">
+          <div class="sec-title">Notatki</div>
+          <div class="shops-v2-note-content">${noteText || '<span class="shops-v2-empty-inline">Brak notatek dla tego dnia.</span>'}</div>
+        </div>
+        <div class="shops-v2-store-meta">
+          <span class="badge badge-gray">VAT ${store.vat_rate}%</span>
+          <span class="badge badge-gray">${store.headcount} ${plural(store.headcount, 'osoba', 'osoby', 'osób')}</span>
+          <span class="badge badge-gray">${esc(CALCULATION_MODE_LABELS[store.calculation_mode] || '')}</span>
+          <span class="badge badge-gray">${esc(SHARE_TYPE_LABELS[store.profit_share_type] || '')}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderStoreTable(store, summary, key, selectedDate){
+    const dates = monthDays(key);
+    const stats = statMapForStore(store.id, key);
+    const rows = [
+      {key:'revenue_gross', label:'Przychód brutto', total:summary.gross, formatter:formatPLN},
+      {key:'revenue_net_resolved', label:'Przychód netto', total:summary.net, formatter:formatPLN},
+      {key:'ad_cost_tiktok', label:'Koszty TikTok', total:summary.ads, formatter:formatPLN},
+      {key:'refunds', label:'Zwroty', total:summary.refunds, formatter:formatPLN},
+      {key:'extra_costs', label:'Dodatkowe koszty', total:summary.extra, formatter:formatPLN},
+      {key:'income', label:'Dochód', total:summary.income, formatter:formatPLN},
+      {key:'per_head', label:'Na głowę', total:summary.perHead, formatter:formatPLN},
+      {key:'ad_pct', label:'TikTok / przychód %', total:summary.adPct, formatter:formatPct}
+    ];
+
+    return `
+      <div class="card shops-v2-table-card">
+        <div class="shops-v2-table-toolbar">
+          <div>
+            <div class="sec-title">Tabela miesięczna</div>
+            <div class="shops-v2-muted">Przewijaj poziomo i klikaj komórki, żeby szybko edytować konkretny dzień.</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" type="button" onclick="openStatModal('${store.id}','${selectedDate}')">Edytuj ${esc(shortDateLabel(selectedDate))}</button>
+        </div>
+        <div class="shops-v2-table-wrap">
+          <div class="shops-v2-table-scroll">
+            <table class="shops-v2-month-table">
+              <thead>
+                <tr>
+                  <th class="shops-v2-sticky-col">Metryka</th>
+                  <th>Suma</th>
+                  ${dates.map(date=>`
+                    <th class="${date === selectedDate ? 'shops-v2-selected-col' : ''}">
+                      <button type="button" class="shops-v2-day-header${date === selectedDate ? ' active' : ''}" onclick="jumpToShopsDate('${date}')">
+                        <span>${Number(date.slice(8, 10))}</span>
+                        <small>${esc(weekdayShort(date))}</small>
+                      </button>
+                    </th>
+                  `).join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.map(row=>`
+                  <tr>
+                    <th class="shops-v2-sticky-col">${esc(row.label)}</th>
+                    <td class="shops-v2-row-total">${row.formatter(row.total)}</td>
+                    ${dates.map(date=>{
+                      const stat = stats.get(date);
+                      const value = stat ? row.formatter(stat[row.key]) : '—';
+                      return `
+                        <td class="${date === selectedDate ? 'shops-v2-selected-col' : ''}">
+                          <button type="button" class="shops-v2-cell-btn${stat ? ' has-value' : ''}" onclick="openStatModal('${store.id}','${date}')">${value}</button>
+                        </td>
+                      `;
+                    }).join('')}
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderStoreView(data){
+    const store = getStore(data.ui.storeId);
+    if(!store) return renderCompanyView(data);
+    const company = getCompany(store.company_id);
+    const summary = summarizeStore(store, data.ui.monthKey, 'month', data.ui.selectedDate);
+    return `
+      <div class="shops-v2-store-view">
+        <div class="card shops-v2-company-head">
+          <div class="shops-v2-company-copy">
+            <span class="shops-v2-entity-dot" style="background:${store.color}"></span>
+            <div>
+              <div class="shops-v2-company-title">${esc(store.name)}</div>
+              <div class="shops-v2-muted">${company ? `${esc(company.name)} • ` : ''}${rangeLabel(data.ui.monthKey, 'month', data.ui.selectedDate)}</div>
+            </div>
+          </div>
+          <div class="shops-v2-actions">
+            <button class="btn btn-ghost" type="button" onclick="openShopsCompany('${store.company_id}')">Wróć do firmy</button>
+            <button class="btn btn-primary" type="button" onclick="openStoreModal('${store.company_id}','${store.id}')">Ustawienia sklepu</button>
+          </div>
+        </div>
+        ${renderSummaryGrid(summary, {label: monthLabel(data.ui.monthKey), filledDays: summary.filledDays})}
+        <div class="shops-v2-store-top">
+          ${renderSelectedDayPanel(store, data.ui.selectedDate)}
+          ${renderStoreCalendar(store, data.ui.monthKey, data.ui.selectedDate)}
+        </div>
+        ${renderStoreTable(store, summary, data.ui.monthKey, data.ui.selectedDate)}
+      </div>
+    `;
+  }
+
+  function renderContent(data){
+    if(data.ui.view === 'company') return renderCompanyView(data);
+    if(data.ui.view === 'store') return renderStoreView(data);
+    return renderOverview(data);
+  }
+
+  function renderCompanyModal(modal){
+    const company = modal.companyId ? getCompany(modal.companyId) : null;
+    return `
+      <div class="shops-v2-modal-overlay" onclick="closeShopsModal()">
+        <div class="shops-v2-modal" onclick="event.stopPropagation()">
+          <div class="shops-v2-modal-head">
+            <div>
+              <h3>${company ? 'Edytuj firmę' : 'Dodaj firmę'}</h3>
+              <p>Firma to pierwszy poziom: potem podpinasz do niej sklepy.</p>
+            </div>
+            <button class="btn btn-ghost btn-sm" type="button" onclick="closeShopsModal()">✕</button>
+          </div>
+          <div class="shops-v2-modal-body">
+            <div class="form-group">
+              <label class="lbl">Nazwa firmy</label>
+              <input id="shops-company-name" type="text" value="${esc(company?.name || '')}" placeholder="Np. Forzone Commerce">
+            </div>
+            <label class="toggle-row" style="margin-top:14px">
+              <input id="shops-company-active" type="checkbox" ${company?.is_active !== false ? 'checked' : ''} style="width:auto">
+              <span>Firma aktywna</span>
+            </label>
+          </div>
+          <div class="shops-v2-modal-foot">
+            <button class="btn btn-ghost" type="button" onclick="closeShopsModal()">Anuluj</button>
+            <button class="btn btn-primary" type="button" onclick="saveShopsCompany()">Zapisz firmę</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderStoreModal(modal){
+    const data = ensureData();
+    const store = modal.storeId ? getStore(modal.storeId) : null;
+    const companyId = store?.company_id || modal.companyId || data.companies[0]?.id || '';
+    const companyOptions = data.companies.map(company=>`<option value="${company.id}" ${company.id === companyId ? 'selected' : ''}>${esc(company.name)}</option>`).join('');
+    return `
+      <div class="shops-v2-modal-overlay" onclick="closeShopsModal()">
+        <div class="shops-v2-modal shops-v2-modal-wide" onclick="event.stopPropagation()">
+          <div class="shops-v2-modal-head">
+            <div>
+              <h3>${store ? 'Edytuj sklep' : 'Dodaj sklep'}</h3>
+              <p>Sklep ma własne ustawienia liczenia, kalendarz i dane dzienne.</p>
+            </div>
+            <button class="btn btn-ghost btn-sm" type="button" onclick="closeShopsModal()">✕</button>
+          </div>
+          <div class="shops-v2-modal-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="lbl">Firma</label>
+                <select id="shops-store-company">${companyOptions}</select>
+              </div>
+              <div class="form-group">
+                <label class="lbl">Nazwa sklepu</label>
+                <input id="shops-store-name" type="text" value="${esc(store?.name || '')}" placeholder="Np. FashionDrop PL">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="lbl">VAT %</label>
+                <input id="shops-store-vat" type="number" min="0" max="99" step="0.1" value="${formatInputNumber(store?.vat_rate ?? 23)}">
+              </div>
+              <div class="form-group">
+                <label class="lbl">Liczba osób</label>
+                <input id="shops-store-headcount" type="number" min="1" step="1" value="${formatInputNumber(store?.headcount ?? 1)}">
+              </div>
+              <div class="form-group">
+                <label class="lbl">Kolor sklepu</label>
+                <input id="shops-store-color" type="color" value="${esc(store?.color || cssVar('--accent', '#4f7ef8'))}" style="padding:4px;height:44px">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="lbl">Model podziału</label>
+                <select id="shops-store-share-type">
+                  <option value="headcount" ${store?.profit_share_type === 'headcount' || !store ? 'selected' : ''}>Podział na osoby</option>
+                  <option value="percentage" ${store?.profit_share_type === 'percentage' ? 'selected' : ''}>Procent dochodu</option>
+                  <option value="fixed" ${store?.profit_share_type === 'fixed' ? 'selected' : ''}>Stała kwota</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="lbl">Wartość modelu</label>
+                <input id="shops-store-share-value" type="number" min="0" step="0.01" value="${formatInputNumber(store?.profit_share_value ?? 0)}">
+              </div>
+              <div class="form-group">
+                <label class="lbl">Liczenie netto</label>
+                <select id="shops-store-calc-mode">
+                  <option value="gross_to_net" ${store?.calculation_mode === 'gross_to_net' || !store ? 'selected' : ''}>Automatycznie z brutto</option>
+                  <option value="manual_net" ${store?.calculation_mode === 'manual_net' ? 'selected' : ''}>Wpisywane ręcznie</option>
+                </select>
+              </div>
+            </div>
+            <label class="toggle-row" style="margin-top:10px">
+              <input id="shops-store-active" type="checkbox" ${store?.is_active !== false ? 'checked' : ''} style="width:auto">
+              <span>Sklep aktywny</span>
+            </label>
+          </div>
+          <div class="shops-v2-modal-foot">
+            <button class="btn btn-ghost" type="button" onclick="closeShopsModal()">Anuluj</button>
+            <button class="btn btn-primary" type="button" onclick="saveShopsStore()">Zapisz sklep</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderStatModal(modal){
+    const store = getStore(modal.storeId);
+    const existing = store ? getStoreStat(store.id, modal.date) : null;
+    return `
+      <div class="shops-v2-modal-overlay" onclick="closeShopsModal()">
+        <div class="shops-v2-modal shops-v2-modal-wide" onclick="event.stopPropagation()">
+          <div class="shops-v2-modal-head">
+            <div>
+              <h3>${existing ? 'Edytuj dane dnia' : 'Dodaj dane dnia'}</h3>
+              <p>${store ? `${esc(store.name)} • ${esc(fullDateLabel(modal.date))}` : 'Wpis dnia'}</p>
+            </div>
+            <button class="btn btn-ghost btn-sm" type="button" onclick="closeShopsModal()">✕</button>
+          </div>
+          <div class="shops-v2-modal-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="lbl">Data</label>
+                <input id="shops-stat-date" type="date" value="${esc(modal.date)}">
+              </div>
+              <div class="form-group">
+                <label class="lbl">Przychód brutto</label>
+                <input id="shops-stat-gross" type="number" min="0" step="0.01" value="${formatInputNumber(existing?.revenue_gross || 0)}">
+              </div>
+              <div class="form-group">
+                <label class="lbl">Przychód netto</label>
+                <input id="shops-stat-net" type="number" min="0" step="0.01" value="${formatInputNumber(existing?.revenue_net)}" placeholder="Puste = licz automatycznie">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="lbl">Koszty TikTok</label>
+                <input id="shops-stat-ads" type="number" min="0" step="0.01" value="${formatInputNumber(existing?.ad_cost_tiktok || 0)}">
+              </div>
+              <div class="form-group">
+                <label class="lbl">Zwroty</label>
+                <input id="shops-stat-refunds" type="number" min="0" step="0.01" value="${formatInputNumber(existing?.refunds || 0)}">
+              </div>
+              <div class="form-group">
+                <label class="lbl">Dodatkowe koszty</label>
+                <input id="shops-stat-extra" type="number" min="0" step="0.01" value="${formatInputNumber(existing?.extra_costs || 0)}">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="lbl">Notatki</label>
+              <textarea id="shops-stat-notes" placeholder="Kampania, problemy ze zwrotami, zmiana kreacji...">${esc(existing?.notes || '')}</textarea>
+            </div>
+          </div>
+          <div class="shops-v2-modal-foot">
+            <button class="btn btn-ghost" type="button" onclick="closeShopsModal()">Anuluj</button>
+            ${existing ? `<button class="btn btn-danger" type="button" onclick="confirmDeleteStat('${store?.id}','${modal.date}')">Usuń</button>` : ''}
+            <button class="btn btn-primary" type="button" onclick="saveShopsStat()">Zapisz dzień</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderConfirmModal(modal){
+    return `
+      <div class="shops-v2-modal-overlay" onclick="closeShopsModal()">
+        <div class="shops-v2-modal shops-v2-confirm" onclick="event.stopPropagation()">
+          <div class="shops-v2-modal-head">
+            <div>
+              <h3>${esc(modal.title || 'Potwierdź')}</h3>
+              <p>${esc(modal.description || '')}</p>
+            </div>
+          </div>
+          <div class="shops-v2-modal-foot">
+            <button class="btn btn-ghost" type="button" onclick="closeShopsModal()">Anuluj</button>
+            <button class="btn btn-danger" type="button" onclick="confirmShopsModalAction()">Usuń</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderModal(modal){
+    if(!modal) return '';
+    if(modal.type === 'company') return renderCompanyModal(modal);
+    if(modal.type === 'store') return renderStoreModal(modal);
+    if(modal.type === 'stat') return renderStatModal(modal);
+    if(modal.type === 'confirm') return renderConfirmModal(modal);
+    return '';
+  }
+
+  function renderWidget(body){
+    const host = typeof body === 'string' ? document.getElementById(body) : body;
+    if(!host) return;
+    const currentMonth = monthKey(new Date());
+    const summary = summarizeGlobal(currentMonth, 'month', localDate(new Date()));
+    host.innerHTML = `
+      <div class="wstat-grid">
+        <div class="wstat-cell"><div class="wstat-val">${summary.companies.length}</div><div class="wstat-lbl">Firmy</div></div>
+        <div class="wstat-cell"><div class="wstat-val">${summary.stores.length}</div><div class="wstat-lbl">Sklepy</div></div>
+        <div class="wstat-cell"><div class="wstat-val" style="color:var(--green)">${formatCompactPLN(summary.gross)}</div><div class="wstat-lbl">Przychód mies.</div></div>
+        <div class="wstat-cell"><div class="wstat-val" style="color:var(--accent)">${formatCompactPLN(summary.income)}</div><div class="wstat-lbl">Dochód mies.</div></div>
+      </div>
+    `;
+  }
+
+  function clampWindow(){
+    const win = document.getElementById('win-shops');
+    if(!win || win.classList.contains('minimized')) return;
+    if(typeof window.maxedWin === 'string' && window.maxedWin === 'win-shops') return;
+
+    const width = win.offsetWidth || parseInt(win.style.width, 10) || 0;
+    const height = win.offsetHeight || parseInt(win.style.height, 10) || 0;
+    const maxWidth = Math.max(720, window.innerWidth - 24);
+    const maxHeight = Math.max(520, window.innerHeight - 24);
+    const nextWidth = Math.min(width, maxWidth);
+    const nextHeight = Math.min(height, maxHeight);
+    const currentLeft = parseInt(win.style.left, 10) || 18;
+    const currentTop = parseInt(win.style.top, 10) || 18;
+    const left = Math.min(Math.max(12, currentLeft), Math.max(12, window.innerWidth - nextWidth - 12));
+    const top = Math.min(Math.max(12, currentTop), Math.max(12, window.innerHeight - nextHeight - 12));
+
+    win.style.width = `${nextWidth}px`;
+    win.style.height = `${nextHeight}px`;
+    win.style.left = `${left}px`;
+    win.style.top = `${top}px`;
+  }
+
+  function ensureWindow(){
+    const win = document.getElementById('win-shops');
+    if(!win) return;
+    const desiredWidth = Math.min(Math.max(Math.round(window.innerWidth * 0.86), 980), window.innerWidth - 24);
+    const desiredHeight = Math.min(Math.max(Math.round(window.innerHeight * 0.84), 700), window.innerHeight - 24);
+    const currentWidth = win.offsetWidth || parseInt(win.style.width, 10) || 0;
+    const currentHeight = win.offsetHeight || parseInt(win.style.height, 10) || 0;
+
+    if(!runtime.windowSized || currentWidth < 900 || currentHeight < 620){
+      win.style.width = `${desiredWidth}px`;
+      win.style.height = `${desiredHeight}px`;
+      win.style.left = `${Math.max(12, Math.round((window.innerWidth - desiredWidth) / 2))}px`;
+      win.style.top = `${Math.max(12, Math.round((window.innerHeight - desiredHeight) / 2))}px`;
+      runtime.windowSized = true;
     }
-    root.innerHTML = `<div class="tracker-app">${trackerToolbarHtml(data)}<div class="tracker-content">${trackerContentHtml(data)}</div>${trackerModalHtml(data)}</div>`;
-    requestAnimationFrame(()=>{
-      trackerStatPreview();
-      trackerRenderCharts();
+
+    clampWindow();
+  }
+
+  function injectStyles(){
+    if(document.getElementById(STYLE_ID)) return;
+    const style = document.createElement('style');
+    style.id = STYLE_ID;
+    style.textContent = `
+      #win-shops{min-width:720px;min-height:520px}
+      #shops-body.shops-v2-host{
+        display:flex;flex-direction:column;height:100%;min-height:0;overflow:hidden;padding:0!important;
+        background:var(--surface);
+      }
+      .shops-v2-shell{
+        position:relative;display:flex;flex-direction:column;gap:12px;flex:1;min-height:0;
+        padding:12px;background:var(--surface);container-type:inline-size;
+      }
+      .shops-v2-shell .card{margin-bottom:0}
+      .shops-v2-header-card{padding:14px 16px}
+      .shops-v2-header-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+      .shops-v2-header-main{display:flex;flex-direction:column;gap:8px;min-width:0}
+      .shops-v2-breadcrumbs{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+      .shops-v2-crumb{background:none;border:none;padding:0;color:var(--text3);cursor:pointer;font:600 12px 'DM Sans',sans-serif}
+      .shops-v2-crumb.active,.shops-v2-crumb:hover{color:var(--text)}
+      .shops-v2-crumb-sep{color:var(--text3);font-size:12px}
+      .shops-v2-header-copy{display:flex;flex-direction:column;gap:4px}
+      .shops-v2-title{font-size:22px;font-weight:800;color:var(--text);line-height:1.1}
+      .shops-v2-subtitle,.shops-v2-muted{font-size:12px;color:var(--text2);line-height:1.45}
+      .shops-v2-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+      .shops-v2-toolbar{
+        display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+        margin-top:12px;padding-top:12px;border-top:1px solid var(--border);
+      }
+      .shops-v2-month-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+      .shops-v2-month-nav input[type="month"]{width:auto;min-width:160px}
+      .shops-v2-filters{margin:0}
+      .shops-v2-range-badge{margin-left:auto}
+      .shops-v2-content,.shops-v2-scroll,.shops-v2-store-view{flex:1;min-height:0}
+      .shops-v2-scroll{overflow:auto;display:flex;flex-direction:column;gap:12px;padding-right:2px}
+      .shops-v2-store-view{display:flex;flex-direction:column;gap:12px;overflow:hidden}
+      .shops-v2-summary-block{display:flex;flex-direction:column;gap:10px}
+      .shops-v2-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+      .shops-v2-stat{display:flex;flex-direction:column;gap:10px;text-align:left;padding:12px 13px}
+      .shops-v2-stat-label{font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+      .shops-v2-stat-value{font-size:clamp(18px,2.6vw,26px);font-weight:800;color:var(--text);line-height:1.05;font-family:'DM Mono',monospace}
+      .shops-v2-stat-meta{font-size:11px;color:var(--text2);line-height:1.35}
+      .shops-v2-stat-blue{border-color:rgba(79,126,248,.22)}
+      .shops-v2-stat-green{border-color:rgba(34,197,94,.22)}
+      .shops-v2-stat-red{border-color:rgba(239,68,68,.22)}
+      .shops-v2-stat-orange{border-color:rgba(249,115,22,.22)}
+      .shops-v2-stat-purple{border-color:rgba(139,92,246,.22)}
+      .shops-v2-overview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+      .shops-v2-ranking{display:flex;flex-direction:column;gap:8px}
+      .shops-v2-ranking-row{
+        display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;width:100%;
+        border:1.5px solid var(--border);background:var(--surface2);padding:10px 11px;border-radius:12px;cursor:pointer;color:var(--text);text-align:left;
+      }
+      .shops-v2-ranking-row:hover{border-color:var(--border2);background:var(--surface3)}
+      .shops-v2-ranking-index{
+        width:24px;height:24px;border-radius:8px;background:var(--accent-light);color:var(--accent);
+        display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;
+      }
+      .shops-v2-ranking-name{font-size:13px;font-weight:600;color:var(--text)}
+      .shops-v2-highlight-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+      .shops-v2-highlight{border:1.5px solid var(--border);border-radius:12px;background:var(--surface2);padding:12px;display:flex;flex-direction:column;gap:4px}
+      .shops-v2-highlight span{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em}
+      .shops-v2-highlight strong{font-size:15px;color:var(--text)}
+      .shops-v2-highlight small{font-size:12px;color:var(--text2)}
+      .shops-v2-section-card,.shops-v2-company-head{padding:14px}
+      .shops-v2-section-head,.shops-v2-company-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+      .shops-v2-company-copy,.shops-v2-entity-brand{display:flex;align-items:flex-start;gap:10px;min-width:0}
+      .shops-v2-company-title,.shops-v2-entity-title{font-size:18px;font-weight:800;color:var(--text);line-height:1.15}
+      .shops-v2-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:12px}
+      .shops-v2-entity-card{display:flex;flex-direction:column;gap:12px;padding:14px}
+      .shops-v2-entity-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+      .shops-v2-entity-dot{
+        width:12px;height:12px;border-radius:999px;display:inline-flex;flex-shrink:0;margin-top:6px;
+        box-shadow:0 0 0 4px rgba(79,126,248,.12);
+      }
+      .shops-v2-entity-sub{font-size:12px;color:var(--text2);line-height:1.4;margin-top:4px}
+      .shops-v2-kpi-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+      .shops-v2-kpi-chip{border:1.5px solid var(--border);background:var(--surface2);border-radius:12px;padding:10px 11px;display:flex;flex-direction:column;gap:4px}
+      .shops-v2-kpi-chip span{font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+      .shops-v2-kpi-chip strong{font-size:15px;color:var(--text);font-family:'DM Mono',monospace}
+      .shops-v2-card-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+      .shops-v2-empty-block,.shops-v2-empty-inline{color:var(--text3);font-size:13px}
+      .shops-v2-empty-block{
+        border:1.5px dashed var(--border2);border-radius:14px;padding:28px 16px;text-align:center;background:var(--surface2);grid-column:1/-1;
+      }
+      .shops-v2-store-top{display:grid;grid-template-columns:minmax(280px,360px) minmax(0,1fr);gap:12px;min-height:0}
+      .shops-v2-panel{
+        background:var(--surface2);border:1.5px solid var(--border);border-radius:16px;min-height:0;display:flex;flex-direction:column;overflow:hidden;
+      }
+      .shops-v2-panel-head{
+        padding:14px 16px 12px;border-bottom:1px solid var(--border);background:var(--surface2);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+      }
+      .shops-v2-side-panel{padding-bottom:0}
+      .shops-v2-side-title{font-size:16px;font-weight:800;color:var(--text);line-height:1.2}
+      .shops-v2-side-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 16px 0}
+      .shops-v2-mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:14px 16px}
+      .shops-v2-mini-stat{border:1.5px solid var(--border);background:var(--surface);border-radius:12px;padding:10px 11px;display:flex;flex-direction:column;gap:4px}
+      .shops-v2-mini-stat span{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em}
+      .shops-v2-mini-stat strong{font-size:14px;font-family:'DM Mono',monospace;color:var(--text)}
+      .shops-v2-note-box{padding:0 16px 16px}
+      .shops-v2-note-content{
+        border:1.5px solid var(--border);background:var(--surface);border-radius:12px;padding:12px;font-size:13px;color:var(--text);line-height:1.55;min-height:80px;
+      }
+      .shops-v2-store-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:0 16px 16px}
+      .shops-v2-calendar-panel{padding:14px 16px}
+      .shops-v2-calendar-inner{display:flex;flex-direction:column;gap:8px}
+      .shops-v2-cal-grid .cal-day{width:100%;border:none;background:transparent}
+      .shops-v2-cal-grid .cal-day.shops-v2-selected-day{background:var(--accent-light);border-color:var(--accent);color:var(--accent);font-weight:800}
+      .shops-v2-cal-grid .cal-day.today.shops-v2-selected-day{background:linear-gradient(180deg,var(--accent),var(--accent2));color:#fff}
+      .shops-v2-table-card{display:flex;flex-direction:column;gap:10px;flex:1;min-height:280px;padding:14px}
+      .shops-v2-table-toolbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+      .shops-v2-table-wrap{flex:1;min-height:0;border:1.5px solid var(--border);border-radius:14px;overflow:hidden;background:var(--surface2)}
+      .shops-v2-table-scroll{height:100%;overflow:auto}
+      .shops-v2-month-table{border-collapse:separate;border-spacing:0;min-width:max-content;width:100%}
+      .shops-v2-month-table th,.shops-v2-month-table td{padding:0;border-bottom:1px solid var(--border);border-right:1px solid var(--border);background:var(--surface)}
+      .shops-v2-month-table thead th{position:sticky;top:0;z-index:2;background:var(--surface2)}
+      .shops-v2-month-table tr:last-child th,.shops-v2-month-table tr:last-child td{border-bottom:none}
+      .shops-v2-month-table th:first-child,.shops-v2-month-table td:first-child{border-left:none}
+      .shops-v2-sticky-col{
+        position:sticky;left:0;z-index:3;min-width:190px;text-align:left;padding:12px 14px!important;background:var(--surface2)!important;
+        font-size:12px;font-weight:800;color:var(--text);text-transform:none;letter-spacing:0;
+      }
+      .shops-v2-row-total{min-width:120px;padding:12px 14px!important;background:var(--surface2);font-size:12px;font-weight:700;color:var(--text);font-family:'DM Mono',monospace}
+      .shops-v2-day-header{
+        display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:78px;padding:12px 8px;border:none;background:transparent;cursor:pointer;font:600 12px 'DM Sans',sans-serif;color:var(--text);
+      }
+      .shops-v2-day-header small{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em}
+      .shops-v2-day-header.active,.shops-v2-day-header:hover{background:var(--accent-light);color:var(--accent)}
+      .shops-v2-cell-btn{
+        min-width:78px;width:100%;padding:12px 10px;border:none;background:transparent;cursor:pointer;font:600 12px 'DM Mono',monospace;color:var(--text2);text-align:center;
+      }
+      .shops-v2-cell-btn:hover{background:var(--surface2);color:var(--text)}
+      .shops-v2-cell-btn.has-value{color:var(--text)}
+      .shops-v2-selected-col{background:rgba(79,126,248,.06)!important}
+      .shops-v2-modal-overlay{
+        position:absolute;inset:0;background:rgba(0,0,0,.42);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:18px;z-index:40;
+      }
+      .shops-v2-modal{
+        width:min(520px,100%);max-height:100%;overflow:hidden;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:22px;box-shadow:0 32px 80px rgba(0,0,0,.35);
+      }
+      .shops-v2-modal-wide{width:min(760px,100%)}
+      .shops-v2-modal-head{
+        padding:18px 20px 14px;border-bottom:1px solid var(--border);background:var(--surface2);display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+      }
+      .shops-v2-modal-head h3{margin:0;font-size:18px;color:var(--text)}
+      .shops-v2-modal-head p{margin:4px 0 0;font-size:12px;color:var(--text2);line-height:1.4}
+      .shops-v2-modal-body{padding:18px 20px;overflow:auto}
+      .shops-v2-modal-foot{
+        padding:12px 20px;border-top:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;
+      }
+      .shops-v2-confirm{width:min(420px,100%)}
+      .shops-v2-host .btn,.shops-v2-host .filter-btn{white-space:nowrap}
+      @container (max-width: 1160px){
+        .shops-v2-store-top{grid-template-columns:1fr}
+        .shops-v2-mini-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      }
+      @container (max-width: 920px){
+        .shops-v2-highlight-grid,.shops-v2-kpi-grid,.shops-v2-mini-grid{grid-template-columns:1fr}
+        .shops-v2-header-top,.shops-v2-toolbar,.shops-v2-section-head,.shops-v2-company-head{flex-direction:column;align-items:stretch}
+        .shops-v2-actions{width:100%}
+        .shops-v2-actions .btn{flex:1}
+        .shops-v2-range-badge{margin-left:0}
+      }
+      @container (max-width: 720px){
+        .shops-v2-shell{padding:10px}
+        .shops-v2-summary-grid,.shops-v2-card-grid,.shops-v2-overview-grid{grid-template-columns:1fr}
+        .shops-v2-sticky-col{min-width:148px}
+        .shops-v2-day-header,.shops-v2-cell-btn{min-width:64px;padding:10px 8px}
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function renderShops(){
+    injectStyles();
+    const data = ensureData();
+    ensureWindow();
+
+    const host = document.getElementById('shops-body');
+    if(!host) return;
+    host.className = 'shops-v2-host';
+    host.style.padding = '0';
+    host.style.overflow = 'hidden';
+    host.style.display = 'flex';
+    host.style.flexDirection = 'column';
+    host.style.height = '100%';
+    host.innerHTML = `
+      <div class="shops-v2-shell">
+        ${renderHeader(data)}
+        <div class="shops-v2-content">${renderContent(data)}</div>
+        ${renderModal(data.ui.modal)}
+      </div>
+    `;
+
+    const title = document.querySelector('#win-shops .win-title');
+    if(title) title.textContent = 'Sklepy';
+    const appDef = Array.isArray(window.ALL_APPS) ? window.ALL_APPS.find(app=>app.id === 'shops') : null;
+    if(appDef){
+      appDef.label = 'Sklepy';
+      appDef.desc = 'Firmy, sklepy i wyniki';
+    }
+  }
+
+  window.renderShops = renderShops;
+  window.openShopsOverview = openOverview;
+  window.openShopsCompany = openCompany;
+  window.openShopsStore = openStore;
+  window.setShopsMonth = setMonth;
+  window.shiftShopsMonth = shiftMonth;
+  window.setShopsSummaryMode = setSummaryMode;
+  window.jumpToShopsDate = jumpToDate;
+  window.openCompanyModal = openCompanyModal;
+  window.openStoreModal = openStoreModal;
+  window.openStatModal = openStatModal;
+  window.closeShopsModal = closeModal;
+  window.saveShopsCompany = saveCompanyForm;
+  window.saveShopsStore = saveStoreForm;
+  window.saveShopsStat = saveStatForm;
+  window.toggleCompanyActive = toggleCompanyActive;
+  window.toggleStoreActive = toggleStoreActive;
+  window.confirmDeleteCompany = confirmDeleteCompany;
+  window.confirmDeleteStore = confirmDeleteStore;
+  window.confirmDeleteStat = confirmDeleteStat;
+  window.confirmShopsModalAction = confirmModalAction;
+  window.fillShopStats = renderWidget;
+
+  if(!runtime.boundResize){
+    runtime.boundResize = true;
+    window.addEventListener('resize', ()=>{
+      clampWindow();
+      const host = document.getElementById('shops-body');
+      if(host && host.classList.contains('shops-v2-host')) renderShops();
     });
   }
 
-  function trackerFillWidget(body){
-    const data = trackerData();
-    const storeIds = trackerGetFilteredStores(false).map(store=>store.id);
-    const summary = trackerGlobalSummary(data.ui.monthKey, storeIds);
-    const top = summary.ranking.slice(0, 4);
-    body.innerHTML = `
-      <div class="wstat-grid">
-        <div class="wstat-cell"><div class="wstat-val">${summary.storeCount}</div><div class="wstat-lbl">Sklepy</div></div>
-        <div class="wstat-cell"><div class="wstat-val" style="color:var(--green)">${trackerFmtCompactPLN(summary.gross)}</div><div class="wstat-lbl">Przychod</div></div>
-        <div class="wstat-cell"><div class="wstat-val" style="color:var(--accent)">${trackerFmtCompactPLN(summary.income)}</div><div class="wstat-lbl">Dochod</div></div>
-        <div class="wstat-cell"><div class="wstat-val" style="color:var(--purple)">${trackerFmtCompactPLN(summary.ads)}</div><div class="wstat-lbl">Ads</div></div>
-      </div>
-      <div class="wstat-shops">${top.map(item=>`<div class="wstat-shop-row"><div class="wstat-dot" style="background:${item.store.color}"></div><span>${escHtml(item.store.name)}</span><span style="margin-left:auto;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace">${trackerFmtCompactPLN(item.income)}</span></div>`).join('')}</div>`;
-  }
-
-  const baseApplyMigrations = window.applyMigrations;
-  if(typeof baseApplyMigrations === 'function'){
-    window.applyMigrations = function(){
-      baseApplyMigrations();
-      trackerEnsureData();
-    };
-  }
-
-  window.trackerRenderShops = trackerRenderShops;
-  window.renderShops = trackerRenderShops;
-  window.trackerSetView = trackerSetView;
-  window.trackerSetFilter = trackerSetFilter;
-  window.trackerSetMonth = trackerSetMonth;
-  window.trackerShiftMonth = trackerShiftMonth;
-  window.trackerSelectStore = trackerSelectStore;
-  window.trackerOpenStoreModal = trackerOpenStoreModal;
-  window.trackerOpenStatModal = trackerOpenStatModal;
-  window.trackerOpenDeleteStore = trackerOpenDeleteStore;
-  window.trackerOpenDeleteStat = trackerOpenDeleteStat;
-  window.trackerCloseModal = trackerCloseModal;
-  window.trackerSaveStoreForm = trackerSaveStoreForm;
-  window.trackerSaveStatForm = trackerSaveStatForm;
-  window.trackerDeleteStoreConfirmed = trackerDeleteStoreConfirmed;
-  window.trackerDeleteStatConfirmed = trackerDeleteStatConfirmed;
-  window.trackerToggleStoreActive = trackerToggleStoreActive;
-  window.trackerLoadDemoData = trackerLoadDemoData;
-  window.trackerRefreshStatPreview = trackerStatPreview;
-  window.fillShopStats = trackerFillWidget;
-  if(!trackerRuntime.boundResize){
-    window.addEventListener('resize', ()=>trackerClampWindowToViewport());
-    trackerRuntime.boundResize = true;
-  }
-
-  trackerInjectStyles();
-  trackerEnsureData();
-  saveS();
-  trackerRenderShops();
+  ensureData();
+  persist();
+  renderShops();
 })();
-

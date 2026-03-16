@@ -10,8 +10,20 @@ begin
 end;
 $$;
 
+create table if not exists companies (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  is_active boolean not null default true,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create unique index if not exists companies_name_unique_idx
+  on companies (lower(name));
+
 create table if not exists stores (
   id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references companies(id) on delete cascade,
   name text not null,
   is_active boolean not null default true,
   color text not null default '#4f7ef8',
@@ -26,8 +38,11 @@ create table if not exists stores (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
-create unique index if not exists stores_name_unique_idx
-  on stores (lower(name));
+create unique index if not exists stores_company_name_unique_idx
+  on stores (company_id, lower(name));
+
+create index if not exists stores_company_idx
+  on stores (company_id);
 
 create table if not exists daily_store_stats (
   id uuid primary key default gen_random_uuid(),
@@ -47,6 +62,12 @@ create table if not exists daily_store_stats (
 create index if not exists daily_store_stats_store_date_idx
   on daily_store_stats (store_id, date desc);
 
+drop trigger if exists companies_set_updated_at on companies;
+create trigger companies_set_updated_at
+before update on companies
+for each row
+execute function set_updated_at();
+
 drop trigger if exists stores_set_updated_at on stores;
 create trigger stores_set_updated_at
 before update on stores
@@ -62,7 +83,9 @@ execute function set_updated_at();
 create or replace view store_daily_metrics as
 select
   d.id,
-  d.store_id,
+  c.id as company_id,
+  c.name as company_name,
+  s.id as store_id,
   s.name as store_name,
   d.date,
   d.revenue_gross,
@@ -90,24 +113,106 @@ select
   ) as income,
   round(
     case
+      when s.profit_share_type = 'percentage' then
+        (
+          coalesce(
+            d.revenue_net,
+            case
+              when s.calculation_mode = 'gross_to_net'
+                then d.revenue_gross / nullif(1 + (s.vat_rate / 100.0), 0)
+              else 0
+            end
+          ) - d.ad_cost_tiktok - d.refunds - d.extra_costs
+        ) * (s.profit_share_value / 100.0)
+      when s.profit_share_type = 'fixed' then s.profit_share_value
+      else (
+        coalesce(
+          d.revenue_net,
+          case
+            when s.calculation_mode = 'gross_to_net'
+              then d.revenue_gross / nullif(1 + (s.vat_rate / 100.0), 0)
+            else 0
+          end
+        ) - d.ad_cost_tiktok - d.refunds - d.extra_costs
+      ) / nullif(s.headcount, 0)
+    end,
+    2
+  ) as per_head,
+  round(
+    case
       when d.revenue_gross > 0 then (d.ad_cost_tiktok / d.revenue_gross) * 100
       else 0
     end,
     2
   ) as ad_cost_pct
 from daily_store_stats d
-join stores s on s.id = d.store_id;
+join stores s on s.id = d.store_id
+join companies c on c.id = s.company_id;
 
-insert into stores (name, is_active, color, vat_rate, profit_share_type, profit_share_value, headcount, calculation_mode)
+insert into companies (name, is_active)
 select *
 from (
   values
-    ('FashionDrop', true, '#4f7ef8', 23, 'headcount', 0, 2, 'gross_to_net'),
-    ('TechGear', true, '#22c55e', 23, 'percentage', 35, 3, 'gross_to_net'),
-    ('HomeBloom', true, '#f97316', 8, 'fixed', 900, 1, 'manual_net')
-) as seed(name, is_active, color, vat_rate, profit_share_type, profit_share_value, headcount, calculation_mode)
+    ('Forzone Commerce', true),
+    ('Nova Brands', true)
+) as seed(name, is_active)
 where not exists (
   select 1
-  from stores
-  where lower(stores.name) = lower(seed.name)
+  from companies
+  where lower(companies.name) = lower(seed.name)
+);
+
+insert into stores (company_id, name, is_active, color, vat_rate, profit_share_type, profit_share_value, headcount, calculation_mode)
+select
+  c.id,
+  seed.name,
+  seed.is_active,
+  seed.color,
+  seed.vat_rate,
+  seed.profit_share_type,
+  seed.profit_share_value,
+  seed.headcount,
+  seed.calculation_mode
+from (
+  values
+    ('Forzone Commerce', 'FashionDrop PL', true, '#2d5be3', 23, 'headcount', 0, 2, 'gross_to_net'),
+    ('Forzone Commerce', 'TechGear EU', true, '#22c55e', 23, 'headcount', 0, 3, 'gross_to_net'),
+    ('Nova Brands', 'GlowSkin Studio', true, '#f97316', 23, 'percentage', 35, 2, 'manual_net'),
+    ('Nova Brands', 'HomeCraft Lab', true, '#8b5cf6', 8, 'fixed', 850, 1, 'gross_to_net')
+) as seed(company_name, name, is_active, color, vat_rate, profit_share_type, profit_share_value, headcount, calculation_mode)
+join companies c on lower(c.name) = lower(seed.company_name)
+where not exists (
+  select 1
+  from stores s
+  where s.company_id = c.id
+    and lower(s.name) = lower(seed.name)
+);
+
+insert into daily_store_stats (store_id, date, revenue_gross, revenue_net, ad_cost_tiktok, refunds, extra_costs, notes)
+select
+  s.id,
+  seed.date,
+  seed.revenue_gross,
+  seed.revenue_net,
+  seed.ad_cost_tiktok,
+  seed.refunds,
+  seed.extra_costs,
+  seed.notes
+from (
+  values
+    ('FashionDrop PL', current_date - interval '14 day', 15400, null, 2600, 340, 180, 'Wyprzedaz weekendowa'),
+    ('FashionDrop PL', current_date - interval '11 day', 18220, null, 3180, 520, 240, 'Nowe kreacje UGC'),
+    ('TechGear EU', current_date - interval '13 day', 12340, null, 2140, 210, 120, 'Start nowej kampanii'),
+    ('TechGear EU', current_date - interval '7 day', 14180, null, 2480, 280, 190, ''),
+    ('GlowSkin Studio', current_date - interval '12 day', 9800, 7967, 1690, 120, 80, 'Manualne netto z ERP'),
+    ('GlowSkin Studio', current_date - interval '5 day', 11750, 9552, 1910, 180, 130, ''),
+    ('HomeCraft Lab', current_date - interval '10 day', 8340, null, 980, 60, 110, 'Niski koszt zwrotow'),
+    ('HomeCraft Lab', current_date - interval '3 day', 9050, null, 1140, 90, 140, 'Nowa oferta pakietowa')
+) as seed(store_name, date, revenue_gross, revenue_net, ad_cost_tiktok, refunds, extra_costs, notes)
+join stores s on lower(s.name) = lower(seed.store_name)
+where not exists (
+  select 1
+  from daily_store_stats d
+  where d.store_id = s.id
+    and d.date = seed.date::date
 );
