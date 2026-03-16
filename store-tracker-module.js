@@ -1355,7 +1355,8 @@
     ];
     return `
       <div class="shops-v2-summary-block">
-        <div class="sec-title">Dashboard</div>
+        <div class="shops-v2-section-kicker">Podsumowanie</div>
+        <div class="sec-title">Najważniejsze liczby</div>
         <div class="shops-v2-summary-grid">${cards.join('')}</div>
       </div>
     `;
@@ -1367,16 +1368,19 @@
     const activeStores = stores.filter(store=>store.is_active).length;
     return `
       <div class="shops-v2-list-row">
-        <button class="shops-v2-name-btn" type="button" onclick="openShopsCompany('${company.id}')">
-          <span class="shops-v2-entity-dot" style="background:${companyAccent(companySummary)}"></span>
-          <span>${esc(company.name)}</span>
-        </button>
+        <div class="shops-v2-row-titlebox">
+          <button class="shops-v2-name-btn" type="button" onclick="openShopsCompany('${company.id}')">
+            <span class="shops-v2-entity-dot" style="background:${companyAccent(companySummary)}"></span>
+            <span>${esc(company.name)}</span>
+          </button>
+          <div class="shops-v2-row-subline">${stores.length} ${plural(stores.length, 'sklep', 'sklepy', 'sklepów')} • ${activeStores} aktywne</div>
+        </div>
         <div class="shops-v2-row-meta">
-          <div class="shops-v2-row-stats">
-            <span>${stores.length} ${plural(stores.length, 'sklep', 'sklepy', 'sklepów')}</span>
-            <span>${activeStores} aktywne</span>
-            <span>Przychód ${formatCompactPLN(companySummary.gross)}</span>
-            <span>Dochód ${formatCompactPLN(companySummary.income)}</span>
+          <div class="shops-v2-metric-grid">
+            <div class="shops-v2-metric-pill"><small>Przychód</small><strong>${formatCompactPLN(companySummary.gross)}</strong></div>
+            <div class="shops-v2-metric-pill"><small>Dochód</small><strong>${formatCompactPLN(companySummary.income)}</strong></div>
+            <div class="shops-v2-metric-pill"><small>Na głowę</small><strong>${formatCompactPLN(companySummary.perHead)}</strong></div>
+            <div class="shops-v2-metric-pill"><small>Reklamy</small><strong>${formatCompactPLN(companySummary.ads)}</strong></div>
           </div>
           <div class="shops-v2-row-actions">
             <span class="badge ${company.is_active ? 'badge-blue' : 'badge-gray'}">${company.is_active ? 'Aktywna' : 'Pauza'}</span>
@@ -1393,16 +1397,19 @@
     const store = storeSummary.store;
     return `
       <div class="shops-v2-list-row">
-        <button class="shops-v2-name-btn" type="button" onclick="openShopsStore('${store.id}')">
-          <span class="shops-v2-entity-dot" style="background:${store.color}"></span>
-          <span>${esc(store.name)}</span>
-        </button>
+        <div class="shops-v2-row-titlebox">
+          <button class="shops-v2-name-btn" type="button" onclick="openShopsStore('${store.id}')">
+            <span class="shops-v2-entity-dot" style="background:${store.color}"></span>
+            <span>${esc(store.name)}</span>
+          </button>
+          <div class="shops-v2-row-subline">VAT ${store.vat_rate}% • ${store.headcount} ${plural(store.headcount, 'osoba', 'osoby', 'osób')}</div>
+        </div>
         <div class="shops-v2-row-meta">
-          <div class="shops-v2-row-stats">
-            <span>VAT ${store.vat_rate}%</span>
-            <span>${store.headcount} ${plural(store.headcount, 'osoba', 'osoby', 'osób')}</span>
-            <span>Przychód ${formatCompactPLN(storeSummary.gross)}</span>
-            <span>Dochód ${formatCompactPLN(storeSummary.income)}</span>
+          <div class="shops-v2-metric-grid">
+            <div class="shops-v2-metric-pill"><small>Przychód</small><strong>${formatCompactPLN(storeSummary.gross)}</strong></div>
+            <div class="shops-v2-metric-pill"><small>Dochód</small><strong>${formatCompactPLN(storeSummary.income)}</strong></div>
+            <div class="shops-v2-metric-pill"><small>Reklamy</small><strong>${formatCompactPLN(storeSummary.ads)}</strong></div>
+            <div class="shops-v2-metric-pill"><small>Na głowę</small><strong>${formatCompactPLN(storeSummary.perHead)}</strong></div>
           </div>
           <div class="shops-v2-row-actions">
             <span class="badge ${store.is_active ? 'badge-blue' : 'badge-gray'}">${store.is_active ? 'Aktywny' : 'Pauza'}</span>
@@ -1660,6 +1667,7 @@
       <div class="card shops-v2-table-card">
         <div class="shops-v2-table-toolbar">
           <div>
+            <div class="shops-v2-section-kicker">Miesiąc</div>
             <div class="sec-title">Tabela miesięczna</div>
             <div class="shops-v2-muted">Przewijaj poziomo i klikaj komórki, żeby szybko edytować konkretny dzień.</div>
           </div>
@@ -2106,11 +2114,12 @@
         min-height:auto;
       }
       .shops-v2-summary-block{display:flex;flex-direction:column;gap:10px}
-      .shops-v2-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
-      .shops-v2-stat{display:flex;flex-direction:column;gap:10px;text-align:left;padding:12px 13px}
+      .shops-v2-section-kicker{font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+      .shops-v2-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+      .shops-v2-stat{display:flex;flex-direction:column;gap:8px;text-align:left;padding:14px 15px;min-height:120px}
       .shops-v2-stat-label{font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
-      .shops-v2-stat-value{font-size:clamp(18px,2.6vw,26px);font-weight:800;color:var(--text);line-height:1.05;font-family:'DM Mono',monospace}
-      .shops-v2-stat-meta{font-size:11px;color:var(--text2);line-height:1.35}
+      .shops-v2-stat-value{font-size:clamp(20px,2.4vw,28px);font-weight:800;color:var(--text);line-height:1.05;font-family:'DM Mono',monospace}
+      .shops-v2-stat-meta{font-size:12px;color:var(--text2);line-height:1.45}
       .shops-v2-stat-blue{border-color:rgba(79,126,248,.22)}
       .shops-v2-stat-green{border-color:rgba(34,197,94,.22)}
       .shops-v2-stat-red{border-color:rgba(239,68,68,.22)}
@@ -2119,21 +2128,25 @@
       .shops-v2-overview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
       .shops-v2-list{display:flex;flex-direction:column;gap:10px}
       .shops-v2-list-row{
-        display:grid;grid-template-columns:minmax(220px,320px) minmax(0,1fr);gap:12px;align-items:center;
-        padding:12px 14px;border:1.5px solid var(--border);border-radius:16px;background:var(--surface);
+        display:grid;grid-template-columns:minmax(240px,320px) minmax(0,1fr);gap:14px;align-items:center;
+        padding:14px;border:1.5px solid var(--border);border-radius:18px;background:var(--surface);
       }
+      .shops-v2-row-titlebox{display:flex;flex-direction:column;gap:8px;min-width:0}
       .shops-v2-name-btn{
         display:flex;align-items:center;gap:10px;width:100%;min-width:0;text-align:left;
         border:1.5px solid var(--border);background:var(--surface2);color:var(--text);
-        border-radius:14px;padding:13px 14px;font:700 15px 'DM Sans',sans-serif;cursor:pointer;
+        border-radius:14px;padding:14px 15px;font:700 15px 'DM Sans',sans-serif;cursor:pointer;
       }
       .shops-v2-name-btn:hover{border-color:rgba(79,126,248,.28);background:rgba(79,126,248,.08)}
+      .shops-v2-row-subline{font-size:12px;color:var(--text3);padding-left:2px}
       .shops-v2-row-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;flex-wrap:wrap}
-      .shops-v2-row-stats{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
-      .shops-v2-row-stats span{
-        display:inline-flex;align-items:center;min-height:34px;padding:0 11px;border-radius:999px;
-        background:var(--surface2);border:1px solid var(--border);font-size:12px;font-weight:700;color:var(--text2);
+      .shops-v2-metric-grid{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:8px;min-width:min(560px,100%)}
+      .shops-v2-metric-pill{
+        display:flex;flex-direction:column;justify-content:center;gap:4px;min-height:62px;padding:10px 11px;border-radius:12px;
+        border:1px solid var(--border);background:var(--surface2);
       }
+      .shops-v2-metric-pill small{font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+      .shops-v2-metric-pill strong{font-size:14px;font-weight:800;color:var(--text);font-family:'DM Mono',monospace}
       .shops-v2-row-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
       .shops-v2-ranking{display:flex;flex-direction:column;gap:8px}
       .shops-v2-ranking-row{
@@ -2190,15 +2203,15 @@
         background:var(--surface2);border:1.5px solid var(--border);border-radius:16px;min-height:0;display:flex;flex-direction:column;overflow:hidden;
       }
       .shops-v2-panel-head{
-        padding:14px 16px 12px;border-bottom:1px solid var(--border);background:var(--surface2);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+        padding:16px 16px 12px;border-bottom:1px solid var(--border);background:var(--surface2);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
       }
       .shops-v2-side-panel{padding-bottom:0}
       .shops-v2-side-title{font-size:16px;font-weight:800;color:var(--text);line-height:1.2}
       .shops-v2-side-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 16px 0}
-      .shops-v2-mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:14px 16px}
-      .shops-v2-mini-stat{border:1.5px solid var(--border);background:var(--surface);border-radius:12px;padding:10px 11px;display:flex;flex-direction:column;gap:4px}
-      .shops-v2-mini-stat span{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em}
-      .shops-v2-mini-stat strong{font-size:14px;font-family:'DM Mono',monospace;color:var(--text)}
+      .shops-v2-mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:14px 16px}
+      .shops-v2-mini-stat{border:1.5px solid var(--border);background:var(--surface);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:5px}
+      .shops-v2-mini-stat span{font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+      .shops-v2-mini-stat strong{font-size:15px;font-family:'DM Mono',monospace;color:var(--text)}
       .shops-v2-note-box{padding:0 16px 16px}
       .shops-v2-note-content{
         border:1.5px solid var(--border);background:var(--surface);border-radius:12px;padding:12px;font-size:13px;color:var(--text);line-height:1.55;min-height:80px;
@@ -2209,27 +2222,29 @@
       .shops-v2-cal-grid .cal-day{width:100%;border:none;background:transparent}
       .shops-v2-cal-grid .cal-day.shops-v2-selected-day{background:var(--accent-light);border-color:var(--accent);color:var(--accent);font-weight:800}
       .shops-v2-cal-grid .cal-day.today.shops-v2-selected-day{background:linear-gradient(180deg,var(--accent),var(--accent2));color:#fff}
-      .shops-v2-table-card{display:flex;flex-direction:column;gap:10px;flex:1;min-height:280px;padding:14px}
+      .shops-v2-table-card{display:flex;flex-direction:column;gap:12px;flex:1;min-height:280px;padding:16px}
       .shops-v2-table-toolbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
       .shops-v2-table-wrap{flex:1;min-height:0;border:1.5px solid var(--border);border-radius:14px;overflow:hidden;background:var(--surface2)}
       .shops-v2-table-scroll{height:100%;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}
       .shops-v2-month-table{border-collapse:separate;border-spacing:0;min-width:max-content;width:100%}
       .shops-v2-month-table th,.shops-v2-month-table td{padding:0;border-bottom:1px solid var(--border);border-right:1px solid var(--border);background:var(--surface)}
       .shops-v2-month-table thead th{position:sticky;top:0;z-index:2;background:var(--surface2)}
+      .shops-v2-month-table tbody tr:nth-child(even) td,
+      .shops-v2-month-table tbody tr:nth-child(even) th.shops-v2-sticky-col{background:rgba(0,0,0,.018)!important}
       .shops-v2-month-table tr:last-child th,.shops-v2-month-table tr:last-child td{border-bottom:none}
       .shops-v2-month-table th:first-child,.shops-v2-month-table td:first-child{border-left:none}
       .shops-v2-sticky-col{
         position:sticky;left:0;z-index:3;min-width:190px;text-align:left;padding:12px 14px!important;background:var(--surface2)!important;
         font-size:12px;font-weight:800;color:var(--text);text-transform:none;letter-spacing:0;
       }
-      .shops-v2-row-total{min-width:120px;padding:12px 14px!important;background:var(--surface2);font-size:12px;font-weight:700;color:var(--text);font-family:'DM Mono',monospace}
+      .shops-v2-row-total{min-width:120px;padding:12px 14px!important;background:var(--surface2);font-size:12px;font-weight:800;color:var(--text);font-family:'DM Mono',monospace}
       .shops-v2-day-header{
         display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:78px;padding:12px 8px;border:none;background:transparent;cursor:pointer;font:600 12px 'DM Sans',sans-serif;color:var(--text);
       }
       .shops-v2-day-header small{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em}
       .shops-v2-day-header.active,.shops-v2-day-header:hover{background:var(--accent-light);color:var(--accent)}
       .shops-v2-cell-btn{
-        min-width:78px;width:100%;padding:12px 10px;border:none;background:transparent;cursor:pointer;font:600 12px 'DM Mono',monospace;color:var(--text2);text-align:center;
+        min-width:78px;width:100%;padding:12px 10px;border:none;background:transparent;cursor:pointer;font:700 12px 'DM Mono',monospace;color:var(--text2);text-align:center;
       }
       .shops-v2-cell-btn:hover{background:var(--surface2);color:var(--text)}
       .shops-v2-cell-btn.has-value{color:var(--text)}
@@ -2262,6 +2277,7 @@
         .shops-v2-actions{width:100%}
         .shops-v2-actions .btn{flex:1}
         .shops-v2-list-row{grid-template-columns:1fr}
+        .shops-v2-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr));min-width:0;width:100%}
         .shops-v2-row-actions{justify-content:flex-start}
         .shops-v2-quickbar{flex-direction:column;align-items:stretch}
         .shops-v2-range-badge{margin-left:0}

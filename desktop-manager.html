@@ -4109,19 +4109,13 @@ document.addEventListener('click',e=>{
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape') return;
   // Priority: innermost first
+  if(document.querySelector('#shops-body .shops-v2-modal-overlay')){closeShopsModal();return;}
   if(document.getElementById('day-modal-overlay')?.classList.contains('open')){closeDayModalDirect();return;}
   if(launcherOpen){closeLauncher();return;}
   if(document.getElementById('ctx-menu')?.style.display==='block'){closeCtx();return;}
   if(focusOpen){closeFocus();return;}
   if(schedOpen){toggleSchedPanel();return;}
   if(sidebarOpen){closeSidebar();return;}
-  // Close topmost visible window
-  const wins=[...document.querySelectorAll('.window:not(.minimized)')].sort((a,b)=>(parseInt(b.style.zIndex)||0)-(parseInt(a.style.zIndex)||0));
-  if(wins.length){
-    const w=wins[0];
-    const closeBtn=w.querySelector('.win-btn.close');
-    if(closeBtn) closeBtn.click();
-  }
 });
 
 // ═══════════════ FOCUS PANEL ═══════════════
