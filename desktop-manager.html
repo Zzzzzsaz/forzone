@@ -9460,8 +9460,8 @@ function bootApp(){
     ];
     saveS(); try{renderQL();}catch(e){}
   }
-  // Sample data (desktop only path)
-  if(!(S.shops||[]).length&&!(S.tasks||[]).length){
+  // Optional sample data (disabled by default in production/private use)
+  if(window.__enableDesktopDemoSeed === true && !(S.shops||[]).length&&!(S.tasks||[]).length){
     S.shops=[
       {id:1,name:'FashionDrop PL',platform:'Shopify',notes:'Testujemy nowe kreacje',adsOn:true,campaignOk:true,status:'active',entries:[],adPlatforms:[{id:'meta',name:'Meta Ads',enabled:true,color:'#1877f2'}],vatRate:23,people:1,apiKey:''},
       {id:2,name:'TechGear Store',platform:'WooCommerce',notes:'Czeka na meta zatwierdzenie',adsOn:false,campaignOk:false,status:'warning',entries:[],adPlatforms:[{id:'meta',name:'Meta Ads',enabled:true,color:'#1877f2'}],vatRate:23,people:1,apiKey:''},

@@ -2,7 +2,7 @@
   if(window.__storeTrackerModuleLoaded) return;
   window.__storeTrackerModuleLoaded = true;
 
-  const MODULE_VERSION = 2;
+  const MODULE_VERSION = 3;
   const STYLE_ID = 'shops-v2-styles';
   const STORE_COLORS = ['#2d5be3', '#22c55e', '#f97316', '#8b5cf6', '#ef4444', '#06b6d4', '#eab308', '#14b8a6'];
   const SHARE_TYPE_LABELS = {
@@ -17,7 +17,9 @@
   const DEFAULT_SHOPIFY_API_VERSION = '2025-10';
   const runtime = {
     boundResize: false,
-    wheelHost: null
+    wheelHost: null,
+    silentSyncQueued: false,
+    silentSyncRunning: false
   };
 
   function rootState(){
@@ -184,6 +186,17 @@
     };
   }
 
+  function trackerSnapshot(data){
+    return JSON.stringify({
+      version: data?.version || null,
+      companies: Array.isArray(data?.companies) ? data.companies : [],
+      stores: Array.isArray(data?.stores) ? data.stores : [],
+      dailyStats: Array.isArray(data?.dailyStats) ? data.dailyStats : [],
+      ui: data?.ui || {},
+      meta: data?.meta || {}
+    });
+  }
+
   function normalizeCompany(company, index){
     const now = nowIso();
     return {
@@ -300,6 +313,7 @@
   }
 
   function seedDemoData(data){
+    if(window.__enableStoreTrackerDemoSeed !== true) return;
     if(data.meta.seeded) return;
     if(data.companies.length || data.stores.length || data.dailyStats.length) return;
 
@@ -336,10 +350,35 @@
     data.meta.seeded = true;
   }
 
+  function isBuiltInDemoData(data){
+    const companyNames = (data.companies || []).map(company=>String(company.name || '').trim()).sort().join('|');
+    const storeNames = (data.stores || []).map(store=>String(store.name || '').trim()).sort().join('|');
+    const demoCompanies = ['Forzone Commerce', 'Nova Brands'].sort().join('|');
+    const demoStores = ['FashionDrop PL', 'TechGear EU', 'GlowSkin Studio', 'HomeCraft Lab'].sort().join('|');
+    if(companyNames !== demoCompanies || storeNames !== demoStores) return false;
+    if(!(data.dailyStats || []).length) return false;
+    return (data.dailyStats || []).every(stat=>String(stat.id || '').startsWith('seed_'));
+  }
+
+  function cleanupBuiltInDemoData(data){
+    if(!isBuiltInDemoData(data)) return false;
+    data.companies = [];
+    data.stores = [];
+    data.dailyStats = [];
+    data.ui.companyId = null;
+    data.ui.storeId = null;
+    data.ui.view = 'overview';
+    data.meta.seeded = false;
+    data.meta.migratedToCompanies = true;
+    data.meta.cleanedBuiltInDemo = true;
+    return true;
+  }
+
   function ensureData(){
     const state = rootState();
     if(!state.storeTracker || typeof state.storeTracker !== 'object') state.storeTracker = {};
     const data = state.storeTracker;
+    const before = trackerSnapshot(data);
     if(!Array.isArray(data.companies)) data.companies = [];
     if(!Array.isArray(data.stores)) data.stores = [];
     if(!Array.isArray(data.dailyStats)) data.dailyStats = [];
@@ -357,6 +396,7 @@
       data.ui.summaryMode = defaults.summaryMode;
     }
 
+    cleanupBuiltInDemoData(data);
     migrateLegacyData(data);
     seedDemoData(data);
 
@@ -389,6 +429,7 @@
       data.ui.selectedDate = isDateInMonth(today, data.ui.monthKey) ? today : dateFromMonthDay(data.ui.monthKey, 1);
     }
     syncLegacyMirror(data);
+    if(before !== trackerSnapshot(data)) scheduleSilentPersist();
     return data;
   }
 
@@ -426,6 +467,25 @@
         entries
       };
     });
+  }
+
+  function scheduleSilentPersist(){
+    if(runtime.silentSyncQueued) return;
+    runtime.silentSyncQueued = true;
+    setTimeout(()=>{
+      runtime.silentSyncQueued = false;
+      if(runtime.silentSyncRunning) return;
+      runtime.silentSyncRunning = true;
+      try{
+        const data = rootState().storeTracker;
+        if(data) syncLegacyMirror(data);
+        if(typeof window.saveS === 'function') window.saveS();
+      }catch(error){
+        console.warn('storeTracker silent save failed', error);
+      }finally{
+        runtime.silentSyncRunning = false;
+      }
+    }, 0);
   }
 
   function persist(message, type){
@@ -3354,6 +3414,5 @@
   }
 
   ensureData();
-  persist();
   renderShops();
 })();
