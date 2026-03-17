@@ -2986,27 +2986,49 @@
     return String(dateAtNoon(bounds.start).getFullYear());
   }
 
-  function renderHeader(data){
+  function renderHeaderNav(data){
     const ui = data.ui;
-    let actions = '';
-    if(ui.view === 'overview'){
-      actions = `<button class="btn btn-primary" type="button" onclick="openCompanyModal()">+ Firma</button>`;
-    }else if(ui.view === 'company'){
-      actions = [
-        `<button class="btn btn-ghost" type="button" onclick="openShopsOverview()">Wszystko</button>`,
-        `<button class="btn btn-ghost" type="button" onclick="openCompanyModal('${ui.companyId}')">Edytuj</button>`,
-        `<button class="btn btn-danger" type="button" onclick="confirmDeleteCompany('${ui.companyId}')">Usun</button>`,
-        `<button class="btn btn-primary" type="button" onclick="openStoreModal('${ui.companyId}')">+ Sklep</button>`
-      ].join('');
-    }else{
-      actions = [
-        `<button class="btn btn-ghost" type="button" onclick="openShopsCompany('${ui.companyId}')">Firma</button>`,
-        `<button class="btn btn-ghost" type="button" onclick="openStatModal('${ui.storeId}','${ui.selectedDate}')">Dzien</button>`,
-        `<button class="btn btn-ghost" type="button" onclick="openStoreModal('${ui.companyId}','${ui.storeId}')">Edytuj</button>`,
-        `<button class="btn btn-danger" type="button" onclick="confirmDeleteStore('${ui.storeId}')">Usun</button>`
-      ].join('');
+    const items = [
+      {
+        label: 'Menu glowne',
+        active: ui.view === 'overview',
+        action: 'openShopsOverview()'
+      }
+    ];
+
+    if(ui.companyId){
+      const company = getCompany(ui.companyId);
+      if(company){
+        items.push({
+          label: company.name,
+          active: ui.view === 'company',
+          action: `openShopsCompany('${company.id}')`
+        });
+      }
     }
 
+    if(ui.view === 'store' && ui.storeId){
+      const store = getStore(ui.storeId);
+      if(store){
+        items.push({
+          label: store.name,
+          active: true,
+          action: `openShopsStore('${store.id}')`
+        });
+      }
+    }
+
+    return `
+      <div class="shops-min-nav">
+        ${items.map(item=>`
+          <button class="shops-min-nav-btn${item.active ? ' active' : ''}" type="button" onclick="${item.action}">${esc(item.label)}</button>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  function renderHeader(data){
+    const ui = data.ui;
     return `
       <div class="card shops-min-head">
         <div class="shops-min-head-top">
@@ -3014,8 +3036,8 @@
             <div class="shops-min-head-title">${esc(viewTitle(ui))}</div>
             <div class="shops-min-head-sub">${esc(rangeLabel(ui.monthKey, ui.summaryMode, ui.selectedDate))}</div>
           </div>
-          <div class="shops-min-head-actions">${actions}</div>
         </div>
+        ${renderHeaderNav(data)}
         <div class="shops-min-toolbar">
           <input class="shops-min-date" type="date" value="${esc(ui.selectedDate)}" onchange="jumpToShopsDate(this.value)" aria-label="Data">
           <div class="todo-filters shops-min-filters">
@@ -3168,6 +3190,16 @@
           ${renderStoreCalendar(store, data.ui.monthKey, data.ui.selectedDate)}
         </div>
         ${renderStoreTable(store, summary, data.ui.monthKey, data.ui.selectedDate)}
+        <div class="card shops-min-card">
+          <div class="shops-min-card-head">
+            <div class="shops-min-card-title">Zarzadzanie sklepem</div>
+            <div class="shops-min-inline-actions">
+              ${company ? `<button class="btn btn-ghost btn-sm" type="button" onclick="openShopsCompany('${company.id}')">Firma</button>` : ''}
+              <button class="btn btn-ghost btn-sm" type="button" onclick="openStoreModal('${store.company_id}','${store.id}')">Edytuj sklep</button>
+              <button class="btn btn-danger btn-sm" type="button" onclick="confirmDeleteStore('${store.id}')">Usun sklep</button>
+            </div>
+          </div>
+        </div>
       </div>
     `;
   }
@@ -3277,7 +3309,9 @@
       .shops-min-head-copy{display:flex;flex-direction:column;gap:4px;align-items:center}
       .shops-min-head-title{font-size:28px;font-weight:900;color:var(--text);line-height:1}
       .shops-min-head-sub{font-size:13px;color:var(--text2)}
-      .shops-min-head-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+      .shops-min-nav{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px}
+      .shops-min-nav-btn{padding:10px 14px;border:1px solid var(--border);border-radius:999px;background:var(--surface2);color:var(--text);font:700 13px 'DM Sans',sans-serif;cursor:pointer}
+      .shops-min-nav-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
       .shops-min-toolbar{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px}
       .shops-min-date{min-width:170px}
       .shops-min-filters{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
@@ -3336,8 +3370,10 @@
       }
       @container (max-width: 720px){
         .shops-v2-shell{padding:10px}
-        .shops-min-head-actions,.shops-min-inline-actions{width:100%}
-        .shops-min-head-actions .btn,.shops-min-inline-actions .btn{flex:1}
+        .shops-min-nav{flex-direction:column;align-items:stretch}
+        .shops-min-nav-btn{width:100%}
+        .shops-min-inline-actions{width:100%}
+        .shops-min-inline-actions .btn{flex:1}
         .shops-min-hero-row,.shops-min-stats,.shops-min-stats-2{grid-template-columns:1fr}
         .shops-min-menu-btn{width:100%}
       }
