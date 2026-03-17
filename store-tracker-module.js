@@ -392,7 +392,7 @@
     Object.keys(defaults).forEach(key=>{
       if(data.ui[key] === undefined || data.ui[key] === null || data.ui[key] === '') data.ui[key] = defaults[key];
     });
-    if(!['today', 'yesterday', 'week', 'month', 'year'].includes(String(data.ui.summaryMode || ''))){
+    if(!['day', 'today', 'yesterday', 'week', 'month', 'year'].includes(String(data.ui.summaryMode || ''))){
       data.ui.summaryMode = defaults.summaryMode;
     }
 
@@ -567,18 +567,26 @@
   }
 
   function getRangePresetBounds(mode, selectedDate){
-    const preset = ['today', 'yesterday', 'week', 'month', 'year'].includes(String(mode || '')) ? String(mode) : 'today';
-    const base = dateAtNoon(selectedDate || localDate(new Date()));
-    const year = base.getFullYear();
-    const month = base.getMonth();
+    const preset = ['day', 'today', 'yesterday', 'week', 'month', 'year'].includes(String(mode || '')) ? String(mode) : 'today';
+    const selectedBase = dateAtNoon(selectedDate || localDate(new Date()));
+    const todayBase = dateAtNoon(localDate(new Date()));
+    const year = selectedBase.getFullYear();
+    const month = selectedBase.getMonth();
+
+    if(preset === 'day'){
+      return {preset, start: localDate(selectedBase), end: localDate(selectedBase)};
+    }
+    if(preset === 'today'){
+      return {preset, start: localDate(todayBase), end: localDate(todayBase)};
+    }
 
     if(preset === 'yesterday'){
-      const day = addDays(base, -1);
+      const day = addDays(todayBase, -1);
       return {preset, start: localDate(day), end: localDate(day)};
     }
     if(preset === 'week'){
-      const weekday = base.getDay() === 0 ? 6 : base.getDay() - 1;
-      const start = addDays(base, -weekday);
+      const weekday = selectedBase.getDay() === 0 ? 6 : selectedBase.getDay() - 1;
+      const start = addDays(selectedBase, -weekday);
       const end = addDays(start, 6);
       return {preset, start: localDate(start), end: localDate(end)};
     }
@@ -596,7 +604,7 @@
         end: localDate(new Date(year, 11, 31, 12))
       };
     }
-    return {preset, start: localDate(base), end: localDate(base)};
+    return {preset, start: localDate(selectedBase), end: localDate(selectedBase)};
   }
 
   function isDateInRange(date, bounds){
@@ -730,7 +738,7 @@
 
   function setSummaryMode(mode){
     const data = ensureData();
-    data.ui.summaryMode = ['today', 'yesterday', 'week', 'month', 'year'].includes(String(mode || '')) ? String(mode) : 'today';
+    data.ui.summaryMode = ['day', 'today', 'yesterday', 'week', 'month', 'year'].includes(String(mode || '')) ? String(mode) : 'today';
     renderShops();
   }
 
@@ -739,6 +747,7 @@
     const data = ensureData();
     data.ui.selectedDate = date;
     data.ui.monthKey = String(date).slice(0, 7);
+    data.ui.summaryMode = 'day';
     renderShops();
   }
 
@@ -846,6 +855,7 @@
     const data = ensureData();
     data.ui.monthKey = String(date).slice(0, 7);
     data.ui.selectedDate = date;
+    data.ui.summaryMode = 'day';
     renderShops();
   }
 
@@ -2979,6 +2989,7 @@
 
   function rangeLabel(key, mode, selectedDate){
     const bounds = getRangePresetBounds(mode, selectedDate);
+    if(bounds.preset === 'day') return fullDateLabel(bounds.start);
     if(bounds.preset === 'today') return `Dzisiaj / ${fullDateLabel(bounds.start)}`;
     if(bounds.preset === 'yesterday') return `Wczoraj / ${fullDateLabel(bounds.start)}`;
     if(bounds.preset === 'week') return `${shortDateLabel(bounds.start)} - ${shortDateLabel(bounds.end)}`;
@@ -2990,32 +3001,26 @@
     const ui = data.ui;
     const items = [
       {
-        label: 'Menu glowne',
+        label: 'Menu',
         active: ui.view === 'overview',
         action: 'openShopsOverview()'
       }
     ];
 
-    if(ui.companyId){
-      const company = getCompany(ui.companyId);
-      if(company){
-        items.push({
-          label: company.name,
-          active: ui.view === 'company',
-          action: `openShopsCompany('${company.id}')`
-        });
-      }
+    if(ui.companyId && ui.view !== 'overview'){
+      items.push({
+        label: 'Firma',
+        active: ui.view === 'company',
+        action: `openShopsCompany('${ui.companyId}')`
+      });
     }
 
     if(ui.view === 'store' && ui.storeId){
-      const store = getStore(ui.storeId);
-      if(store){
-        items.push({
-          label: store.name,
-          active: true,
-          action: `openShopsStore('${store.id}')`
-        });
-      }
+      items.push({
+        label: 'Sklep',
+        active: true,
+        action: `openShopsStore('${ui.storeId}')`
+      });
     }
 
     return `
@@ -3031,32 +3036,44 @@
     const ui = data.ui;
     return `
       <div class="card shops-min-head">
-        <div class="shops-min-head-top">
-          <div class="shops-min-head-copy">
-            <div class="shops-min-head-title">${esc(viewTitle(ui))}</div>
-            <div class="shops-min-head-sub">${esc(rangeLabel(ui.monthKey, ui.summaryMode, ui.selectedDate))}</div>
-          </div>
-        </div>
-        ${renderHeaderNav(data)}
-        <div class="shops-min-toolbar">
-          <input class="shops-min-date" type="date" value="${esc(ui.selectedDate)}" onchange="jumpToShopsDate(this.value)" aria-label="Data">
-          <div class="todo-filters shops-min-filters">
-            <button class="filter-btn${ui.summaryMode === 'today' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('today')">Dzis</button>
-            <button class="filter-btn${ui.summaryMode === 'yesterday' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('yesterday')">Wczoraj</button>
-            <button class="filter-btn${ui.summaryMode === 'week' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('week')">Tydzien</button>
-            <button class="filter-btn${ui.summaryMode === 'month' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('month')">Miesiac</button>
-            <button class="filter-btn${ui.summaryMode === 'year' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('year')">Rok</button>
+        <div class="shops-min-head-bar">
+          <div class="shops-min-head-left">${renderHeaderNav(data)}</div>
+          <div class="shops-min-head-center">${esc(viewTitle(ui))}</div>
+          <div class="shops-min-head-right">
+            <div class="shops-min-head-range">${esc(rangeLabel(ui.monthKey, ui.summaryMode, ui.selectedDate))}</div>
           </div>
         </div>
       </div>
     `;
   }
 
-  function renderMinimalHero(summary, title, accent){
+  function renderResultControls(data){
+    const ui = data.ui;
+    return `
+      <div class="shops-min-result-tools">
+        <div class="shops-min-result-dates">
+          <input class="shops-min-date" type="date" value="${esc(ui.selectedDate)}" onchange="jumpToShopsDate(this.value)" aria-label="Data">
+          <input class="shops-min-month" type="month" value="${esc(ui.monthKey)}" onchange="setShopsMonth(this.value)" aria-label="Miesiac">
+        </div>
+        <div class="todo-filters shops-min-filters">
+          <button class="filter-btn${ui.summaryMode === 'day' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('day')">Dzien</button>
+          <button class="filter-btn${ui.summaryMode === 'today' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('today')">Dzis</button>
+          <button class="filter-btn${ui.summaryMode === 'yesterday' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('yesterday')">Wczoraj</button>
+          <button class="filter-btn${ui.summaryMode === 'week' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('week')">Tydzien</button>
+          <button class="filter-btn${ui.summaryMode === 'month' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('month')">Miesiac</button>
+          <button class="filter-btn${ui.summaryMode === 'year' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('year')">Rok</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderMinimalHero(summary, title, accent, data){
     return `
       <div class="card shops-min-hero" style="--shops-min-accent:${accent || cssVar('--accent', '#4f7ef8')}">
+        ${renderResultControls(data)}
         <div class="shops-min-kicker">${esc(title)}</div>
         <div class="shops-min-amount">${formatPLN(summary.income)}</div>
+        <div class="shops-min-hero-label">${esc(rangeLabel(data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate))}</div>
         <div class="shops-min-hero-row">
           <div class="shops-min-chip"><span>Przychod</span><strong>${formatPLN(summary.gross)}</strong></div>
           <div class="shops-min-chip"><span>Reklamy</span><strong>${formatPLN(summary.ads)}</strong></div>
@@ -3184,7 +3201,7 @@
     const summary = summarizeStore(store, data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate);
     return `
       <div class="shops-v2-scroll shops-min-page">
-        ${renderMinimalHero(summary, `${store.name}${company ? ` / ${company.name}` : ''}`, store.color)}
+        ${renderMinimalHero(summary, `${store.name}${company ? ` / ${company.name}` : ''}`, store.color, data)}
         <div class="shops-min-store-grid">
           ${renderSelectedDayPanel(store, data.ui.selectedDate)}
           ${renderStoreCalendar(store, data.ui.monthKey, data.ui.selectedDate)}
@@ -3208,7 +3225,7 @@
     const summary = summarizeGlobal(data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate);
     return `
       <div class="shops-v2-scroll shops-min-page">
-        ${renderMinimalHero(summary, 'Zarobek lacznie', cssVar('--accent', '#4f7ef8'))}
+        ${renderMinimalHero(summary, 'Zarobek lacznie', cssVar('--accent', '#4f7ef8'), data)}
         ${renderMiniStats(summary)}
         <div class="card shops-min-card">
           <div class="shops-min-card-head">
@@ -3229,7 +3246,7 @@
     const summary = summarizeCompany(company, data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate);
     return `
       <div class="shops-v2-scroll shops-min-page">
-        ${renderMinimalHero(summary, company.name, companyAccent(summary))}
+        ${renderMinimalHero(summary, company.name, companyAccent(summary), data)}
         ${renderMiniStats(summary)}
         <div class="card shops-min-card">
           <div class="shops-min-card-head">
@@ -3304,22 +3321,26 @@
       .shops-v2-content{flex:1;min-height:0;overflow:auto;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
       .shops-v2-scroll,.shops-v2-store-view{display:flex;flex-direction:column;gap:14px}
       .shops-min-page{max-width:980px;width:100%;margin:0 auto}
-      .shops-min-head{padding:16px 18px}
-      .shops-min-head-top{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:12px;text-align:center}
-      .shops-min-head-copy{display:flex;flex-direction:column;gap:4px;align-items:center}
-      .shops-min-head-title{font-size:28px;font-weight:900;color:var(--text);line-height:1}
-      .shops-min-head-sub{font-size:13px;color:var(--text2)}
-      .shops-min-nav{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px}
-      .shops-min-nav-btn{padding:10px 14px;border:1px solid var(--border);border-radius:999px;background:var(--surface2);color:var(--text);font:700 13px 'DM Sans',sans-serif;cursor:pointer}
+      .shops-min-head{padding:10px 14px}
+      .shops-min-head-bar{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:12px}
+      .shops-min-head-left{display:flex;justify-content:flex-start;min-width:0}
+      .shops-min-head-center{min-width:0;text-align:center;font-size:20px;font-weight:900;color:var(--text);line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .shops-min-head-right{display:flex;justify-content:flex-end;min-width:0}
+      .shops-min-head-range{font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .shops-min-nav{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-start;margin:0}
+      .shops-min-nav-btn{padding:7px 10px;border:1px solid var(--border);border-radius:999px;background:var(--surface2);color:var(--text);font:700 12px 'DM Sans',sans-serif;cursor:pointer}
       .shops-min-nav-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
-      .shops-min-toolbar{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px}
       .shops-min-date{min-width:170px}
+      .shops-min-month{min-width:150px}
       .shops-min-filters{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
-      .shops-min-hero{padding:26px 22px;text-align:center;border:1.5px solid color-mix(in srgb, var(--shops-min-accent) 28%, var(--border));background:linear-gradient(180deg, color-mix(in srgb, var(--shops-min-accent) 10%, var(--surface)) 0%, var(--surface) 100%)}
+      .shops-min-result-tools{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+      .shops-min-result-dates{display:flex;gap:8px;flex-wrap:wrap}
+      .shops-min-hero{padding:16px 18px;text-align:center;border:1.5px solid color-mix(in srgb, var(--shops-min-accent) 28%, var(--border));background:linear-gradient(180deg, color-mix(in srgb, var(--shops-min-accent) 10%, var(--surface)) 0%, var(--surface) 100%)}
       .shops-min-kicker{font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.12em}
-      .shops-min-amount{margin-top:10px;font-size:clamp(34px,5vw,58px);font-weight:900;font-family:'DM Mono',monospace;color:var(--text);line-height:1}
-      .shops-min-hero-row{margin:18px auto 0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;max-width:760px}
-      .shops-min-chip{padding:12px;border:1px solid var(--border);border-radius:16px;background:rgba(255,255,255,.55);display:flex;flex-direction:column;gap:4px}
+      .shops-min-amount{margin-top:8px;font-size:clamp(30px,4vw,48px);font-weight:900;font-family:'DM Mono',monospace;color:var(--text);line-height:1}
+      .shops-min-hero-label{margin-top:6px;font-size:12px;color:var(--text2)}
+      .shops-min-hero-row{margin:14px auto 0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;max-width:760px}
+      .shops-min-chip{padding:10px;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.55);display:flex;flex-direction:column;gap:4px}
       .shops-min-chip span{font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
       .shops-min-chip strong{font-size:15px;font-weight:800;color:var(--text);font-family:'DM Mono',monospace}
       .shops-min-details{padding:0;overflow:hidden}
@@ -3370,8 +3391,13 @@
       }
       @container (max-width: 720px){
         .shops-v2-shell{padding:10px}
+        .shops-min-head-bar{grid-template-columns:1fr}
+        .shops-min-head-left,.shops-min-head-right{justify-content:center}
+        .shops-min-head-center{order:-1}
         .shops-min-nav{flex-direction:column;align-items:stretch}
         .shops-min-nav-btn{width:100%}
+        .shops-min-result-tools,.shops-min-result-dates{flex-direction:column;align-items:stretch}
+        .shops-min-date,.shops-min-month{width:100%;min-width:0}
         .shops-min-inline-actions{width:100%}
         .shops-min-inline-actions .btn{flex:1}
         .shops-min-hero-row,.shops-min-stats,.shops-min-stats-2{grid-template-columns:1fr}
