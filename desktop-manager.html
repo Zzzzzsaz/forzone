@@ -2356,6 +2356,84 @@ body.dark .order-card{background:var(--surface2)}
 .ntb { min-width:40px !important; height:40px !important; border-radius:8px !important; }
 #notes-title-inp { font-size:20px !important; min-height:54px !important; }
 #notes-editor { font-size:16px !important; line-height:1.75 !important; padding:16px !important; }
+#notes-check-toolbar { padding:12px !important; gap:8px !important; }
+#notes-check-toolbar .btn { min-height:46px !important; border-radius:12px !important; }
+#notes-checklist { padding:16px !important; }
+.notes-check-row { flex-wrap:wrap !important; align-items:stretch !important; padding:12px !important; gap:10px !important; }
+.notes-check-input { flex-basis:100% !important; width:100% !important; font-size:16px !important; min-height:26px !important; }
+.notes-check-toggle { flex:1 !important; min-width:0 !important; height:46px !important; font-size:12px !important; }
+.notes-check-del { width:46px !important; height:46px !important; border-radius:12px !important; background:var(--surface) !important; }
+
+/* ═══ GLOBAL MOBILE POLISH ═══ */
+.window input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+.window select,
+.window textarea,
+#order-modal input, #order-modal select, #order-modal textarea,
+#file-editor-modal input, #file-editor-modal textarea,
+#task-date-modal input, #task-date-modal select,
+#day-modal input, #day-modal textarea,
+#task-editor-pop textarea {
+  font-size:16px !important;
+}
+.window textarea,
+#order-modal textarea,
+#file-editor-modal textarea,
+#task-editor-pop textarea {
+  min-height:96px !important;
+}
+.window .btn,
+#order-modal .btn,
+#file-editor-modal .btn,
+#task-date-modal .btn,
+#day-modal .btn,
+#task-editor-pop .btn {
+  min-height:48px !important;
+  border-radius:12px !important;
+}
+.window .card { border-radius:18px !important; }
+.win-body, #notes-list, #notes-editor, #notes-checklist, #plans-list, #ideas-list, #tasks-list, #fe-body, .orders-col-body, .shops-v2-content {
+  overscroll-behavior:contain;
+}
+#file-editor-overlay, #day-modal-overlay { align-items:flex-end !important; padding:0 !important; }
+#file-editor-modal, #day-modal {
+  width:100% !important;
+  max-width:none !important;
+  max-height:92dvh !important;
+  border-radius:24px 24px 0 0 !important;
+}
+#file-editor-modal { height:min(92dvh, 760px) !important; }
+#fe-body { min-height:0 !important; }
+.fe-note-ta { font-size:16px !important; line-height:1.7 !important; padding:16px !important; }
+#task-editor-pop {
+  left:10px !important;
+  right:10px !important;
+  width:auto !important;
+  max-width:none !important;
+  border-radius:18px !important;
+}
+.day-modal-hdr, .day-modal-body, .day-modal-ftr { padding-left:16px !important; padding-right:16px !important; }
+.day-modal-ftr { flex-wrap:wrap !important; gap:10px !important; }
+#day-time-inp { width:112px !important; }
+#day-task-inp { flex:1 1 180px !important; min-width:0 !important; }
+#win-plans .win-body > div:last-child,
+#win-ideas .win-body > div:last-child,
+#win-suppliers .win-body > div:last-child {
+  padding:14px !important;
+}
+#win-plans .win-body > div:last-child > div,
+#win-ideas .win-body > div:last-child > div,
+#win-suppliers .win-body > div:last-child > div {
+  flex-direction:column !important;
+  align-items:stretch !important;
+}
+#win-plans .win-body > div:last-child .btn,
+#win-ideas .win-body > div:last-child .btn,
+#win-suppliers .win-body > div:last-child .btn {
+  width:100% !important;
+}
+#ctx-menu {
+  max-width:calc(100vw - 16px) !important;
+}
 
 }
 </style>
