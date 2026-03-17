@@ -3532,13 +3532,48 @@ async function supaInit(){
 }
 
 const SUPA_STATE_ID = 'forzone-main-state';
+function stateSavedAt(state){
+  const ts = Number(state?._savedAt || 0);
+  return Number.isFinite(ts) ? ts : 0;
+}
+function hasStoreTrackerData(state){
+  const tracker = state?.storeTracker;
+  return !!(
+    tracker &&
+    (
+      (Array.isArray(tracker.companies) && tracker.companies.length) ||
+      (Array.isArray(tracker.stores) && tracker.stores.length) ||
+      (Array.isArray(tracker.dailyStats) && tracker.dailyStats.length)
+    )
+  );
+}
+function mergeStatePreservingStores(localState, remoteState){
+  const merged = {...localState, ...remoteState};
+  if(hasStoreTrackerData(localState) && !hasStoreTrackerData(remoteState)){
+    merged.storeTracker = localState.storeTracker;
+  }
+  if((localState?.shops||[]).length && !(remoteState?.shops||[]).length){
+    merged.shops = localState.shops;
+  }
+  return merged;
+}
 async function supaLoadState(){
   if(!supaReady()) return false;
   try{
-    const {data,error}=await supaClient.from('app_state').select('data').eq('state_id',SUPA_STATE_ID).maybeSingle();
+    const {data,error}=await supaClient.from('app_state').select('data, updated_at').eq('state_id',SUPA_STATE_ID).maybeSingle();
     if(error) throw error;
     if(data?.data && Object.keys(data.data).length > 0){
-      S = {...S, ...data.data}; // merge so default arrays survive
+      const localTs = stateSavedAt(S);
+      const remoteTs = Math.max(
+        stateSavedAt(data.data),
+        data.updated_at ? new Date(data.updated_at).getTime() : 0
+      );
+      if(remoteTs > localTs + 500){
+        S = mergeStatePreservingStores(S, data.data);
+      }else{
+        S = {...data.data, ...S};
+        setTimeout(()=>{ try{supaSaveState();}catch(e){} }, 0);
+      }
     }
     applyMigrations(); // always ensure all fields exist
     return true;
@@ -3549,8 +3584,9 @@ async function supaSaveState(){
   if(!supaReady()) return;
   showSyncBadge('saving');
   try{
-    const now = new Date().toISOString();
-    S._savedAt = Date.now();
+    const ts = stateSavedAt(S) || Date.now();
+    const now = new Date(ts).toISOString();
+    S._savedAt = ts;
     await supaClient.from('app_state').upsert(
       {state_id:SUPA_STATE_ID, data:S, updated_at:now},
       {onConflict:'state_id'}
@@ -3610,6 +3646,7 @@ function applyMigrations(){
 }
 
 function saveS(){
+  S._savedAt = Date.now();
   try{localStorage.setItem('mys_v2',JSON.stringify(S))}catch(e){}
   if(supaReady()){ clearTimeout(_saveTimer); _saveTimer=setTimeout(()=>supaSaveState(),2000); }
 }
