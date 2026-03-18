@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/Users/heski/Documents/GitHub/forzone -type f -name *.json)",
+      "Bash(find /c/Users/heski/Documents/GitHub/forzone -maxdepth 3 -type f \\\\\\(-name *.js -o -name *.ts -o -name *.json -o -name *.py \\\\\\))",
+      "Bash(file /c/Users/heski/Documents/GitHub/forzone/*)"
+    ]
+  }
+}
