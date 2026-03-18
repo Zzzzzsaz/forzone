@@ -397,6 +397,12 @@
       data.ui.summaryMode = defaults.summaryMode;
     }
 
+    const trackerLooksEmpty = !data.companies.length && !data.stores.length && !data.dailyStats.length;
+    const legacyShopsAvailable = Array.isArray(state.shops) && state.shops.length > 0;
+    if(trackerLooksEmpty && legacyShopsAvailable && data.meta.migratedToCompanies){
+      data.meta.migratedToCompanies = false;
+    }
+
     cleanupBuiltInDemoData(data);
     migrateLegacyData(data);
     seedDemoData(data);

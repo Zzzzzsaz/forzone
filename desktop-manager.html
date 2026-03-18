@@ -3568,6 +3568,13 @@ function mergeStatePreservingStores(localState, remoteState){
   }
   return merged;
 }
+function persistStateLocally(state){
+  try{
+    const serialized = JSON.stringify(state);
+    localStorage.setItem('mys_v2', serialized);
+    localStorage.setItem('mys_v2_backup', serialized);
+  }catch(e){}
+}
 async function supaLoadState(){
   if(!supaReady()) return false;
   try{
@@ -3610,6 +3617,19 @@ var DEFAULT_DOCK = ['shops','tasks','orders','budget','plans','ideas'];
 
 function loadS(){
   try{const d=localStorage.getItem('mys_v2');if(d)S=JSON.parse(d)}catch(e){}
+  try{
+    const b = localStorage.getItem('mys_v2_backup');
+    if(b){
+      const backup = JSON.parse(b);
+      if(
+        (hasStoreTrackerData(backup) && !hasStoreTrackerData(S)) ||
+        ((backup?.shops||[]).length && !(S?.shops||[]).length) ||
+        stateSavedAt(backup) > stateSavedAt(S) + 500
+      ){
+        S = mergeStatePreservingStores(backup, S);
+      }
+    }
+  }catch(e){}
   applyMigrations();
 }
 
@@ -3658,7 +3678,7 @@ function applyMigrations(){
 
 function saveS(){
   S._savedAt = Date.now();
-  try{localStorage.setItem('mys_v2',JSON.stringify(S))}catch(e){}
+  persistStateLocally(S);
   if(supaReady()){ clearTimeout(_saveTimer); _saveTimer=setTimeout(()=>supaSaveState(),2000); }
 }
 
@@ -9390,8 +9410,9 @@ function initRealtimeSync(){
       // Only apply if incoming is strictly newer (>500ms gap to avoid echo)
       if(incoming && incomingTs > localTs + 500){
         isReceivingUpdate = true;
-        S = incoming;
-        try{ localStorage.setItem('mys_v2', JSON.stringify(S)); }catch(e){}
+        S = mergeStatePreservingStores(S, incoming);
+        S._savedAt = Math.max(stateSavedAt(S), incomingTs);
+        persistStateLocally(S);
         refreshAllUI();
         showSyncBadge('synced');
         toast('🔄 Zsynchronizowano z innego urządzenia','info',2200);
@@ -9417,8 +9438,9 @@ document.addEventListener('visibilitychange', async () => {
       const remoteTs = new Date(data.updated_at).getTime();
       const localTs  = S._savedAt || 0;
       if(data.data && remoteTs > localTs + 500){
-        S = data.data;
-        try{ localStorage.setItem('mys_v2', JSON.stringify(S)); }catch(e){}
+        S = mergeStatePreservingStores(S, data.data);
+        S._savedAt = Math.max(stateSavedAt(S), remoteTs);
+        persistStateLocally(S);
         refreshAllUI();
         showSyncBadge('synced');
         toast('🔄 Dane zaktualizowane','info',1800);
