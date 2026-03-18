@@ -19,7 +19,8 @@
     boundResize: false,
     wheelHost: null,
     silentSyncQueued: false,
-    silentSyncRunning: false
+    silentSyncRunning: false,
+    modalBackdropArmed: false
   };
 
   function rootState(){
@@ -962,6 +963,16 @@
   function closeModal(){
     ensureData().ui.modal = null;
     renderShops();
+  }
+
+  function armModalBackdrop(event){
+    runtime.modalBackdropArmed = event?.target === event?.currentTarget;
+  }
+
+  function releaseModalBackdrop(event){
+    const shouldClose = runtime.modalBackdropArmed && event?.target === event?.currentTarget;
+    runtime.modalBackdropArmed = false;
+    if(shouldClose) closeModal();
   }
 
   function saveCompanyForm(){
@@ -2054,7 +2065,7 @@
   function renderCompanyModal(modal){
     const company = modal.companyId ? getCompany(modal.companyId) : null;
     return `
-      <div class="shops-v2-modal-overlay" onclick="closeShopsModal()">
+      <div class="shops-v2-modal-overlay" onpointerdown="armShopsModalBackdrop(event)" onpointerup="releaseShopsModalBackdrop(event)" onpointercancel="releaseShopsModalBackdrop(event)">
         <div class="shops-v2-modal" onclick="event.stopPropagation()">
           <div class="shops-v2-modal-head">
             <div>
@@ -2088,7 +2099,7 @@
     const companyId = store?.company_id || modal.companyId || data.companies[0]?.id || '';
     const companyOptions = data.companies.map(company=>`<option value="${company.id}" ${company.id === companyId ? 'selected' : ''}>${esc(company.name)}</option>`).join('');
     return `
-      <div class="shops-v2-modal-overlay" onclick="closeShopsModal()">
+      <div class="shops-v2-modal-overlay" onpointerdown="armShopsModalBackdrop(event)" onpointerup="releaseShopsModalBackdrop(event)" onpointercancel="releaseShopsModalBackdrop(event)">
         <div class="shops-v2-modal shops-v2-modal-wide" onclick="event.stopPropagation()">
           <div class="shops-v2-modal-head">
             <div>
@@ -2185,7 +2196,7 @@
     const store = getStore(modal.storeId);
     const existing = store ? getStoreStat(store.id, modal.date) : null;
     return `
-      <div class="shops-v2-modal-overlay" onclick="closeShopsModal()">
+      <div class="shops-v2-modal-overlay" onpointerdown="armShopsModalBackdrop(event)" onpointerup="releaseShopsModalBackdrop(event)" onpointercancel="releaseShopsModalBackdrop(event)">
         <div class="shops-v2-modal shops-v2-modal-wide" onclick="event.stopPropagation()">
           <div class="shops-v2-modal-head">
             <div>
@@ -2240,7 +2251,7 @@
 
   function renderConfirmModal(modal){
     return `
-      <div class="shops-v2-modal-overlay" onclick="closeShopsModal()">
+      <div class="shops-v2-modal-overlay" onpointerdown="armShopsModalBackdrop(event)" onpointerup="releaseShopsModalBackdrop(event)" onpointercancel="releaseShopsModalBackdrop(event)">
         <div class="shops-v2-modal shops-v2-confirm" onclick="event.stopPropagation()">
           <div class="shops-v2-modal-head">
             <div>
@@ -3067,19 +3078,22 @@
     `;
   }
 
-  function renderMinimalHero(summary, title, accent, data){
+  function renderMinimalHero(summary, title, accent, data, options){
+    const showDetails = options?.showDetails !== false;
     return `
       <div class="card shops-min-hero" style="--shops-min-accent:${accent || cssVar('--accent', '#4f7ef8')}">
         ${renderResultControls(data)}
         <div class="shops-min-kicker">${esc(title)}</div>
         <div class="shops-min-amount">${formatPLN(summary.income)}</div>
         <div class="shops-min-hero-label">${esc(rangeLabel(data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate))}</div>
-        <div class="shops-min-hero-row">
-          <div class="shops-min-chip"><span>Przychod</span><strong>${formatPLN(summary.gross)}</strong></div>
-          <div class="shops-min-chip"><span>Reklamy</span><strong>${formatPLN(summary.ads)}</strong></div>
-          <div class="shops-min-chip"><span>Zwroty</span><strong>${formatPLN(summary.refunds)}</strong></div>
-          <div class="shops-min-chip"><span>Na glowe</span><strong>${formatPLN(summary.perHead)}</strong></div>
-        </div>
+        ${showDetails ? `
+          <div class="shops-min-hero-row">
+            <div class="shops-min-chip"><span>Przychod</span><strong>${formatPLN(summary.gross)}</strong></div>
+            <div class="shops-min-chip"><span>Reklamy</span><strong>${formatPLN(summary.ads)}</strong></div>
+            <div class="shops-min-chip"><span>Zwroty</span><strong>${formatPLN(summary.refunds)}</strong></div>
+            <div class="shops-min-chip"><span>Na glowe</span><strong>${formatPLN(summary.perHead)}</strong></div>
+          </div>
+        ` : ''}
       </div>
     `;
   }
@@ -3225,8 +3239,7 @@
     const summary = summarizeGlobal(data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate);
     return `
       <div class="shops-v2-scroll shops-min-page">
-        ${renderMinimalHero(summary, 'Zarobek lacznie', cssVar('--accent', '#4f7ef8'), data)}
-        ${renderMiniStats(summary)}
+        ${renderMinimalHero(summary, 'Moj dochod lacznie', cssVar('--accent', '#4f7ef8'), data, {showDetails:false})}
         <div class="card shops-min-card">
           <div class="shops-min-card-head">
             <div class="shops-min-card-title">Firmy</div>
@@ -3465,6 +3478,8 @@
   window.quickAddStore = quickAddStore;
   window.saveInlineStat = saveInlineStat;
   window.syncShopifyRevenue = syncShopifyRevenue;
+  window.armShopsModalBackdrop = armModalBackdrop;
+  window.releaseShopsModalBackdrop = releaseModalBackdrop;
 
   if(!runtime.boundResize){
     runtime.boundResize = true;
