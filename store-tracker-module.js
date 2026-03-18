@@ -309,63 +309,29 @@
   }
 
   function migrateLegacyData(data){
-    if(data.meta.migratedToCompanies) return;
-
-    if(Array.isArray(data.companies) && data.companies.length){
-      data.meta.migratedToCompanies = true;
-      return;
-    }
-
-    if(Array.isArray(data.stores) && data.stores.length){
-      const companyId = uid('company_import');
-      data.companies = [normalizeCompany({id:companyId, name:'Zaimportowane', is_active:true}, 0)];
-      data.stores = data.stores.map((store, index)=>normalizeStore({
-        ...store,
-        company_id: store.company_id || companyId
-      }, index, companyId));
-      data.meta.migratedToCompanies = true;
-      return;
-    }
-
-    const state = rootState();
-    // Skip if shops are mirrored from storeTracker (not real legacy data)
-    const realLegacyShops = Array.isArray(state.shops) ? state.shops.filter(s=>!s._stMirrored) : [];
-    if(realLegacyShops.length){
-      const companyId = uid('company_legacy');
-      data.companies = [normalizeCompany({id:companyId, name:'Zaimportowane', is_active:true}, 0)];
-      const importedStats = [];
-      data.stores = realLegacyShops.map((shop, index)=>{
-        const storeId = String(shop.id || uid('legacy_store'));
-        (shop.entries || []).forEach(entry=>{
-          importedStats.push(normalizeStat({
-            id: entry.id ? `legacy_${shop.id}_${entry.id}` : uid('legacy_stat'),
-            store_id: storeId,
-            date: String(entry.date || '').slice(0, 10),
-            revenue_gross: Array.isArray(entry.revenues) ? sumAmounts(entry.revenues, 'amount') : numberValue(entry.revenue),
-            revenue_net: null,
-            ad_cost_tiktok: Array.isArray(entry.adEntries) ? sumAmounts(entry.adEntries, 'amount') : 0,
-            refunds: 0,
-            extra_costs: 0,
-            notes: ''
-          }));
-        });
-        return normalizeStore({
-          id: storeId,
-          company_id: companyId,
-          name: shop.name,
-          is_active: shop.status !== 'inactive',
-          vat_rate: shop.vatRate ?? 23,
-          headcount: shop.people ?? 1,
-          profit_share_type: 'headcount',
-          profit_share_value: 0,
-          calculation_mode: 'gross_to_net',
-          color: STORE_COLORS[index % STORE_COLORS.length]
-        }, index, companyId);
-      });
-      data.dailyStats = importedStats.filter(Boolean);
-    }
-
+    // Just mark as migrated — we no longer auto-create "Zaimportowane" from legacy data
     data.meta.migratedToCompanies = true;
+  }
+
+  function removeZaimportowane(data){
+    // Remove any "Zaimportowane" companies (and their stores/stats) left from old migrations
+    const zIds = new Set(
+      (data.companies || [])
+        .filter(c=>String(c.name||'').trim()==='Zaimportowane')
+        .map(c=>c.id)
+    );
+    if(!zIds.size) return;
+    data.companies = data.companies.filter(c=>!zIds.has(c.id));
+    const removedStoreIds = new Set(
+      (data.stores || []).filter(s=>zIds.has(s.company_id)).map(s=>s.id)
+    );
+    data.stores = data.stores.filter(s=>!zIds.has(s.company_id));
+    data.dailyStats = (data.dailyStats||[]).filter(stat=>!removedStoreIds.has(stat.store_id));
+    if(zIds.has(data.ui?.companyId)){
+      data.ui.companyId = data.companies[0]?.id || null;
+      data.ui.storeId = null;
+      data.ui.view = 'overview';
+    }
   }
 
   function seedDemoData(data){
@@ -482,18 +448,11 @@
     }
 
     const trackerLooksEmpty = !data.companies.length && !data.stores.length && !data.dailyStats.length;
-    const legacyShopsAvailable = Array.isArray(state.shops) && state.shops.length > 0;
-    const shopsAreMirrored = legacyShopsAvailable && state.shops.every(s=>s._stMirrored);
-    // Only allow migration reset if shops are NOT mirrored from storeTracker
-    // and we've never had real data before (to prevent "Zaimportowane" from reappearing)
-    if(trackerLooksEmpty && legacyShopsAvailable && !shopsAreMirrored && data.meta.migratedToCompanies && !data.meta.hadRealData){
-      data.meta.migratedToCompanies = false;
-    }
-    // Track that real data existed to prevent spurious re-migration
     if(!trackerLooksEmpty) data.meta.hadRealData = true;
 
     cleanupBuiltInDemoData(data);
     migrateLegacyData(data);
+    removeZaimportowane(data);
     seedDemoData(data);
 
     data.companies = data.companies.map((company, index)=>normalizeCompany(company, index));
