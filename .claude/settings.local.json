@@ -3,7 +3,17 @@
     "allow": [
       "Bash(find /c/Users/heski/Documents/GitHub/forzone -type f -name *.json)",
       "Bash(find /c/Users/heski/Documents/GitHub/forzone -maxdepth 3 -type f \\\\\\(-name *.js -o -name *.ts -o -name *.json -o -name *.py \\\\\\))",
-      "Bash(file /c/Users/heski/Documents/GitHub/forzone/*)"
+      "Bash(file /c/Users/heski/Documents/GitHub/forzone/*)",
+      "Bash(find . -maxdepth 2 -name .* -not -path ./.git/*)",
+      "Bash(grep -v \"^\\\\.$\")",
+      "Bash(find . -type f -not -path ./.git/*)",
+      "Bash(grep -i \"createServer\\\\|express\\\\|app.listen\\\\|http.Server\" \"/c/Users/heski/Documents/GitHub/forzone\"/*.js)",
+      "Bash(ls /c/Users/heski/Documents/GitHub/forzone/netlify*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(where python3:*)",
+      "Bash(where node:*)",
+      "Bash(where npx:*)",
+      "Bash(npx --version)"
     ]
   }
 }

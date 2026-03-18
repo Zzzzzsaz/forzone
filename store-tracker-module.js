@@ -22,7 +22,8 @@
     silentSyncQueued: false,
     silentSyncRunning: false,
     modalBackdropArmed: false,
-    restoreScrollTop: null
+    restoreScrollTop: null,
+    initialized: false
   };
 
   function preserveContentScroll(){
@@ -413,6 +414,8 @@
     if(!Array.isArray(data.dailyStats)) data.dailyStats = [];
     if(!data.ui || typeof data.ui !== 'object') data.ui = {};
     if(!data.meta || typeof data.meta !== 'object') data.meta = {};
+    // Clear stale modal on first call after page load — prevents frozen overlay blocking all clicks
+    if(!runtime.initialized) data.ui.modal = null;
     data.version = MODULE_VERSION;
     if(typeof data.meta.migratedToCompanies !== 'boolean') data.meta.migratedToCompanies = false;
     if(typeof data.meta.seeded !== 'boolean') data.meta.seeded = false;
@@ -541,7 +544,11 @@
           syncLegacyMirror(data);
           saveDirectBackup(data);
         }
+        // Never persist modal state — clear before save, restore after
+        const savedModal = data?.ui?.modal ?? null;
+        if(data?.ui) data.ui.modal = null;
         if(typeof window.saveS === 'function') window.saveS();
+        if(data?.ui) data.ui.modal = savedModal;
       }catch(error){
         console.warn('storeTracker silent save failed', error);
       }finally{
@@ -555,7 +562,11 @@
     touchTrackerSavedAt(data);
     syncLegacyMirror(data);
     saveDirectBackup(data);
+    // Never persist modal state — it's transient UI that must not survive page reload
+    const savedModal = data.ui.modal;
+    data.ui.modal = null;
     if(typeof window.saveS === 'function') window.saveS();
+    data.ui.modal = savedModal;
     if(message) toastMsg(message, type || 'success', 2200);
   }
 
@@ -3563,6 +3574,7 @@
     `;
     restoreContentScroll(host);
     bindWheelScroll(host);
+    runtime.initialized = true;
 
     const title = document.querySelector('#win-shops .win-title');
     if(title) title.textContent = 'Sklepy';
