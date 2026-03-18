@@ -1,0 +1,3 @@
+Forzone deploy smoke test
+Date: 2026-03-18
+Purpose: harmless file to trigger a deploy without changing app behavior.
