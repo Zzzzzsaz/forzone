@@ -408,7 +408,6 @@
   }
 
   function ensureData(){
-    if(typeof window.restoreStoreTrackerBackup === 'function') window.restoreStoreTrackerBackup();
     const state = rootState();
     if(!state.storeTracker || typeof state.storeTracker !== 'object') state.storeTracker = {};
     const data = state.storeTracker;
