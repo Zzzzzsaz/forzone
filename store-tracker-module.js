@@ -2477,6 +2477,98 @@
     runtime.wheelHost = host;
   }
 
+  function handleDelegatedAction(actionEl){
+    const action = String(actionEl?.dataset?.shopsAction || '');
+    if(!action) return false;
+    const companyId = actionEl.dataset.companyId || null;
+    const storeId = actionEl.dataset.storeId || null;
+    const date = actionEl.dataset.date || null;
+    const mode = actionEl.dataset.mode || null;
+    const delta = Number(actionEl.dataset.delta || 0);
+
+    if(action === 'open-overview'){ openOverview(); return true; }
+    if(action === 'open-company' && companyId){ openCompany(companyId); return true; }
+    if(action === 'open-store' && storeId){ openStore(storeId); return true; }
+    if(action === 'open-company-modal'){ openCompanyModal(companyId); return true; }
+    if(action === 'open-store-modal'){ openStoreModal(companyId, storeId); return true; }
+    if(action === 'open-stat-modal' && storeId){ openStatModal(storeId, date); return true; }
+    if(action === 'delete-company' && companyId){ confirmDeleteCompany(companyId); return true; }
+    if(action === 'delete-store' && storeId){ confirmDeleteStore(storeId); return true; }
+    if(action === 'delete-stat' && storeId && date){ confirmDeleteStat(storeId, date); return true; }
+    if(action === 'set-summary-mode' && mode){ setSummaryMode(mode); return true; }
+    if(action === 'shift-month' && delta){ shiftMonth(delta); return true; }
+    if(action === 'jump-date' && date){ jumpToDate(date); return true; }
+    if(action === 'close-modal'){ closeModal(); return true; }
+    if(action === 'save-company'){ saveCompanyForm(); return true; }
+    if(action === 'save-store'){ saveStoreForm(); return true; }
+    if(action === 'save-stat'){ saveStatForm(); return true; }
+    if(action === 'confirm-modal'){ confirmModalAction(); return true; }
+    return false;
+  }
+
+  function handleDelegatedModalFallback(target){
+    const modal = target?.closest('.shops-v2-modal');
+    if(!modal) return false;
+
+    const closeButton = target.closest('.shops-v2-modal-head .btn-ghost, .shops-v2-modal-foot .btn-ghost');
+    if(closeButton){
+      closeModal();
+      return true;
+    }
+
+    const primaryButton = target.closest('.shops-v2-modal-foot .btn-primary');
+    if(primaryButton){
+      if(document.getElementById('shops-company-name')){ saveCompanyForm(); return true; }
+      if(document.getElementById('shops-store-name')){ saveStoreForm(); return true; }
+      if(document.getElementById('shops-stat-gross')){ saveStatForm(); return true; }
+    }
+
+    const dangerButton = target.closest('.shops-v2-modal-foot .btn-danger');
+    if(dangerButton){
+      const modalState = ensureData().ui.modal || {};
+      if(modalState.type === 'stat' && modalState.storeId && modalState.date){
+        confirmDeleteStat(modalState.storeId, modalState.date);
+        return true;
+      }
+      if(modalState.type === 'confirm'){
+        confirmModalAction();
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  function bindDelegatedActions(host){
+    if(!host || host.dataset.shopsActionsBound === '1') return;
+
+    host.addEventListener('click', event => {
+      const actionEl = event.target.closest('[data-shops-action]');
+      if(actionEl && host.contains(actionEl)){
+        event.preventDefault();
+        event.stopPropagation();
+        if(handleDelegatedAction(actionEl)) return;
+      }
+
+      if(handleDelegatedModalFallback(event.target)){
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    });
+
+    host.addEventListener('change', event => {
+      const field = event.target.closest('[data-shops-change]');
+      if(!field || !host.contains(field)) return;
+      const kind = String(field.dataset.shopsChange || '');
+      if(kind === 'selected-date'){ jumpToDate(field.value); return; }
+      if(kind === 'month'){ setMonth(field.value); return; }
+      if(kind === 'range-start'){ setCustomRangeEdge('start', field.value); return; }
+      if(kind === 'range-end'){ setCustomRangeEdge('end', field.value); }
+    });
+
+    host.dataset.shopsActionsBound = '1';
+  }
+
   function injectStyles(){
     if(document.getElementById(STYLE_ID)) return;
     const style = document.createElement('style');
@@ -2805,12 +2897,12 @@
   function renderMiniCompanyButton(companySummary){
     const company = companySummary.company;
     const color = companyAccent(companySummary);
-    return `<button class="shops-min-menu-btn" type="button" style="--shops-min-accent:${color}" onclick="openShopsCompany('${company.id}')">${esc(company.name)}</button>`;
+    return `<button class="shops-min-menu-btn" type="button" style="--shops-min-accent:${color}" data-shops-action="open-company" data-company-id="${company.id}" onclick="openShopsCompany('${company.id}')">${esc(company.name)}</button>`;
   }
 
   function renderMiniStoreButton(storeSummary){
     const store = storeSummary.store;
-    return `<button class="shops-min-menu-btn" type="button" style="--shops-min-accent:${store.color}" onclick="openShopsStore('${store.id}')">${esc(store.name)}</button>`;
+    return `<button class="shops-min-menu-btn" type="button" style="--shops-min-accent:${store.color}" data-shops-action="open-store" data-store-id="${store.id}" onclick="openShopsStore('${store.id}')">${esc(store.name)}</button>`;
   }
 
   function renderMiniStoreRow(storeSummary){
@@ -3125,7 +3217,7 @@
       {
         label: 'Menu',
         active: ui.view === 'overview',
-        action: 'openShopsOverview()'
+        action: 'open-overview'
       }
     ];
 
@@ -3133,7 +3225,8 @@
       items.push({
         label: 'Firma',
         active: ui.view === 'company',
-        action: `openShopsCompany('${ui.companyId}')`
+        action: 'open-company',
+        companyId: ui.companyId
       });
     }
 
@@ -3141,14 +3234,22 @@
       items.push({
         label: 'Sklep',
         active: true,
-        action: `openShopsStore('${ui.storeId}')`
+        action: 'open-store',
+        storeId: ui.storeId
       });
     }
 
     return `
       <div class="shops-min-nav">
         ${items.map(item=>`
-          <button class="shops-min-nav-btn${item.active ? ' active' : ''}" type="button" onclick="${item.action}">${esc(item.label)}</button>
+          <button
+            class="shops-min-nav-btn${item.active ? ' active' : ''}"
+            type="button"
+            data-shops-action="${item.action}"
+            ${item.companyId ? `data-company-id="${item.companyId}"` : ''}
+            ${item.storeId ? `data-store-id="${item.storeId}"` : ''}
+            onclick="${item.action === 'open-overview' ? 'openShopsOverview()' : item.action === 'open-company' ? `openShopsCompany('${item.companyId}')` : `openShopsStore('${item.storeId}')`}"
+          >${esc(item.label)}</button>
         `).join('')}
       </div>
     `;
@@ -3174,27 +3275,27 @@
     return `
       <div class="shops-min-result-tools">
         <div class="shops-min-result-dates">
-          <input class="shops-min-date" type="date" value="${esc(ui.selectedDate)}" onchange="jumpToShopsDate(this.value)" aria-label="Data">
-          <input class="shops-min-month" type="month" value="${esc(ui.monthKey)}" onchange="setShopsMonth(this.value)" aria-label="Miesiac">
+          <input class="shops-min-date" type="date" value="${esc(ui.selectedDate)}" data-shops-change="selected-date" onchange="jumpToShopsDate(this.value)" aria-label="Data">
+          <input class="shops-min-month" type="month" value="${esc(ui.monthKey)}" data-shops-change="month" onchange="setShopsMonth(this.value)" aria-label="Miesiac">
         </div>
         <div class="todo-filters shops-min-filters">
-          <button class="filter-btn${ui.summaryMode === 'custom' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('custom')">Okres</button>
-          <button class="filter-btn${ui.summaryMode === 'day' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('day')">Dzien</button>
-          <button class="filter-btn${ui.summaryMode === 'today' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('today')">Dzis</button>
-          <button class="filter-btn${ui.summaryMode === 'yesterday' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('yesterday')">Wczoraj</button>
-          <button class="filter-btn${ui.summaryMode === 'week' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('week')">Tydzien</button>
-          <button class="filter-btn${ui.summaryMode === 'month' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('month')">Miesiac</button>
-          <button class="filter-btn${ui.summaryMode === 'year' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('year')">Rok</button>
+          <button class="filter-btn${ui.summaryMode === 'custom' ? ' active' : ''}" type="button" data-shops-action="set-summary-mode" data-mode="custom" onclick="setShopsSummaryMode('custom')">Okres</button>
+          <button class="filter-btn${ui.summaryMode === 'day' ? ' active' : ''}" type="button" data-shops-action="set-summary-mode" data-mode="day" onclick="setShopsSummaryMode('day')">Dzien</button>
+          <button class="filter-btn${ui.summaryMode === 'today' ? ' active' : ''}" type="button" data-shops-action="set-summary-mode" data-mode="today" onclick="setShopsSummaryMode('today')">Dzis</button>
+          <button class="filter-btn${ui.summaryMode === 'yesterday' ? ' active' : ''}" type="button" data-shops-action="set-summary-mode" data-mode="yesterday" onclick="setShopsSummaryMode('yesterday')">Wczoraj</button>
+          <button class="filter-btn${ui.summaryMode === 'week' ? ' active' : ''}" type="button" data-shops-action="set-summary-mode" data-mode="week" onclick="setShopsSummaryMode('week')">Tydzien</button>
+          <button class="filter-btn${ui.summaryMode === 'month' ? ' active' : ''}" type="button" data-shops-action="set-summary-mode" data-mode="month" onclick="setShopsSummaryMode('month')">Miesiac</button>
+          <button class="filter-btn${ui.summaryMode === 'year' ? ' active' : ''}" type="button" data-shops-action="set-summary-mode" data-mode="year" onclick="setShopsSummaryMode('year')">Rok</button>
         </div>
         ${ui.summaryMode === 'custom' ? `
           <div class="shops-min-custom-range">
             <label class="shops-min-range-field">
               <span>Od</span>
-              <input type="date" value="${esc(ui.rangeStart)}" onchange="setShopsCustomRangeStart(this.value)" aria-label="Data od">
+              <input type="date" value="${esc(ui.rangeStart)}" data-shops-change="range-start" onchange="setShopsCustomRangeStart(this.value)" aria-label="Data od">
             </label>
             <label class="shops-min-range-field">
               <span>Do</span>
-              <input type="date" value="${esc(ui.rangeEnd)}" onchange="setShopsCustomRangeEnd(this.value)" aria-label="Data do">
+              <input type="date" value="${esc(ui.rangeEnd)}" data-shops-change="range-end" onchange="setShopsCustomRangeEnd(this.value)" aria-label="Data do">
             </label>
           </div>
         ` : ''}
@@ -3249,8 +3350,8 @@
           <div class="shops-min-stat"><span>Zwroty</span><strong>${stat ? formatPLN(stat.refunds) : '-'}</strong></div>
         </div>
         <div class="shops-min-inline-actions">
-          <button class="btn btn-primary" type="button" onclick="openStatModal('${store.id}','${selectedDate}')">${stat ? 'Edytuj' : 'Dodaj'}</button>
-          ${stat ? `<button class="btn btn-danger" type="button" onclick="confirmDeleteStat('${store.id}','${selectedDate}')">Usun</button>` : ''}
+          <button class="btn btn-primary" type="button" data-shops-action="open-stat-modal" data-store-id="${store.id}" data-date="${selectedDate}" onclick="openStatModal('${store.id}','${selectedDate}')">${stat ? 'Edytuj' : 'Dodaj'}</button>
+          ${stat ? `<button class="btn btn-danger" type="button" data-shops-action="delete-stat" data-store-id="${store.id}" data-date="${selectedDate}" onclick="confirmDeleteStat('${store.id}','${selectedDate}')">Usun</button>` : ''}
         </div>
       </div>
     `;
@@ -3265,8 +3366,8 @@
         <div class="shops-min-card-head">
           <div class="shops-min-card-title">${esc(monthLabel(key))}</div>
           <div class="shops-min-inline-actions">
-            <button class="btn btn-ghost btn-sm" type="button" onclick="shiftShopsMonth(-1)">&lt;</button>
-            <button class="btn btn-ghost btn-sm" type="button" onclick="shiftShopsMonth(1)">&gt;</button>
+            <button class="btn btn-ghost btn-sm" type="button" data-shops-action="shift-month" data-delta="-1" onclick="shiftShopsMonth(-1)">&lt;</button>
+            <button class="btn btn-ghost btn-sm" type="button" data-shops-action="shift-month" data-delta="1" onclick="shiftShopsMonth(1)">&gt;</button>
           </div>
         </div>
         <div class="shops-min-cal-head">
@@ -3282,7 +3383,7 @@
               cell.date === today ? 'is-today' : '',
               stat ? 'has-data' : ''
             ].filter(Boolean).join(' ');
-            return `<button class="${cls}" type="button" onclick="jumpToShopsDate('${cell.date}')">${cell.day}</button>`;
+            return `<button class="${cls}" type="button" data-shops-action="jump-date" data-date="${cell.date}" onclick="jumpToShopsDate('${cell.date}')">${cell.day}</button>`;
           }).join('')}
         </div>
       </div>
@@ -3303,7 +3404,7 @@
       <div class="card shops-min-card shops-min-table-card">
         <div class="shops-min-card-head">
           <div class="shops-min-card-title">Tabela</div>
-          <button class="btn btn-ghost btn-sm" type="button" onclick="openStatModal('${store.id}','${selectedDate}')">Edytuj dzien</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-shops-action="open-stat-modal" data-store-id="${store.id}" data-date="${selectedDate}" onclick="openStatModal('${store.id}','${selectedDate}')">Edytuj dzien</button>
         </div>
         <div class="shops-min-table-wrap">
           <table class="shops-min-table">
@@ -3311,7 +3412,7 @@
               <tr>
                 <th>Metryka</th>
                 <th>Suma</th>
-                ${dates.map(date=>`<th><button class="shops-min-day-btn${date === selectedDate ? ' is-active' : ''}" type="button" onclick="jumpToShopsDate('${date}')">${Number(date.slice(8, 10))}</button></th>`).join('')}
+                ${dates.map(date=>`<th><button class="shops-min-day-btn${date === selectedDate ? ' is-active' : ''}" type="button" data-shops-action="jump-date" data-date="${date}" onclick="jumpToShopsDate('${date}')">${Number(date.slice(8, 10))}</button></th>`).join('')}
               </tr>
             </thead>
             <tbody>
@@ -3321,7 +3422,7 @@
                   <td>${row.formatter(row.total)}</td>
                   ${dates.map(date=>{
                     const stat = stats.get(date);
-                    return `<td><button class="shops-min-cell${date === selectedDate ? ' is-active' : ''}" type="button" onclick="openStatModal('${store.id}','${date}')">${stat ? row.formatter(stat[row.key]) : '-'}</button></td>`;
+                    return `<td><button class="shops-min-cell${date === selectedDate ? ' is-active' : ''}" type="button" data-shops-action="open-stat-modal" data-store-id="${store.id}" data-date="${date}" onclick="openStatModal('${store.id}','${date}')">${stat ? row.formatter(stat[row.key]) : '-'}</button></td>`;
                   }).join('')}
                 </tr>
               `).join('')}
@@ -3349,9 +3450,9 @@
           <div class="shops-min-card-head">
             <div class="shops-min-card-title">Zarzadzanie sklepem</div>
             <div class="shops-min-inline-actions">
-              ${company ? `<button class="btn btn-ghost btn-sm" type="button" onclick="openShopsCompany('${company.id}')">Firma</button>` : ''}
-              <button class="btn btn-ghost btn-sm" type="button" onclick="openStoreModal('${store.company_id}','${store.id}')">Edytuj sklep</button>
-              <button class="btn btn-danger btn-sm" type="button" onclick="confirmDeleteStore('${store.id}')">Usun sklep</button>
+              ${company ? `<button class="btn btn-ghost btn-sm" type="button" data-shops-action="open-company" data-company-id="${company.id}" onclick="openShopsCompany('${company.id}')">Firma</button>` : ''}
+              <button class="btn btn-ghost btn-sm" type="button" data-shops-action="open-store-modal" data-company-id="${store.company_id}" data-store-id="${store.id}" onclick="openStoreModal('${store.company_id}','${store.id}')">Edytuj sklep</button>
+              <button class="btn btn-danger btn-sm" type="button" data-shops-action="delete-store" data-store-id="${store.id}" onclick="confirmDeleteStore('${store.id}')">Usun sklep</button>
             </div>
           </div>
         </div>
@@ -3367,7 +3468,7 @@
         <div class="card shops-min-card">
           <div class="shops-min-card-head">
             <div class="shops-min-card-title">Firmy</div>
-            <button class="btn btn-primary btn-sm" type="button" onclick="openCompanyModal()">+ Firma</button>
+            <button class="btn btn-primary btn-sm" type="button" data-shops-action="open-company-modal" onclick="openCompanyModal()">+ Firma</button>
           </div>
           <div class="shops-min-menu">
             ${summary.companies.length ? summary.companies.map(renderMiniCompanyButton).join('') : '<div class="shops-min-empty">Dodaj pierwsza firme</div>'}
@@ -3389,9 +3490,9 @@
           <div class="shops-min-card-head">
             <div class="shops-min-card-title">Sklepy</div>
             <div class="shops-min-inline-actions">
-              <button class="btn btn-ghost btn-sm" type="button" onclick="openCompanyModal('${company.id}')">Edytuj</button>
-              <button class="btn btn-danger btn-sm" type="button" onclick="confirmDeleteCompany('${company.id}')">Usun</button>
-              <button class="btn btn-primary btn-sm" type="button" onclick="openStoreModal('${company.id}')">+ Sklep</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-shops-action="open-company-modal" data-company-id="${company.id}" onclick="openCompanyModal('${company.id}')">Edytuj</button>
+              <button class="btn btn-danger btn-sm" type="button" data-shops-action="delete-company" data-company-id="${company.id}" onclick="confirmDeleteCompany('${company.id}')">Usun</button>
+              <button class="btn btn-primary btn-sm" type="button" data-shops-action="open-store-modal" data-company-id="${company.id}" onclick="openStoreModal('${company.id}')">+ Sklep</button>
             </div>
           </div>
           <div class="shops-min-menu">
@@ -3454,10 +3555,11 @@
     style.textContent = `
       #win-shops{min-width:720px;min-height:520px}
       #shops-body.shops-v2-host{display:flex;flex:1;flex-direction:column;height:100%;min-height:0;overflow:hidden;padding:0!important;background:var(--surface)}
-      .shops-v2-shell{position:relative;display:flex;flex-direction:column;gap:12px;flex:1;min-height:0;height:100%;overflow:hidden;padding:14px;background:var(--surface);container-type:inline-size}
+      .shops-v2-shell{position:relative;display:flex;flex-direction:column;gap:12px;flex:1;min-height:0;height:100%;overflow:hidden;padding:14px;background:var(--surface);container-type:inline-size;isolation:isolate}
       .shops-v2-content{flex:1;min-height:0;overflow:auto;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
       .shops-v2-scroll,.shops-v2-store-view{display:flex;flex-direction:column;gap:14px}
       .shops-min-page{max-width:980px;width:100%;margin:0 auto}
+      .shops-v2-content,.shops-v2-scroll,.shops-min-page,.shops-min-head,.shops-min-hero,.shops-min-card,.shops-min-menu,.shops-min-menu-btn,.shops-min-nav,.shops-min-nav-btn,.shops-min-day-btn,.shops-min-cell,.shops-min-cal-day{position:relative;z-index:1;pointer-events:auto}
       .shops-min-head{padding:10px 14px}
       .shops-min-head-bar{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:12px}
       .shops-min-head-left{display:flex;justify-content:flex-start;min-width:0}
@@ -3573,6 +3675,7 @@
       </div>
     `;
     restoreContentScroll(host);
+    bindDelegatedActions(host);
     bindWheelScroll(host);
     runtime.initialized = true;
 
