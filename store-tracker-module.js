@@ -3,6 +3,7 @@
   window.__storeTrackerModuleLoaded = true;
 
   const MODULE_VERSION = 3;
+  const ST_DIRECT_KEY = 'mys_st_v1';
   const STYLE_ID = 'shops-v2-styles';
   const STORE_COLORS = ['#2d5be3', '#22c55e', '#f97316', '#8b5cf6', '#ef4444', '#06b6d4', '#eab308', '#14b8a6'];
   const SHARE_TYPE_LABELS = {
@@ -49,6 +50,32 @@
     }catch(e){}
     if(typeof window.S !== 'object' || !window.S) window.S = {};
     return window.S;
+  }
+
+  function saveDirectBackup(data){
+    try{
+      if(!data || typeof data !== 'object') return;
+      if(!Array.isArray(data.companies) || !data.companies.length) return;
+      localStorage.setItem(ST_DIRECT_KEY, JSON.stringify({
+        savedAt: Date.now(),
+        companies: data.companies,
+        stores: data.stores || [],
+        dailyStats: data.dailyStats || [],
+        meta: data.meta || {},
+        ui: data.ui || {},
+        version: data.version || MODULE_VERSION
+      }));
+    }catch(e){}
+  }
+
+  function loadDirectBackup(){
+    try{
+      const raw = localStorage.getItem(ST_DIRECT_KEY);
+      if(!raw) return null;
+      const b = JSON.parse(raw);
+      if(!b || !Array.isArray(b.companies) || !b.companies.length) return null;
+      return b;
+    }catch(e){ return null; }
   }
 
   function esc(value){
@@ -301,11 +328,13 @@
     }
 
     const state = rootState();
-    if(Array.isArray(state.shops) && state.shops.length){
+    // Skip if shops are mirrored from storeTracker (not real legacy data)
+    const realLegacyShops = Array.isArray(state.shops) ? state.shops.filter(s=>!s._stMirrored) : [];
+    if(realLegacyShops.length){
       const companyId = uid('company_legacy');
       data.companies = [normalizeCompany({id:companyId, name:'Zaimportowane', is_active:true}, 0)];
       const importedStats = [];
-      data.stores = state.shops.map((shop, index)=>{
+      data.stores = realLegacyShops.map((shop, index)=>{
         const storeId = String(shop.id || uid('legacy_store'));
         (shop.entries || []).forEach(entry=>{
           importedStats.push(normalizeStat({
@@ -421,6 +450,18 @@
     if(typeof data.meta.migratedToCompanies !== 'boolean') data.meta.migratedToCompanies = false;
     if(typeof data.meta.seeded !== 'boolean') data.meta.seeded = false;
 
+    // Restore from dedicated backup if tracker appears empty but backup has real data
+    if(!data.companies.length && !data.stores.length && !data.dailyStats.length){
+      const backup = loadDirectBackup();
+      if(backup && Array.isArray(backup.companies) && backup.companies.length){
+        data.companies = backup.companies;
+        data.stores = backup.stores || [];
+        data.dailyStats = backup.dailyStats || [];
+        if(backup.meta) Object.assign(data.meta, backup.meta);
+        if(backup.ui) Object.assign(data.ui, backup.ui);
+      }
+    }
+
     const defaults = defaultUi();
     Object.keys(defaults).forEach(key=>{
       if(data.ui[key] === undefined || data.ui[key] === null || data.ui[key] === '') data.ui[key] = defaults[key];
@@ -442,9 +483,14 @@
 
     const trackerLooksEmpty = !data.companies.length && !data.stores.length && !data.dailyStats.length;
     const legacyShopsAvailable = Array.isArray(state.shops) && state.shops.length > 0;
-    if(trackerLooksEmpty && legacyShopsAvailable && data.meta.migratedToCompanies){
+    const shopsAreMirrored = legacyShopsAvailable && state.shops.every(s=>s._stMirrored);
+    // Only allow migration reset if shops are NOT mirrored from storeTracker
+    // and we've never had real data before (to prevent "Zaimportowane" from reappearing)
+    if(trackerLooksEmpty && legacyShopsAvailable && !shopsAreMirrored && data.meta.migratedToCompanies && !data.meta.hadRealData){
       data.meta.migratedToCompanies = false;
     }
+    // Track that real data existed to prevent spurious re-migration
+    if(!trackerLooksEmpty) data.meta.hadRealData = true;
 
     cleanupBuiltInDemoData(data);
     migrateLegacyData(data);
@@ -505,6 +551,7 @@
         adEntries: item.ad_cost_tiktok > 0 ? [{id:`${item.id}_ads`, amount:item.ad_cost_tiktok}] : []
       }));
       return {
+        _stMirrored: true,
         id: store.id,
         name: store.name,
         platform: company ? company.name : 'Firma',
@@ -531,6 +578,7 @@
         if(data){
           touchTrackerSavedAt(data);
           syncLegacyMirror(data);
+          saveDirectBackup(data);
         }
         if(typeof window.saveS === 'function') window.saveS();
       }catch(error){
@@ -545,6 +593,7 @@
     const data = ensureData();
     touchTrackerSavedAt(data);
     syncLegacyMirror(data);
+    saveDirectBackup(data);
     if(typeof window.saveS === 'function') window.saveS();
     if(message) toastMsg(message, type || 'success', 2200);
   }
