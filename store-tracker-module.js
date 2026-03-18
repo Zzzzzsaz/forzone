@@ -56,13 +56,14 @@
     try{
       if(!data || typeof data !== 'object') return;
       if(!Array.isArray(data.companies) || !data.companies.length) return;
+      const { modal: _modal, ...safeUi } = data.ui || {};
       localStorage.setItem(ST_DIRECT_KEY, JSON.stringify({
         savedAt: Date.now(),
         companies: data.companies,
         stores: data.stores || [],
         dailyStats: data.dailyStats || [],
         meta: data.meta || {},
-        ui: data.ui || {},
+        ui: safeUi,
         version: data.version || MODULE_VERSION
       }));
     }catch(e){}
@@ -425,6 +426,7 @@
         data.dailyStats = backup.dailyStats || [];
         if(backup.meta) Object.assign(data.meta, backup.meta);
         if(backup.ui) Object.assign(data.ui, backup.ui);
+        data.ui.modal = null;
       }
     }
 
