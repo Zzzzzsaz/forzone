@@ -3543,8 +3543,13 @@ async function supaInit(){
 }
 
 const SUPA_STATE_ID = 'forzone-main-state';
+const STORE_TRACKER_BACKUP_KEY = 'mys_v2_store_tracker_backup';
 function stateSavedAt(state){
   const ts = Number(state?._savedAt || 0);
+  return Number.isFinite(ts) ? ts : 0;
+}
+function storeTrackerSavedAt(state){
+  const ts = Number(state?.storeTracker?.meta?.savedAt || state?.storeTracker?._savedAt || 0);
   return Number.isFinite(ts) ? ts : 0;
 }
 function hasStoreTrackerData(state){
@@ -3558,21 +3563,87 @@ function hasStoreTrackerData(state){
     )
   );
 }
+function storeTrackerWeight(state){
+  const tracker = state?.storeTracker;
+  return (
+    (Array.isArray(tracker?.companies) ? tracker.companies.length * 1000000 : 0) +
+    (Array.isArray(tracker?.stores) ? tracker.stores.length * 1000 : 0) +
+    (Array.isArray(tracker?.dailyStats) ? tracker.dailyStats.length : 0)
+  );
+}
+function legacyShopsWeight(state){
+  return (state?.shops || []).reduce((total, shop)=>{
+    return total + 1 + (Array.isArray(shop?.entries) ? shop.entries.length : 0);
+  }, 0);
+}
 function mergeStatePreservingStores(localState, remoteState){
   const merged = {...localState, ...remoteState};
-  if(hasStoreTrackerData(localState) && !hasStoreTrackerData(remoteState)){
-    merged.storeTracker = localState.storeTracker;
+  const localTrackerTs = Math.max(stateSavedAt(localState), storeTrackerSavedAt(localState));
+  const remoteTrackerTs = Math.max(stateSavedAt(remoteState), storeTrackerSavedAt(remoteState));
+  const localTrackerHasData = hasStoreTrackerData(localState);
+  const remoteTrackerHasData = hasStoreTrackerData(remoteState);
+  const localTrackerWeight = storeTrackerWeight(localState);
+  const remoteTrackerWeight = storeTrackerWeight(remoteState);
+  if(localTrackerHasData || remoteTrackerHasData){
+    if(
+      (localTrackerHasData && !remoteTrackerHasData) ||
+      (localTrackerTs > remoteTrackerTs + 500) ||
+      (localTrackerTs >= remoteTrackerTs - 500 && localTrackerWeight >= remoteTrackerWeight)
+    ){
+      merged.storeTracker = localState?.storeTracker;
+    }else{
+      merged.storeTracker = remoteState?.storeTracker;
+    }
   }
-  if((localState?.shops||[]).length && !(remoteState?.shops||[]).length){
-    merged.shops = localState.shops;
+  const localShopsWeight = legacyShopsWeight(localState);
+  const remoteShopsWeight = legacyShopsWeight(remoteState);
+  if(localShopsWeight || remoteShopsWeight){
+    if(
+      (!remoteShopsWeight && localShopsWeight) ||
+      (localTrackerTs > remoteTrackerTs + 500) ||
+      (localTrackerTs >= remoteTrackerTs - 500 && localShopsWeight >= remoteShopsWeight)
+    ){
+      merged.shops = localState?.shops || [];
+    }else{
+      merged.shops = remoteState?.shops || [];
+    }
   }
+  merged._savedAt = Math.max(stateSavedAt(localState), stateSavedAt(remoteState), storeTrackerSavedAt(merged));
   return merged;
 }
+function applyStoreTrackerBackup(state){
+  try{
+    const raw = localStorage.getItem(STORE_TRACKER_BACKUP_KEY);
+    if(!raw) return state;
+    const backup = JSON.parse(raw);
+    if(!backup || typeof backup !== 'object') return state;
+    const backupState = {
+      _savedAt: Number(backup.savedAt || 0),
+      storeTracker: backup.storeTracker || null,
+      shops: Array.isArray(backup.shops) ? backup.shops : []
+    };
+    if(!hasStoreTrackerData(backupState) && !backupState.shops.length) return state;
+    return mergeStatePreservingStores(backupState, state || {});
+  }catch(e){
+    return state;
+  }
+}
+window.restoreStoreTrackerBackup = function(){
+  S = applyStoreTrackerBackup(S || {});
+  return S;
+};
 function persistStateLocally(state){
   try{
     const serialized = JSON.stringify(state);
     localStorage.setItem('mys_v2', serialized);
     localStorage.setItem('mys_v2_backup', serialized);
+    if(hasStoreTrackerData(state) || (state?.shops || []).length){
+      localStorage.setItem(STORE_TRACKER_BACKUP_KEY, JSON.stringify({
+        savedAt: Math.max(stateSavedAt(state), storeTrackerSavedAt(state), Date.now()),
+        storeTracker: state?.storeTracker || null,
+        shops: Array.isArray(state?.shops) ? state.shops : []
+      }));
+    }
   }catch(e){}
 }
 async function supaLoadState(){
@@ -3589,10 +3660,11 @@ async function supaLoadState(){
       if(remoteTs > localTs + 500){
         S = mergeStatePreservingStores(S, data.data);
       }else{
-        S = {...data.data, ...S};
+        S = mergeStatePreservingStores(data.data, S);
         setTimeout(()=>{ try{supaSaveState();}catch(e){} }, 0);
       }
     }
+    S = applyStoreTrackerBackup(S);
     applyMigrations(); // always ensure all fields exist
     return true;
   }catch(e){ console.warn('supaLoad error',e); return false; }
@@ -3630,6 +3702,7 @@ function loadS(){
       }
     }
   }catch(e){}
+  S = applyStoreTrackerBackup(S || {});
   applyMigrations();
 }
 

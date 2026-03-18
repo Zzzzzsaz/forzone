@@ -395,7 +395,14 @@
     return true;
   }
 
+  function touchTrackerSavedAt(data){
+    if(!data || typeof data !== 'object') return;
+    if(!data.meta || typeof data.meta !== 'object') data.meta = {};
+    data.meta.savedAt = Date.now();
+  }
+
   function ensureData(){
+    if(typeof window.restoreStoreTrackerBackup === 'function') window.restoreStoreTrackerBackup();
     const state = rootState();
     if(!state.storeTracker || typeof state.storeTracker !== 'object') state.storeTracker = {};
     const data = state.storeTracker;
@@ -516,7 +523,10 @@
       runtime.silentSyncRunning = true;
       try{
         const data = rootState().storeTracker;
-        if(data) syncLegacyMirror(data);
+        if(data){
+          touchTrackerSavedAt(data);
+          syncLegacyMirror(data);
+        }
         if(typeof window.saveS === 'function') window.saveS();
       }catch(error){
         console.warn('storeTracker silent save failed', error);
@@ -528,6 +538,7 @@
 
   function persist(message, type){
     const data = ensureData();
+    touchTrackerSavedAt(data);
     syncLegacyMirror(data);
     if(typeof window.saveS === 'function') window.saveS();
     if(message) toastMsg(message, type || 'success', 2200);
