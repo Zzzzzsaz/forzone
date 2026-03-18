@@ -3667,6 +3667,9 @@
     host.style.flex = '1';
     host.style.minHeight = '0';
     host.style.height = '100%';
+    host.style.position = 'relative';
+    host.style.zIndex = '1';
+    host.style.pointerEvents = 'auto';
     host.innerHTML = `
       <div class="shops-v2-shell">
         ${renderHeader(data)}
