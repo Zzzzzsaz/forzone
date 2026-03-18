@@ -20,8 +20,25 @@
     wheelHost: null,
     silentSyncQueued: false,
     silentSyncRunning: false,
-    modalBackdropArmed: false
+    modalBackdropArmed: false,
+    restoreScrollTop: null
   };
+
+  function preserveContentScroll(){
+    const content = document.querySelector('#shops-body .shops-v2-content');
+    runtime.restoreScrollTop = content ? content.scrollTop : null;
+  }
+
+  function restoreContentScroll(host){
+    if(typeof runtime.restoreScrollTop !== 'number') return;
+    const top = runtime.restoreScrollTop;
+    const content = host?.querySelector('.shops-v2-content');
+    runtime.restoreScrollTop = null;
+    if(!content) return;
+    requestAnimationFrame(()=>{
+      content.scrollTop = top;
+    });
+  }
 
   function rootState(){
     if(typeof window.S !== 'object' || !window.S) window.S = {};
@@ -176,11 +193,14 @@
   }
 
   function defaultUi(){
+    const today = localDate(new Date());
     return {
       view: 'overview',
       monthKey: monthKey(new Date()),
-      selectedDate: localDate(new Date()),
+      selectedDate: today,
       summaryMode: 'today',
+      rangeStart: today,
+      rangeEnd: today,
       companyId: null,
       storeId: null,
       modal: null
@@ -393,8 +413,19 @@
     Object.keys(defaults).forEach(key=>{
       if(data.ui[key] === undefined || data.ui[key] === null || data.ui[key] === '') data.ui[key] = defaults[key];
     });
-    if(!['day', 'today', 'yesterday', 'week', 'month', 'year'].includes(String(data.ui.summaryMode || ''))){
+    if(!['custom', 'day', 'today', 'yesterday', 'week', 'month', 'year'].includes(String(data.ui.summaryMode || ''))){
       data.ui.summaryMode = defaults.summaryMode;
+    }
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(data.ui.rangeStart || ''))){
+      data.ui.rangeStart = data.ui.selectedDate || defaults.rangeStart;
+    }
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(data.ui.rangeEnd || ''))){
+      data.ui.rangeEnd = data.ui.selectedDate || defaults.rangeEnd;
+    }
+    if(String(data.ui.rangeStart) > String(data.ui.rangeEnd)){
+      const tmp = data.ui.rangeStart;
+      data.ui.rangeStart = data.ui.rangeEnd;
+      data.ui.rangeEnd = tmp;
     }
 
     const trackerLooksEmpty = !data.companies.length && !data.stores.length && !data.dailyStats.length;
@@ -573,13 +604,20 @@
     return next;
   }
 
-  function getRangePresetBounds(mode, selectedDate){
-    const preset = ['day', 'today', 'yesterday', 'week', 'month', 'year'].includes(String(mode || '')) ? String(mode) : 'today';
+  function getRangePresetBounds(mode, selectedDate, rangeStart, rangeEnd){
+    const preset = ['custom', 'day', 'today', 'yesterday', 'week', 'month', 'year'].includes(String(mode || '')) ? String(mode) : 'today';
     const selectedBase = dateAtNoon(selectedDate || localDate(new Date()));
     const todayBase = dateAtNoon(localDate(new Date()));
     const year = selectedBase.getFullYear();
     const month = selectedBase.getMonth();
 
+    if(preset === 'custom'){
+      const start = /^\d{4}-\d{2}-\d{2}$/.test(String(rangeStart || '')) ? String(rangeStart) : localDate(selectedBase);
+      const end = /^\d{4}-\d{2}-\d{2}$/.test(String(rangeEnd || '')) ? String(rangeEnd) : start;
+      return start <= end
+        ? {preset, start, end}
+        : {preset, start:end, end:start};
+    }
     if(preset === 'day'){
       return {preset, start: localDate(selectedBase), end: localDate(selectedBase)};
     }
@@ -635,18 +673,18 @@
     return [computeStat(store, stat)];
   }
 
-  function statsForStoreInRange(storeId, mode, selectedDate){
+  function statsForStoreInRange(storeId, mode, selectedDate, rangeStart, rangeEnd){
     const store = getStore(storeId);
     if(!store) return [];
-    const bounds = getRangePresetBounds(mode, selectedDate);
+    const bounds = getRangePresetBounds(mode, selectedDate, rangeStart, rangeEnd);
     return getStatsForStore(storeId)
       .filter(stat=>isDateInRange(stat.date, bounds))
       .map(stat=>computeStat(store, stat))
       .sort((a, b)=>a.date.localeCompare(b.date));
   }
 
-  function summarizeStore(store, key, mode, selectedDate){
-    const stats = statsForStoreInRange(store.id, mode, selectedDate);
+  function summarizeStore(store, key, mode, selectedDate, rangeStart, rangeEnd){
+    const stats = statsForStoreInRange(store.id, mode, selectedDate, rangeStart, rangeEnd);
     const gross = sumAmounts(stats, 'revenue_gross');
     const net = sumAmounts(stats, 'revenue_net_resolved');
     const ads = sumAmounts(stats, 'ad_cost_tiktok');
@@ -694,9 +732,9 @@
     };
   }
 
-  function summarizeCompany(company, key, mode, selectedDate){
+  function summarizeCompany(company, key, mode, selectedDate, rangeStart, rangeEnd){
     const stores = getStoresForCompany(company.id, true);
-    const storeSummaries = stores.map(store=>summarizeStore(store, key, mode, selectedDate));
+    const storeSummaries = stores.map(store=>summarizeStore(store, key, mode, selectedDate, rangeStart, rangeEnd));
     return {
       company,
       stores,
@@ -705,9 +743,9 @@
     };
   }
 
-  function summarizeGlobal(key, mode, selectedDate){
+  function summarizeGlobal(key, mode, selectedDate, rangeStart, rangeEnd){
     const companies = ensureData().companies;
-    const companySummaries = companies.map(company=>summarizeCompany(company, key, mode, selectedDate));
+    const companySummaries = companies.map(company=>summarizeCompany(company, key, mode, selectedDate, rangeStart, rangeEnd));
     const storeSummaries = companySummaries.flatMap(summary=>summary.storeSummaries);
     return {
       companies: companySummaries,
@@ -729,6 +767,7 @@
   function setMonth(key){
     if(!/^\d{4}-\d{2}$/.test(String(key || ''))) return;
     const data = ensureData();
+    preserveContentScroll();
     data.ui.monthKey = key;
     if(!isDateInMonth(data.ui.selectedDate, key)){
       const today = localDate(new Date());
@@ -745,16 +784,41 @@
 
   function setSummaryMode(mode){
     const data = ensureData();
-    data.ui.summaryMode = ['day', 'today', 'yesterday', 'week', 'month', 'year'].includes(String(mode || '')) ? String(mode) : 'today';
+    const nextMode = ['custom', 'day', 'today', 'yesterday', 'week', 'month', 'year'].includes(String(mode || '')) ? String(mode) : 'today';
+    preserveContentScroll();
+    if(nextMode === 'custom' && data.ui.summaryMode !== 'custom'){
+      const anchor = data.ui.selectedDate || localDate(new Date());
+      data.ui.rangeStart = anchor;
+      data.ui.rangeEnd = anchor;
+    }
+    data.ui.summaryMode = nextMode;
     renderShops();
   }
 
   function setSelectedDate(date){
     if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date || ''))) return;
     const data = ensureData();
+    preserveContentScroll();
     data.ui.selectedDate = date;
     data.ui.monthKey = String(date).slice(0, 7);
     data.ui.summaryMode = 'day';
+    renderShops();
+  }
+
+  function setCustomRangeEdge(which, value){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return;
+    const data = ensureData();
+    preserveContentScroll();
+    if(which === 'start'){
+      data.ui.rangeStart = value;
+      if(String(data.ui.rangeEnd || '') < value) data.ui.rangeEnd = value;
+      data.ui.selectedDate = value;
+      data.ui.monthKey = value.slice(0, 7);
+    }else{
+      data.ui.rangeEnd = value;
+      if(String(data.ui.rangeStart || '') > value) data.ui.rangeStart = value;
+    }
+    data.ui.summaryMode = 'custom';
     renderShops();
   }
 
@@ -3004,8 +3068,12 @@
     `;
   }
 
-  function rangeLabel(key, mode, selectedDate){
-    const bounds = getRangePresetBounds(mode, selectedDate);
+  function rangeLabel(key, mode, selectedDate, rangeStart, rangeEnd){
+    const bounds = getRangePresetBounds(mode, selectedDate, rangeStart, rangeEnd);
+    if(bounds.preset === 'custom'){
+      if(bounds.start === bounds.end) return fullDateLabel(bounds.start);
+      return `${shortDateLabel(bounds.start)} - ${shortDateLabel(bounds.end)}`;
+    }
     if(bounds.preset === 'day') return fullDateLabel(bounds.start);
     if(bounds.preset === 'today') return `Dzisiaj / ${fullDateLabel(bounds.start)}`;
     if(bounds.preset === 'yesterday') return `Wczoraj / ${fullDateLabel(bounds.start)}`;
@@ -3057,7 +3125,7 @@
           <div class="shops-min-head-left">${renderHeaderNav(data)}</div>
           <div class="shops-min-head-center">${esc(viewTitle(ui))}</div>
           <div class="shops-min-head-right">
-            <div class="shops-min-head-range">${esc(rangeLabel(ui.monthKey, ui.summaryMode, ui.selectedDate))}</div>
+            <div class="shops-min-head-range">${esc(rangeLabel(ui.monthKey, ui.summaryMode, ui.selectedDate, ui.rangeStart, ui.rangeEnd))}</div>
           </div>
         </div>
       </div>
@@ -3073,6 +3141,7 @@
           <input class="shops-min-month" type="month" value="${esc(ui.monthKey)}" onchange="setShopsMonth(this.value)" aria-label="Miesiac">
         </div>
         <div class="todo-filters shops-min-filters">
+          <button class="filter-btn${ui.summaryMode === 'custom' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('custom')">Okres</button>
           <button class="filter-btn${ui.summaryMode === 'day' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('day')">Dzien</button>
           <button class="filter-btn${ui.summaryMode === 'today' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('today')">Dzis</button>
           <button class="filter-btn${ui.summaryMode === 'yesterday' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('yesterday')">Wczoraj</button>
@@ -3080,6 +3149,18 @@
           <button class="filter-btn${ui.summaryMode === 'month' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('month')">Miesiac</button>
           <button class="filter-btn${ui.summaryMode === 'year' ? ' active' : ''}" type="button" onclick="setShopsSummaryMode('year')">Rok</button>
         </div>
+        ${ui.summaryMode === 'custom' ? `
+          <div class="shops-min-custom-range">
+            <label class="shops-min-range-field">
+              <span>Od</span>
+              <input type="date" value="${esc(ui.rangeStart)}" onchange="setShopsCustomRangeStart(this.value)" aria-label="Data od">
+            </label>
+            <label class="shops-min-range-field">
+              <span>Do</span>
+              <input type="date" value="${esc(ui.rangeEnd)}" onchange="setShopsCustomRangeEnd(this.value)" aria-label="Data do">
+            </label>
+          </div>
+        ` : ''}
       </div>
     `;
   }
@@ -3091,7 +3172,7 @@
         ${renderResultControls(data)}
         <div class="shops-min-kicker">${esc(title)}</div>
         <div class="shops-min-amount">${formatPLN(summary.income)}</div>
-        <div class="shops-min-hero-label">${esc(rangeLabel(data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate))}</div>
+        <div class="shops-min-hero-label">${esc(rangeLabel(data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate, data.ui.rangeStart, data.ui.rangeEnd))}</div>
         ${showDetails ? `
           <div class="shops-min-hero-row">
             <div class="shops-min-chip"><span>Przychod</span><strong>${formatPLN(summary.gross)}</strong></div>
@@ -3218,7 +3299,7 @@
     const store = getStore(data.ui.storeId);
     if(!store) return renderCompanyCentral(data);
     const company = getCompany(store.company_id);
-    const summary = summarizeStore(store, data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate);
+    const summary = summarizeStore(store, data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate, data.ui.rangeStart, data.ui.rangeEnd);
     return `
       <div class="shops-v2-scroll shops-min-page">
         ${renderMinimalHero(summary, `${store.name}${company ? ` / ${company.name}` : ''}`, store.color, data)}
@@ -3242,7 +3323,7 @@
   }
 
   function renderOverviewCentral(data){
-    const summary = summarizeGlobal(data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate);
+    const summary = summarizeGlobal(data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate, data.ui.rangeStart, data.ui.rangeEnd);
     return `
       <div class="shops-v2-scroll shops-min-page">
         ${renderMinimalHero(summary, 'Moj dochod lacznie', cssVar('--accent', '#4f7ef8'), data, {showDetails:false})}
@@ -3262,7 +3343,7 @@
   function renderCompanyCentral(data){
     const company = getCompany(data.ui.companyId);
     if(!company) return renderOverviewCentral(data);
-    const summary = summarizeCompany(company, data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate);
+    const summary = summarizeCompany(company, data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate, data.ui.rangeStart, data.ui.rangeEnd);
     return `
       <div class="shops-v2-scroll shops-min-page">
         ${renderMinimalHero(summary, company.name, companyAccent(summary), data)}
@@ -3354,6 +3435,10 @@
       .shops-min-filters{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
       .shops-min-result-tools{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
       .shops-min-result-dates{display:flex;gap:8px;flex-wrap:wrap}
+      .shops-min-custom-range{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;width:100%}
+      .shops-min-range-field{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:12px;background:var(--surface2);font-size:12px;color:var(--text2)}
+      .shops-min-range-field span{font-weight:700;color:var(--text3)}
+      .shops-min-range-field input{min-width:150px}
       .shops-min-hero{padding:16px 18px;text-align:center;border:1.5px solid color-mix(in srgb, var(--shops-min-accent) 28%, var(--border));background:linear-gradient(180deg, color-mix(in srgb, var(--shops-min-accent) 10%, var(--surface)) 0%, var(--surface) 100%)}
       .shops-min-kicker{font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.12em}
       .shops-min-amount{margin-top:8px;font-size:clamp(30px,4vw,48px);font-weight:900;font-family:'DM Mono',monospace;color:var(--text);line-height:1}
@@ -3416,7 +3501,10 @@
         .shops-min-nav{flex-direction:column;align-items:stretch}
         .shops-min-nav-btn{width:100%}
         .shops-min-result-tools,.shops-min-result-dates{flex-direction:column;align-items:stretch}
+        .shops-min-custom-range{flex-direction:column;align-items:stretch}
         .shops-min-date,.shops-min-month{width:100%;min-width:0}
+        .shops-min-range-field{justify-content:space-between}
+        .shops-min-range-field input{width:100%;min-width:0}
         .shops-min-inline-actions{width:100%}
         .shops-min-inline-actions .btn{flex:1}
         .shops-min-hero-row,.shops-min-stats,.shops-min-stats-2{grid-template-columns:1fr}
@@ -3447,6 +3535,7 @@
         ${renderModal(data.ui.modal)}
       </div>
     `;
+    restoreContentScroll(host);
     bindWheelScroll(host);
 
     const title = document.querySelector('#win-shops .win-title');
@@ -3486,6 +3575,8 @@
   window.syncShopifyRevenue = syncShopifyRevenue;
   window.armShopsModalBackdrop = armModalBackdrop;
   window.releaseShopsModalBackdrop = releaseModalBackdrop;
+  window.setShopsCustomRangeStart = value => setCustomRangeEdge('start', value);
+  window.setShopsCustomRangeEnd = value => setCustomRangeEdge('end', value);
 
   if(!runtime.boundResize){
     runtime.boundResize = true;
