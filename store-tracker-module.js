@@ -41,6 +41,12 @@
   }
 
   function rootState(){
+    try{
+      if(typeof S === 'object' && S){
+        window.S = S;
+        return S;
+      }
+    }catch(e){}
     if(typeof window.S !== 'object' || !window.S) window.S = {};
     return window.S;
   }

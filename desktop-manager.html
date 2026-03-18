@@ -3407,6 +3407,11 @@ let S = {
     'music':      {enabled:false,x:840,y:80},
   }
 };
+function syncStateRef(){
+  try{ window.S = S; }catch(e){}
+  return S;
+}
+syncStateRef();
 let taskFilter='all';
 let launcherOpen=false, launcherEditing=false;
 let focusOpen=false, sidebarOpen=false, qlOpen=false;
@@ -3630,6 +3635,7 @@ function applyStoreTrackerBackup(state){
 }
 window.restoreStoreTrackerBackup = function(){
   S = applyStoreTrackerBackup(S || {});
+  syncStateRef();
   return S;
 };
 function persistStateLocally(state){
@@ -3665,6 +3671,7 @@ async function supaLoadState(){
       }
     }
     S = applyStoreTrackerBackup(S);
+    syncStateRef();
     applyMigrations(); // always ensure all fields exist
     return true;
   }catch(e){ console.warn('supaLoad error',e); return false; }
@@ -3703,6 +3710,7 @@ function loadS(){
     }
   }catch(e){}
   S = applyStoreTrackerBackup(S || {});
+  syncStateRef();
   applyMigrations();
 }
 
@@ -3750,6 +3758,7 @@ function applyMigrations(){
 }
 
 function saveS(){
+  syncStateRef();
   S._savedAt = Date.now();
   persistStateLocally(S);
   if(supaReady()){ clearTimeout(_saveTimer); _saveTimer=setTimeout(()=>supaSaveState(),2000); }
@@ -9484,6 +9493,7 @@ function initRealtimeSync(){
       if(incoming && incomingTs > localTs + 500){
         isReceivingUpdate = true;
         S = mergeStatePreservingStores(S, incoming);
+        syncStateRef();
         S._savedAt = Math.max(stateSavedAt(S), incomingTs);
         persistStateLocally(S);
         refreshAllUI();
@@ -9512,6 +9522,7 @@ document.addEventListener('visibilitychange', async () => {
       const localTs  = S._savedAt || 0;
       if(data.data && remoteTs > localTs + 500){
         S = mergeStatePreservingStores(S, data.data);
+        syncStateRef();
         S._savedAt = Math.max(stateSavedAt(S), remoteTs);
         persistStateLocally(S);
         refreshAllUI();
