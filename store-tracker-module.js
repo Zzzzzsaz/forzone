@@ -3326,7 +3326,7 @@
     const summary = summarizeGlobal(data.ui.monthKey, data.ui.summaryMode, data.ui.selectedDate, data.ui.rangeStart, data.ui.rangeEnd);
     return `
       <div class="shops-v2-scroll shops-min-page">
-        ${renderMinimalHero(summary, 'Moj dochod lacznie', cssVar('--accent', '#4f7ef8'), data, {showDetails:false})}
+        ${renderMinimalHero({...summary, income: summary.perHead}, 'Moj dochod na glowe', cssVar('--accent', '#4f7ef8'), data, {showDetails:false})}
         <div class="card shops-min-card">
           <div class="shops-min-card-head">
             <div class="shops-min-card-title">Firmy</div>
